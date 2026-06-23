@@ -60,27 +60,46 @@ export default function BundleDetailPage({
   onOpenBundle,
   user,
   loginWithGoogle,
+  bundles = [],
 }) {
   const isPortrait = bundle.orientation === 'portrait' || bundle.orientation === 'vertical';
   const isLandscape = !isPortrait;
 
   const presets = useMemo(() => {
     const rawPresets = bundle.ratioOptions || [];
+    let filtered = [];
     if (isLandscape) {
-      // Filter out presets that are mobile/portrait
-      return rawPresets.filter(p => {
+      // Filter out presets that are mobile/portrait and also filter out triple monitor presets
+      filtered = rawPresets.filter(p => {
         const id = p.id.toLowerCase();
         const label = p.label.toLowerCase();
-        return !id.includes('mobile') && !id.includes('phone') && !id.includes('portrait') && !label.includes('mobile') && !label.includes('phone') && !label.includes('portrait');
+        const isMobile = id.includes('mobile') || id.includes('phone') || id.includes('portrait') || label.includes('mobile') || label.includes('phone') || label.includes('portrait');
+        const isTriple = id.includes('triple') || label.includes('triple') || label.includes('48:9');
+        return !isMobile && !isTriple;
       });
     } else {
       // Portrait: Filter out presets that are desktop/landscape
-      return rawPresets.filter(p => {
+      filtered = rawPresets.filter(p => {
         const id = p.id.toLowerCase();
         const label = p.label.toLowerCase();
         return id.includes('mobile') || id.includes('phone') || id.includes('portrait') || label.includes('mobile') || label.includes('phone') || label.includes('portrait');
       });
     }
+
+    // Always ensure 'Original' option exists!
+    const hasOriginal = filtered.some(p => p.id === 'original');
+    if (!hasOriginal) {
+      filtered.unshift({
+        id: 'original',
+        label: 'Original',
+        subtitle: 'Uncropped high-res wallpapers',
+        resolution: 'Original',
+        size: 'Full Size ZIP',
+        formats: ['PNG', 'JPG']
+      });
+    }
+
+    return filtered;
   }, [bundle, isLandscape]);
 
   const supportsLandscapeDownloads = true;
@@ -276,9 +295,13 @@ export default function BundleDetailPage({
     }
   };
 
+  const allBundlesList = useMemo(() => {
+    return bundles && bundles.length > 0 ? bundles : WALLPAPER_BUNDLES;
+  }, [bundles]);
+
   const genres = useMemo(() => {
     const uniqueTags = new Set();
-    WALLPAPER_BUNDLES.forEach((item) => {
+    allBundlesList.forEach((item) => {
       if (item.tags && Array.isArray(item.tags)) {
         item.tags.forEach((tag) => {
           if (tag) uniqueTags.add(tag);
@@ -286,13 +309,13 @@ export default function BundleDetailPage({
       }
     });
     return ['All', ...Array.from(uniqueTags)];
-  }, []);
+  }, [allBundlesList]);
 
   const filteredRelatedBundles = useMemo(() => {
-    const others = WALLPAPER_BUNDLES.filter((item) => item.id !== bundle.id);
+    const others = allBundlesList.filter((item) => item.id !== bundle.id);
     if (selectedSidebarGenre === 'All') return others;
     return others.filter((item) => item.tags.includes(selectedSidebarGenre));
-  }, [bundle.id, selectedSidebarGenre]);
+  }, [bundle.id, selectedSidebarGenre, allBundlesList]);
 
   const activeIndex = useMemo(() => {
     return allOptions.findIndex((option) => option.id === selectedDownloadId);

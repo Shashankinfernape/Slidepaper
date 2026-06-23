@@ -658,6 +658,7 @@ function AppContent() {
             onOpenBundle={handleOpenBundle}
             user={user}
             loginWithGoogle={loginWithGoogle}
+            bundles={bundles}
           />
         ) : (
           <>

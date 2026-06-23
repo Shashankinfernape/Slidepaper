@@ -6,6 +6,36 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
+function FilePreviewItem({ file, index, removeFile }) {
+  const [objectUrl, setObjectUrl] = useState('');
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setObjectUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [file]);
+
+  if (!objectUrl) return null;
+
+  return (
+    <div style={{ position: 'relative', aspectRatio: '16/10', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <img src={objectUrl} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      <button 
+        type="button" 
+        onClick={(e) => { e.stopPropagation(); removeFile(index); }} 
+        style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Trash2 size={12} />
+      </button>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {file.name}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard({ onBack, logout }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [bundles, setBundles] = useState([]);
@@ -25,6 +55,21 @@ export default function AdminDashboard({ onBack, logout }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const [bundleRatio, setBundleRatio] = useState('16:9');
+
+  useEffect(() => {
+    setBundleRatio(bundleOrientation === 'landscape' ? '16:9' : '9:16');
+  }, [bundleOrientation]);
+
+  useEffect(() => {
+    const preventDrag = (e) => e.preventDefault();
+    window.addEventListener('dragover', preventDrag);
+    window.addEventListener('drop', preventDrag);
+    return () => {
+      window.removeEventListener('dragover', preventDrag);
+      window.removeEventListener('drop', preventDrag);
+    };
+  }, []);
 
   // Fetch bundles list from backend database
   const fetchBundles = async () => {
@@ -160,6 +205,7 @@ export default function AdminDashboard({ onBack, logout }) {
     formData.append('name', bundleName);
     formData.append('description', bundleDescription);
     formData.append('orientation', bundleOrientation);
+    formData.append('ratio', bundleRatio);
     formData.append('type', bundleType || (bundleOrientation === 'landscape' ? 'Landscape Wallpaper Pack' : 'Vertical Mobile Pack'));
     formData.append('tags', bundleTags);
     formData.append('includes', bundleIncludes);
@@ -537,7 +583,7 @@ export default function AdminDashboard({ onBack, logout }) {
         {activeTab === 'upload' && (
           <div className="admin-card" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
             <form onSubmit={handleSubmitBundle} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Bundle Name *</label>
                   <input 
@@ -559,6 +605,32 @@ export default function AdminDashboard({ onBack, logout }) {
                   >
                     <option value="landscape">Landscape (Desktop & Wide Screen Ratio only)</option>
                     <option value="portrait">Portrait (Mobile Locked Ratio only)</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Native Ratio *</label>
+                  <select 
+                    value={bundleRatio} 
+                    onChange={(e) => setBundleRatio(e.target.value)} 
+                    className="admin-modal-input"
+                    style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                  >
+                    {bundleOrientation === 'landscape' ? (
+                      <>
+                        <option value="16:9">16:9 (Standard Desktop)</option>
+                        <option value="21:9">21:9 (Ultrawide)</option>
+                        <option value="32:9">32:9 (Super Ultrawide)</option>
+                        <option value="16:10">16:10 (MacBook/Display)</option>
+                        <option value="48:9">48:9 (Triple Monitor Spread)</option>
+                        <option value="original">Original (Uncropped)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="9:16">9:16 (Standard Mobile)</option>
+                        <option value="9:19.5">9:19.5 (iPhone/Modern Mobile)</option>
+                        <option value="original">Original (Uncropped)</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
@@ -623,11 +695,11 @@ export default function AdminDashboard({ onBack, logout }) {
                   }}
                   className="admin-dropzone"
                 >
-                  <Upload size={32} style={{ color: 'var(--text-secondary)' }} />
-                  <div>
+                  <Upload size={32} style={{ color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+                  <div style={{ pointerEvents: 'none' }}>
                     <span style={{ fontWeight: 600, color: 'var(--color-google-blue)' }}>Click to upload</span> or drag and drop images
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Supported formats: PNG, JPG, JPEG</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', pointerEvents: 'none' }}>Supported formats: PNG, JPG, JPEG</span>
                   <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -639,29 +711,18 @@ export default function AdminDashboard({ onBack, logout }) {
                 </div>
               </div>
 
-              {/* Uploaded Files Previews */}
               {selectedFiles.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Selected Wallpapers ({selectedFiles.length})</span>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                    {selectedFiles.map((file, index) => {
-                      const objectUrl = URL.createObjectURL(file);
-                      return (
-                        <div key={index} style={{ position: 'relative', aspectRatio: '16/10', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                          <img src={objectUrl} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button 
-                            type="button" 
-                            onClick={(e) => { e.stopPropagation(); removeFile(index); }} 
-                            style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {file.name}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {selectedFiles.map((file, index) => (
+                      <FilePreviewItem 
+                        key={`${file.name}-${index}`} 
+                        file={file} 
+                        index={index} 
+                        removeFile={removeFile} 
+                      />
+                    ))}
                   </div>
                 </div>
               )}

@@ -247,6 +247,11 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
+const cacheDir = path.join(tempDir, 'proxy_cache');
+if (!fs.existsSync(cacheDir)) {
+  fs.mkdirSync(cacheDir, { recursive: true });
+}
+
 const uploadsDir = path.join(tempDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -380,11 +385,68 @@ app.post('/api/custom-ratio', async (req, res) => {
   let srcFolder = path.join(__dirname, '../frontend/src/assets');
   let imageFilenames = BUNDLE_IMAGES[bundleId];
 
-  // Check if it is a dynamically uploaded bundle
+  const isDynamic = !BUNDLE_IMAGES[bundleId];
   const dynamicAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
-  if (fs.existsSync(dynamicAssetsDir)) {
+
+  if (isDynamic) {
+    // If local directory doesn't exist, we must restore files from Google Drive
+    if (!fs.existsSync(dynamicAssetsDir)) {
+      try {
+        console.log(`[Custom Ratio] Local assets missing for dynamic bundle "${bundleId}". Attempting restoration from Google Drive...`);
+        const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
+        const dbBundle = bundlesData.find(b => b.id === bundleId);
+        
+        if (dbBundle && dbBundle.images && dbBundle.images.length > 0) {
+          fs.mkdirSync(dynamicAssetsDir, { recursive: true });
+          
+          for (let i = 0; i < dbBundle.images.length; i++) {
+            const img = dbBundle.images[i];
+            const url = img.url;
+            let fileId = null;
+            if (url.includes('drive.google.com')) {
+              const match = url.match(/[?&]id=([^&]+)/);
+              if (match) fileId = match[1];
+            }
+            
+            if (fileId) {
+              // Get original filename via Google Drive API
+              const fileMeta = await drive.files.get({ fileId: fileId, fields: 'name' });
+              const filename = fileMeta.data.name || `${i}_image.png`;
+              
+              // We want to prefix the filename with index to match Multer's naming convention in upload
+              const destFilename = `${i}_${filename}`;
+              const destPath = path.join(dynamicAssetsDir, destFilename);
+              
+              console.log(`[Restore] Downloading file ID: ${fileId} -> ${destPath}`);
+              const destStream = fs.createWriteStream(destPath);
+              const driveResponse = await drive.files.get(
+                { fileId: fileId, alt: 'media' },
+                { responseType: 'stream' }
+              );
+              
+              await new Promise((resolve, reject) => {
+                driveResponse.data
+                  .pipe(destStream)
+                  .on('finish', resolve)
+                  .on('error', reject);
+              });
+            } else {
+              throw new Error(`Google Drive File ID not found for image URL: ${url}`);
+            }
+          }
+          console.log(`[Restore] Successfully restored all ${dbBundle.images.length} images for bundle "${bundleId}".`);
+        } else {
+          return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
+        }
+      } catch (restoreError) {
+        console.error(`[Restore] Failed to restore bundle "${bundleId}" from Google Drive:`, restoreError);
+        return res.status(500).json({ error: `Failed to restore bundle assets from Google Drive: ${restoreError.message}` });
+      }
+    }
+    
+    // Retrieve restored local filenames
     srcFolder = dynamicAssetsDir;
-    imageFilenames = fs.readdirSync(dynamicAssetsDir);
+    imageFilenames = fs.readdirSync(dynamicAssetsDir).filter(f => !f.endsWith('.tmp') && !f.endsWith('.mime'));
   }
 
   if (!imageFilenames || imageFilenames.length === 0) {
@@ -606,6 +668,20 @@ app.get('/api/proxy-image', async (req, res) => {
     return res.status(401).json({ error: 'Drive client not authenticated' });
   }
 
+  const cachePath = path.join(cacheDir, id);
+  const mimePath = cachePath + '.mime';
+
+  if (fs.existsSync(cachePath) && fs.existsSync(mimePath)) {
+    try {
+      const mimeType = fs.readFileSync(mimePath, 'utf8') || 'image/png';
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.sendFile(cachePath);
+    } catch (err) {
+      console.warn(`[Proxy Cache] Failed to read cache files for ID ${id}, falling back to Drive:`, err.message);
+    }
+  }
+
   try {
     // 1. Get file metadata to find mimeType
     const metadata = await drive.files.get({
@@ -617,20 +693,29 @@ app.get('/api/proxy-image', async (req, res) => {
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Access-Control-Allow-Origin', '*');
 
-    // 2. Download file as stream and pipe to response
+    // 2. Download file as stream
     const driveResponse = await drive.files.get(
       { fileId: id, alt: 'media' },
       { responseType: 'stream' }
     );
 
-    driveResponse.data
-      .on('error', (err) => {
-        console.error('Proxy stream error:', err);
-        if (!res.headersSent) {
-          res.status(500).send('Error streaming file');
-        }
-      })
-      .pipe(res);
+    const tempCachePath = cachePath + '.tmp';
+    const fileWriteStream = fs.createWriteStream(tempCachePath);
+
+    await new Promise((resolve, reject) => {
+      driveResponse.data
+        .pipe(fileWriteStream)
+        .on('finish', resolve)
+        .on('error', reject);
+    });
+
+    // Rename temp file to permanent cache path and write mime type
+    fs.renameSync(tempCachePath, cachePath);
+    fs.writeFileSync(mimePath, mimeType);
+
+    // Serve the cached file
+    return res.sendFile(cachePath);
+
   } catch (error) {
     console.error('Error proxying image:', error);
     return res.status(500).json({ error: 'Failed to proxy image from Google Drive', details: error.message });
@@ -729,8 +814,8 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       const destFilename = `${i}_${file.originalname}`;
       const localDestPath = path.join(bundleAssetsDir, destFilename);
 
-      // Copy temp file to persistent bundle_assets directory
-      fs.copyFileSync(file.path, localDestPath);
+      // Copy to persistent assets asynchronously (non-blocking!)
+      const copyPromise = fs.promises.copyFile(file.path, localDestPath);
 
       const fileMetadata = {
         name: file.originalname,
@@ -739,7 +824,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       
       const media = {
         mimeType: file.mimetype,
-        body: fs.createReadStream(localDestPath)
+        body: fs.createReadStream(file.path)
       };
       
       const driveFile = await drive.files.create({
@@ -759,9 +844,12 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       
       const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
       
+      // Wait for copy to complete if it hasn't already
+      await copyPromise;
+
       // Clean up multer temporary file
       try {
-        fs.unlinkSync(file.path);
+        await fs.promises.unlink(file.path);
       } catch (_) {}
 
       return {

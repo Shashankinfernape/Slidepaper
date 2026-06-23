@@ -3,9 +3,11 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { 
   signInWithPopup, 
   signOut as firebaseSignOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithEmailAndPassword
 } from 'firebase/auth';
-import { auth, googleProvider, isConfigured } from '../firebase';
+import { auth, isConfigured } from '../firebase';
 
 const AuthContext = createContext(null);
 
@@ -71,9 +73,11 @@ export function AuthProvider({ children }) {
   // Google sign in helper
   const loginWithGoogle = async () => {
     setLoading(true);
-    if (isConfigured && auth && googleProvider) {
+    if (isConfigured && auth) {
       try {
-        const result = await signInWithPopup(auth, googleProvider);
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await signInWithPopup(auth, provider);
         setLoading(false);
         return result.user;
       } catch (error) {
@@ -184,7 +188,6 @@ export function AuthProvider({ children }) {
     if (isConfigured && auth) {
       try {
         console.error('[AuthContext DIAGNOSTIC] Calling Firebase signInWithEmailAndPassword for email:', emailClean, 'with password length:', password ? password.length : 0);
-        const { signInWithEmailAndPassword } = await import('firebase/auth');
         const result = await signInWithEmailAndPassword(auth, emailClean, password);
         console.log('[AuthContext] Firebase signInWithEmailAndPassword success:', result.user.email);
         localStorage.setItem('slidepapers_admin_session', 'true');
