@@ -263,9 +263,9 @@ const INITIAL_BUNDLES = [
     description: 'A majestic three-screen panorama featuring ethereal neon mountain trails winding through deep canyons under a starry violet sky. Perfect for side-by-side multi-monitor setups or panoramic phone locks.',
     type: 'Panoramic Landscape Split',
     orientation: 'landscape',
-    ratio: '48:9',
+    ratio: '16:9',
     ratioOptions: [
-      { id: 'triple-48-9', label: '48:9 Triple', subtitle: 'Full continuity spread', resolution: '11520 x 2160', size: '1.69 MB ZIP', formats: ['PNG', 'JPG'] },
+      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '1.95 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'ultrawide-21-9', label: '21:9 Ultrawide', subtitle: 'Centered cinematic crop', resolution: '5120 x 2160', size: '1.29 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Single-screen hero crop', resolution: '3840 x 2160', size: '1.61 MB ZIP', formats: ['PNG', 'JPG'] }
     ],
@@ -286,8 +286,9 @@ const INITIAL_BUNDLES = [
     description: 'An abstract, fluid-dynamic liquid wave bundle displaying dynamic glass-like shapes that transition smoothly from cool electric cyan, through royal magenta, into elegant luxury gold.',
     type: 'Fluid Gradient Flow',
     orientation: 'landscape',
-    ratio: '16:9 x3',
+    ratio: '16:9',
     ratioOptions: [
+      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '2.40 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core wallpaper set', resolution: '3840 x 2160', size: '1.97 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Lockscreen vertical pack', resolution: '1290 x 2796', size: '511 KB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'ultrawide-21-9', label: '21:9 Ultrawide', subtitle: 'Panoramic flow crop', resolution: '5120 x 2160', size: '1.50 MB ZIP', formats: ['PNG', 'JPG'] }
@@ -311,6 +312,7 @@ const INITIAL_BUNDLES = [
     orientation: 'landscape',
     ratio: '16:9',
     ratioOptions: [
+      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '2.20 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core city crop', resolution: '3840 x 2160', size: '1.97 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Tall lockscreen pack', resolution: '1290 x 2796', size: '511 KB ZIP', formats: ['PNG', 'JPG'] }
     ],
@@ -333,6 +335,7 @@ const INITIAL_BUNDLES = [
     orientation: 'landscape',
     ratio: '16:9',
     ratioOptions: [
+      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '2.10 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core solar crop', resolution: '3840 x 2160', size: '1.80 MB ZIP', formats: ['PNG', 'JPG'] },
       { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Corona vertical lockscreen', resolution: '1290 x 2796', size: '466 KB ZIP', formats: ['PNG', 'JPG'] }
     ],
@@ -366,10 +369,11 @@ app.post('/api/custom-ratio', async (req, res) => {
     return res.status(400).json({ error: 'Missing required parameters: bundleId, widthRatio, heightRatio' });
   }
 
-  const wRatio = parseFloat(widthRatio);
-  const hRatio = parseFloat(heightRatio);
+  const isOriginal = widthRatio === 'original' && heightRatio === 'original';
+  const wRatio = isOriginal ? 1 : parseFloat(widthRatio);
+  const hRatio = isOriginal ? 1 : parseFloat(heightRatio);
 
-  if (isNaN(wRatio) || isNaN(hRatio) || wRatio <= 0 || hRatio <= 0) {
+  if (!isOriginal && (isNaN(wRatio) || isNaN(hRatio) || wRatio <= 0 || hRatio <= 0)) {
     return res.status(400).json({ error: 'Aspect ratios must be valid numbers greater than zero' });
   }
 
@@ -396,36 +400,49 @@ app.post('/api/custom-ratio', async (req, res) => {
     fs.mkdirSync(jobDirPath, { recursive: true });
     fs.mkdirSync(outputDirPath, { recursive: true });
 
-    // 1. Copy source files to the temporary job directory
-    for (const filename of imageFilenames) {
-      const srcPath = path.join(srcFolder, filename);
-      const destPath = path.join(jobDirPath, filename);
-      
-      if (!fs.existsSync(srcPath)) {
-        throw new Error(`Source image asset not found at: ${srcPath}`);
+    if (isOriginal) {
+      console.log(`[ZIP] Copying original uncropped files for bundle ${bundleId}`);
+      for (const filename of imageFilenames) {
+        const srcPath = path.join(srcFolder, filename);
+        const destPath = path.join(outputDirPath, filename);
+        
+        if (!fs.existsSync(srcPath)) {
+          throw new Error(`Source image asset not found at: ${srcPath}`);
+        }
+        fs.copyFileSync(srcPath, destPath);
       }
-      fs.copyFileSync(srcPath, destPath);
-    }
+    } else {
+      // 1. Copy source files to the temporary job directory
+      for (const filename of imageFilenames) {
+        const srcPath = path.join(srcFolder, filename);
+        const destPath = path.join(jobDirPath, filename);
+        
+        if (!fs.existsSync(srcPath)) {
+          throw new Error(`Source image asset not found at: ${srcPath}`);
+        }
+        fs.copyFileSync(srcPath, destPath);
+      }
 
-    // 2. Execute ImageMagick crop command (mogrify outputs to output folder)
-    const ratioValue = (wRatio / hRatio).toFixed(2);
-    const cropParam = `${ratioValue}:1`;
-    
-    // Cross-platform command support (Windows uses 'magick mogrify' and backslashes; Linux uses 'mogrify' and forward slashes)
-    const isWin = process.platform === 'win32';
-    const cmdPrefix = isWin ? 'magick mogrify' : 'mogrify';
-    const wildcard = isWin ? '.\\*' : './*';
+      // 2. Execute ImageMagick crop command (mogrify outputs to output folder)
+      const ratioValue = (wRatio / hRatio).toFixed(2);
+      const cropParam = `${ratioValue}:1`;
+      
+      // Cross-platform command support (Windows uses 'magick mogrify' and backslashes; Linux uses 'mogrify' and forward slashes)
+      const isWin = process.platform === 'win32';
+      const cmdPrefix = isWin ? 'magick mogrify' : 'mogrify';
+      const wildcard = isWin ? '.\\*' : './*';
 
-    // Get unique extensions of source images to run the mogrify command on them
-    const extensions = [...new Set(imageFilenames.map(f => path.extname(f).toLowerCase()))];
-    for (const ext of extensions) {
-      const cmd = `${cmdPrefix} -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
-      console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
-      await execPromise(cmd, { cwd: jobDirPath });
+      // Get unique extensions of source images to run the mogrify command on them
+      const extensions = [...new Set(imageFilenames.map(f => path.extname(f).toLowerCase()))];
+      for (const ext of extensions) {
+        const cmd = `${cmdPrefix} -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
+        console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
+        await execPromise(cmd, { cwd: jobDirPath });
+      }
     }
 
     // 3. Package all cropped images into a ZIP archive
-    const zipFilename = `${bundleId}_${wRatio}x${hRatio}.zip`;
+    const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
     const zipPath = path.join(tempDir, zipFilename);
     const outputStream = fs.createWriteStream(zipPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
@@ -579,6 +596,47 @@ app.get('/oauth2callback', async (req, res) => {
   }
 });
 
+// Endpoint: Proxy Google Drive images to allow CORS and avoid size limits
+app.get('/api/proxy-image', async (req, res) => {
+  const { id } = req.query;
+  if (!id) {
+    return res.status(400).json({ error: 'Missing file id' });
+  }
+  if (!drive) {
+    return res.status(401).json({ error: 'Drive client not authenticated' });
+  }
+
+  try {
+    // 1. Get file metadata to find mimeType
+    const metadata = await drive.files.get({
+      fileId: id,
+      fields: 'mimeType, size',
+    });
+
+    const mimeType = metadata.data.mimeType || 'image/png';
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // 2. Download file as stream and pipe to response
+    const driveResponse = await drive.files.get(
+      { fileId: id, alt: 'media' },
+      { responseType: 'stream' }
+    );
+
+    driveResponse.data
+      .on('error', (err) => {
+        console.error('Proxy stream error:', err);
+        if (!res.headersSent) {
+          res.status(500).send('Error streaming file');
+        }
+      })
+      .pipe(res);
+  } catch (error) {
+    console.error('Error proxying image:', error);
+    return res.status(500).json({ error: 'Failed to proxy image from Google Drive', details: error.message });
+  }
+});
+
 // Endpoint: Check Google Drive status and list files in target folder
 app.get('/api/drive-status', async (req, res) => {
   if (!drive) {
@@ -665,11 +723,9 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     const bundleFolderId = folderResponse.data.id;
     console.log(`[Google Drive] Created bundle subfolder. ID: ${bundleFolderId}`);
 
-    const imageUrls = [];
-
-    // 2. Process, keep local copy, and upload each image to Google Drive
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    // 2. Process, keep local copy, and upload each image to Google Drive in parallel (faster!)
+    console.log(`[Google Drive] Starting parallel upload of ${files.length} images...`);
+    const uploadPromises = files.map(async (file, i) => {
       const destFilename = `${i}_${file.originalname}`;
       const localDestPath = path.join(bundleAssetsDir, destFilename);
 
@@ -702,30 +758,36 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       });
       
       const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      imageUrls.push({
+      
+      // Clean up multer temporary file
+      try {
+        fs.unlinkSync(file.path);
+      } catch (_) {}
+
+      return {
+        index: i,
         url: downloadUrl,
         label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`
-      });
+      };
+    });
 
-      // Clean up multer temporary file
-      fs.unlinkSync(file.path);
-    }
+    const uploadResults = await Promise.all(uploadPromises);
+    // Sort results to preserve the original selection order
+    uploadResults.sort((a, b) => a.index - b.index);
+    const imageUrls = uploadResults.map(r => ({ url: r.url, label: r.label }));
 
     const tagsArray = tags ? tags.split(',').map(t => t.trim()) : [];
     const includesArray = includes ? includes.split(',').map(i => i.trim()) : [];
 
-    // Build dynamic ratioOptions based on orientation
-    const ratioOptions = [];
+    // Build dynamic ratioOptions based on orientation (includes "Original" by default)
+    const ratioOptions = [
+      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: 'Full Size ZIP', formats: ['PNG', 'JPG'] }
+    ];
     if (orientation === 'landscape') {
       ratioOptions.push(
         { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core wallpaper set', resolution: '3840 x 2160', size: '1.80 MB ZIP', formats: ['PNG', 'JPG'] },
         { id: 'ultrawide-21-9', label: '21:9 Ultrawide', subtitle: 'Panoramic flow crop', resolution: '5120 x 2160', size: '1.50 MB ZIP', formats: ['PNG', 'JPG'] }
       );
-      if (files.length > 1) {
-        ratioOptions.unshift(
-          { id: 'triple-48-9', label: '48:9 Triple', subtitle: 'Full continuity spread', resolution: '11520 x 2160', size: '1.69 MB ZIP', formats: ['PNG', 'JPG'] }
-        );
-      }
     } else {
       ratioOptions.push(
         { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Vertical lockscreen pack', resolution: '1290 x 2796', size: '511 KB ZIP', formats: ['PNG', 'JPG'] },
@@ -770,6 +832,62 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       }
     } catch (_) {}
     return res.status(500).json({ error: 'Failed to process and upload new wallpaper bundle', details: error.message });
+  }
+});
+
+// Endpoint: Delete a wallpaper bundle
+app.delete('/api/bundles/:bundleId', async (req, res) => {
+  if (!drive) {
+    return res.status(401).json({ error: 'Google Drive client not authenticated.' });
+  }
+
+  const { bundleId } = req.params;
+
+  try {
+    // 1. Read existing database
+    const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
+    const bundleIndex = bundlesData.findIndex(b => b.id === bundleId);
+
+    if (bundleIndex === -1) {
+      return res.status(404).json({ error: `Bundle ${bundleId} not found` });
+    }
+
+    const bundle = bundlesData[bundleIndex];
+
+    // 2. Remove the bundle from database array
+    bundlesData.splice(bundleIndex, 1);
+    fs.writeFileSync(BUNDLES_PATH, JSON.stringify(bundlesData, null, 2));
+    console.log(`[Database] Deleted bundle "${bundle.name}" from local JSON.`);
+
+    // 3. Delete local assets backup folder (if exists)
+    const bundleAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
+    if (fs.existsSync(bundleAssetsDir)) {
+      fs.rmSync(bundleAssetsDir, { recursive: true, force: true });
+      console.log(`[Cleanup] Deleted local backup assets at ${bundleAssetsDir}`);
+    }
+
+    // 4. Delete files and subfolder from Google Drive
+    const parentFolderId = await getOrCreateFolder();
+    const driveFolderResponse = await drive.files.list({
+      q: `name = '${bundle.name}' and '${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id)',
+      spaces: 'drive',
+    });
+
+    if (driveFolderResponse.data.files && driveFolderResponse.data.files.length > 0) {
+      const driveFolderId = driveFolderResponse.data.files[0].id;
+      await drive.files.delete({ fileId: driveFolderId });
+      console.log(`[Google Drive] Deleted bundle folder: "${bundle.name}" (${driveFolderId})`);
+    }
+
+    // 5. Save updated bundles database back to Google Drive
+    await saveBundlesToDrive();
+
+    return res.status(200).json({ success: true, message: `Bundle "${bundle.name}" deleted successfully` });
+
+  } catch (error) {
+    console.error('Error deleting bundle:', error);
+    return res.status(500).json({ error: 'Failed to delete wallpaper bundle', details: error.message });
   }
 });
 

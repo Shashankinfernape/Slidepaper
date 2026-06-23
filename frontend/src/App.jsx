@@ -10,8 +10,21 @@ import AdminDashboard from './components/AdminDashboard';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-function HeroSection({ onGetStarted }) {
-  const sampleImages = WALLPAPER_BUNDLES[0].images;
+const getProxiedImageUrl = (url) => {
+  if (!url) return '';
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/[?&]id=([^&]+)/);
+    if (match) {
+      return `${API_URL}/api/proxy-image?id=${match[1]}`;
+    }
+  }
+  return url.replace('http://localhost:5001', API_URL);
+};
+
+function HeroSection({ onGetStarted, bundles }) {
+  const sampleImages = bundles && bundles.length > 0 && bundles[0].images && bundles[0].images.length >= 3
+    ? bundles[0].images 
+    : WALLPAPER_BUNDLES[0].images;
 
   return (
     <section className="hero-section">
@@ -342,12 +355,12 @@ function AppContent() {
       })
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
-          // Normalize image URLs by replacing localhost:5001 with active API_URL
+          // Normalize image URLs by replacing localhost:5001 and proxying Google Drive links
           const normalized = data.map(bundle => ({
             ...bundle,
             images: bundle.images.map(img => ({
               ...img,
-              url: img.url.replace('http://localhost:5001', API_URL)
+              url: getProxiedImageUrl(img.url)
             }))
           }));
           setBundles(normalized);
@@ -631,7 +644,7 @@ function AppContent() {
       {/* Main Container Content */}
       <main style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {currentView === 'landing' ? (
-          <HeroSection onGetStarted={handleGetStarted} />
+          <HeroSection onGetStarted={handleGetStarted} bundles={bundles} />
         ) : currentView === 'admin' && (isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') ? (
           <AdminDashboard 
             onBack={() => setCurrentView('feed')} 

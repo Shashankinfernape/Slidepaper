@@ -154,6 +154,11 @@ export default function BundleDetailPage({
 
     const rawSizes = BUNDLE_RAW_SIZES[bundle.id] || [600000, 600000, 600000];
 
+    if (selectedDownloadId === 'original') {
+      const matchedPreset = presets.find((p) => p.id === 'original');
+      return matchedPreset ? matchedPreset.size : 'Full Size ZIP';
+    }
+
     let w = 16;
     let h = 9;
 
@@ -214,8 +219,14 @@ export default function BundleDetailPage({
     setDownloadState('downloading');
 
     try {
-      const ratioStr = selectedDownloadId === 'custom' ? customRatio : selectedDownload.ratio;
-      const [wStr, hStr] = ratioStr.split(':');
+      let wStr, hStr;
+      if (selectedDownloadId === 'original') {
+        wStr = 'original';
+        hStr = 'original';
+      } else {
+        const ratioStr = selectedDownloadId === 'custom' ? customRatio : (selectedDownload.ratio || '16:9');
+        [wStr, hStr] = ratioStr.split(':');
+      }
 
       const response = await fetch(`${API_URL}/api/custom-ratio`, {
         method: 'POST',

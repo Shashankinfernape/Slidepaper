@@ -13,6 +13,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [driveStatus, setDriveStatus] = useState(null);
   const [loadingDrive, setLoadingDrive] = useState(false);
   const [rebuildingCache, setRebuildingCache] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Form states for uploading new bundle
   const [bundleName, setBundleName] = useState('');
@@ -70,12 +71,28 @@ export default function AdminDashboard({ onBack, logout }) {
   };
 
   // Drag and Drop handlers
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
     const files = Array.from(e.dataTransfer.files).filter(file => 
       file.type.startsWith('image/')
     );
@@ -95,6 +112,30 @@ export default function AdminDashboard({ onBack, logout }) {
 
   const removeFile = (indexToRemove) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleDeleteBundle = async (bundleId, bundleName) => {
+    if (!window.confirm(`Are you sure you want to delete the bundle "${bundleName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/bundles/${bundleId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete bundle.');
+      }
+
+      alert(`Bundle "${bundleName}" deleted successfully!`);
+      // Update local bundles state
+      setBundles(prev => prev.filter(b => b.id !== bundleId));
+    } catch (err) {
+      console.error('Error deleting bundle:', err);
+      alert(`Delete failed: ${err.message}`);
+    }
   };
 
   const handleRebuildCache = () => {
@@ -448,19 +489,44 @@ export default function AdminDashboard({ onBack, logout }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '2rem', fontSize: '0.85rem' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Views</span>
-                      <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.views || 0}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                    <div style={{ display: 'flex', gap: '2rem', fontSize: '0.85rem' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Views</span>
+                        <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.views || 0}</span>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Downloads</span>
+                        <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.downloads || 0}</span>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Likes</span>
+                        <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.likes || 0}</span>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Downloads</span>
-                      <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.downloads || 0}</span>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Likes</span>
-                      <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.likes || 0}</span>
-                    </div>
+
+                    <button 
+                      onClick={() => handleDeleteBundle(bundle.id, bundle.name)}
+                      className="admin-btn secondary"
+                      style={{ 
+                        padding: '8px 12px', 
+                        color: '#ff4444', 
+                        border: '1px solid rgba(255, 68, 68, 0.2)',
+                        background: 'rgba(255, 68, 68, 0.05)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderRadius: '6px',
+                        fontWeight: 500,
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 68, 68, 0.12)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 68, 68, 0.05)'; }}
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
                   </div>
                 </div>
               ))
@@ -537,20 +603,23 @@ export default function AdminDashboard({ onBack, logout }) {
                 <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Upload Wallpaper Images *</label>
                 <div 
                   onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current.click()}
                   style={{
-                    border: '2px dashed var(--border-color)',
+                    border: isDragging ? '2px dashed var(--color-google-blue)' : '2px dashed var(--border-color)',
                     borderRadius: '10px',
                     padding: '2.5rem',
                     textAlign: 'center',
-                    background: 'var(--bg-secondary)',
+                    background: isDragging ? 'rgba(66, 133, 244, 0.04)' : 'var(--bg-secondary)',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '10px',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    transform: isDragging ? 'scale(1.01)' : 'none'
                   }}
                   className="admin-dropzone"
                 >
