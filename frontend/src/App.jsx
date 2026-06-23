@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  ChevronDown, Check, LogOut, Search, Bell
+  ChevronDown, Check, LogOut, Search, Bell, Shield, AlertCircle
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
 import BundleDetailPage from './components/BundleDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import AdminDashboard from './components/AdminDashboard';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 function HeroSection({ onGetStarted }) {
   const sampleImages = WALLPAPER_BUNDLES[0].images;
@@ -225,13 +228,135 @@ function HeroSection({ onGetStarted }) {
 }
 
 function AppContent() {
-  const { user, loginWithGoogle, logout, isFirebaseReal } = useAuth();
+  const { user, isAdmin, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
+  
+  // Secret admin modal states
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminLoginError, setAdminLoginError] = useState('');
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  
+  // Refs for input focus transitions
+  const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
+  
+  // Track keys for secret JDX triggers
+  const keySequenceRef = useRef('');
+  
+  // Autofocus email input when admin modal is opened
+  useEffect(() => {
+    if (showAdminLoginModal) {
+      setTimeout(() => {
+        emailInputRef.current?.focus();
+      }, 80);
+    }
+  }, [showAdminLoginModal]);
+  
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Safety check for undefined key events
+      if (!e || !e.key) return;
+
+      // Trigger 1: Ctrl + Shift + X (Simple, no browser conflicts)
+      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'X') {
+        e.preventDefault();
+        setShowAdminLoginModal(true);
+        return;
+      }
+
+      // Trigger 2: Secret "JDX" typing sequence (without Ctrl/Shift, ignored inside inputs)
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+      
+      if (!isInput) {
+        const key = e.key.toUpperCase();
+        if (key === 'J') {
+          keySequenceRef.current = 'J';
+        } else if (key === 'D' && keySequenceRef.current === 'J') {
+          keySequenceRef.current = 'JD';
+        } else if (key === 'X' && keySequenceRef.current === 'JD') {
+          keySequenceRef.current = '';
+          e.preventDefault();
+          setShowAdminLoginModal(true);
+        } else {
+          // Clear sequence if other keys are pressed
+          if (key !== 'J' && key !== 'D' && key !== 'X') {
+            keySequenceRef.current = '';
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    console.log('[App] handleAdminLogin called with:', adminEmail, adminPassword);
+    setAdminLoginLoading(true);
+    setAdminLoginError('');
+    try {
+      await loginWithEmail(adminEmail, adminPassword);
+      console.log('[App] loginWithEmail completed successfully! Closing modal and opening admin view...');
+      setShowAdminLoginModal(false);
+      setAdminEmail('');
+      setAdminPassword('');
+      setCurrentView('admin');
+    } catch (err) {
+      console.error('[App] Error in handleAdminLogin:', err);
+      setAdminLoginError(err.message || 'Login failed. Please check credentials.');
+    } finally {
+      setAdminLoginLoading(false);
+    }
+  };
+
+  const handleGoogleAdminLogin = async () => {
+    setAdminLoginLoading(true);
+    setAdminLoginError('');
+    try {
+      await loginAdminWithGoogle();
+      setShowAdminLoginModal(false);
+      setCurrentView('admin');
+    } catch (err) {
+      setAdminLoginError(err.message || 'Google authorization failed.');
+    } finally {
+      setAdminLoginLoading(false);
+    }
+  };
   const [theme, setTheme] = useState('dark');
   const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'feed' | 'bundle'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
   const [sortOption, setSortOption] = useState('default'); // default, views, downloads
+  const [bundles, setBundles] = useState(WALLPAPER_BUNDLES);
   const [activeBundle, setActiveBundle] = useState(null);
+
+  // Fetch bundles dynamically from backend JSON database
+  useEffect(() => {
+    fetch(`${API_URL}/api/bundles`)
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('API server returned error status');
+      })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Normalize image URLs by replacing localhost:5001 with active API_URL
+          const normalized = data.map(bundle => ({
+            ...bundle,
+            images: bundle.images.map(img => ({
+              ...img,
+              url: img.url.replace('http://localhost:5001', API_URL)
+            }))
+          }));
+          setBundles(normalized);
+        }
+      })
+      .catch((err) => {
+        console.warn('[API] Using local fallback static bundles:', err.message);
+      });
+  }, [currentView]);
 
   // Dropdown UI states
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -287,7 +412,7 @@ function AppContent() {
   // Extract unique genres/categories dynamically from all wallpaper bundle tags
   const genres = useMemo(() => {
     const uniqueTags = new Set();
-    WALLPAPER_BUNDLES.forEach((bundle) => {
+    bundles.forEach((bundle) => {
       if (bundle.tags && Array.isArray(bundle.tags)) {
         bundle.tags.forEach((tag) => {
           if (tag) uniqueTags.add(tag);
@@ -295,18 +420,18 @@ function AppContent() {
       }
     });
     return ['All', ...Array.from(uniqueTags)];
-  }, []);
+  }, [bundles]);
 
   // Filter wallpaper bundles by search query and selected genre
-  const filteredBundles = WALLPAPER_BUNDLES.filter((bundle) => {
+  const filteredBundles = bundles.filter((bundle) => {
     const matchesGenre =
       selectedGenre === 'All' ||
-      bundle.tags.includes(selectedGenre);
+      (bundle.tags && bundle.tags.includes(selectedGenre));
 
     const matchesSearch =
       bundle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bundle.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bundle.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (bundle.tags && bundle.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))) ||
       bundle.type.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesGenre && matchesSearch;
@@ -380,11 +505,7 @@ function AppContent() {
                 className="dropdown-trigger"
                 onClick={() => setShowSortMenu(!showSortMenu)}
               >
-                <span>Sort: {
-                  sortOption === 'views' ? 'Popularity' :
-                  sortOption === 'downloads' ? 'Most Downloaded' :
-                  'Default'
-                }</span>
+                <span>Sort</span>
                 <ChevronDown size={14} />
               </button>
               {showSortMenu && (
@@ -467,11 +588,11 @@ function AppContent() {
                 className="profile-badge"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
-                <span className="profile-name">{user.displayName.split(' ')[0]}</span>
                 <img
                   src={user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                   alt={user.displayName}
                   className="profile-avatar"
+                  referrerPolicy="no-referrer"
                   onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'; }}
                 />
               </div>
@@ -486,7 +607,13 @@ function AppContent() {
                       </span>
                     )}
                   </div>
-                  <div className="dropdown-item" onClick={() => { logout(); setShowProfileMenu(false); }}>
+                  {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
+                    <div className="dropdown-item" onClick={() => { setCurrentView('admin'); setShowProfileMenu(false); }} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--color-google-yellow)' }}>Admin Dashboard</span>
+                      <Shield size={14} style={{ color: 'var(--color-google-yellow)' }} />
+                    </div>
+                  )}
+                  <div className="dropdown-item" onClick={() => { logout(); setShowProfileMenu(false); if (currentView === 'admin') setCurrentView('landing'); }}>
                     <span>Sign Out</span>
                     <LogOut size={14} />
                   </div>
@@ -495,7 +622,7 @@ function AppContent() {
             </div>
           ) : (
             <button className="auth-btn-google" onClick={loginWithGoogle}>
-              <span>Login with Google</span>
+              <span>Login</span>
             </button>
           )}
         </div>
@@ -505,6 +632,11 @@ function AppContent() {
       <main style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {currentView === 'landing' ? (
           <HeroSection onGetStarted={handleGetStarted} />
+        ) : currentView === 'admin' && (isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') ? (
+          <AdminDashboard 
+            onBack={() => setCurrentView('feed')} 
+            logout={() => { logout(); setCurrentView('landing'); }} 
+          />
         ) : isBundleView ? (
           <BundleDetailPage
             key={activeBundle.id}
@@ -548,6 +680,110 @@ function AppContent() {
         </div>
         <p style={{ opacity: 0.7 }}>(c) 2026 Slidepapers Hub. Desktop-First Viewport.</p>
       </footer>
+
+      {/* Secret Admin Login Modal */}
+      {showAdminLoginModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal" style={{ width: 'min(100%, 24rem)' }}>
+            <h2>Admin Authorization</h2>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>
+              Sign in with email and password to access dashboard.
+            </p>
+
+            {adminLoginError && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0.8rem 1rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                  <AlertCircle size={16} />
+                  <span>Authentication Failed</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9, lineHeight: '1.4' }}>{adminLoginError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminLoginError('');
+                    setAdminEmail('');
+                    setAdminPassword('');
+                    emailInputRef.current?.focus();
+                  }}
+                  className="admin-btn secondary"
+                  style={{ alignSelf: 'flex-start', padding: '4px 10px', fontSize: '0.72rem', marginTop: '4px' }}
+                >
+                  Clear & Retry
+                </button>
+              </div>
+            )}
+
+            <div className="admin-modal-form" style={{ marginTop: '0.5rem' }}>
+              <div className="admin-modal-field">
+                <label>Admin ID / Email</label>
+                <input 
+                  type="text" 
+                  required
+                  ref={emailInputRef}
+                  autoComplete="new-username"
+                  value={adminEmail}
+                  onChange={(e) => {
+                    setAdminEmail(e.target.value);
+                    if (adminLoginError) setAdminLoginError('');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      passwordInputRef.current?.focus();
+                    }
+                  }}
+                  className="admin-modal-input" 
+                />
+              </div>
+
+              <div className="admin-modal-field">
+                <label>Password</label>
+                <input 
+                  type="text" 
+                  required
+                  ref={passwordInputRef}
+                  autoComplete="new-password"
+                  value={adminPassword}
+                  onChange={(e) => {
+                    setAdminPassword(e.target.value);
+                    if (adminLoginError) setAdminLoginError('');
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAdminLogin(e);
+                    }
+                  }}
+                  className="admin-modal-input admin-password-input" 
+                />
+              </div>
+
+              <div className="admin-modal-actions" style={{ marginTop: '0.5rem' }}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setShowAdminLoginModal(false);
+                    setAdminLoginError('');
+                    setAdminEmail('');
+                    setAdminPassword('');
+                  }}
+                  className="admin-btn secondary"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handleAdminLogin}
+                  disabled={adminLoginLoading}
+                  className="admin-btn primary"
+                >
+                  {adminLoginLoading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

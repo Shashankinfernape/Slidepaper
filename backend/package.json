@@ -1,0 +1,23 @@
+{
+  "name": "slidepapers-backend",
+  "version": "1.0.0",
+  "description": "Backend for Slidepapers wallpaper custom ratio generation and Google Drive storage integration",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "googleapis": "^137.1.0",
+    "multer": "^2.2.0",
+    "sharp": "^0.33.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

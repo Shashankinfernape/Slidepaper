@@ -3,10 +3,15 @@ import {
   Bell,
   Check,
   Download,
+  Monitor,
+  Smartphone,
+  Sliders,
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from '../data';
 import BundleCard from './BundleCard';
 import GoogleAd from './GoogleAd';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const SAMPLE_RATIOS = [
   { w: '16', h: '9' },
@@ -15,6 +20,20 @@ const SAMPLE_RATIOS = [
   { w: '4', h: '3' },
   { w: '21', h: '9' }
 ];
+
+function getOptionIcon(optionId) {
+  const id = optionId.toLowerCase();
+  if (id.includes('desktop') || id.includes('ultrawide') || id.includes('triple') || id.includes('landscape') || id.includes('original')) {
+    return <Monitor size={14} style={{ marginRight: '6px', flexShrink: 0 }} />;
+  }
+  if (id.includes('mobile') || id.includes('phone') || id.includes('portrait')) {
+    return <Smartphone size={14} style={{ marginRight: '6px', flexShrink: 0 }} />;
+  }
+  if (id.includes('custom')) {
+    return <Sliders size={14} style={{ marginRight: '6px', flexShrink: 0 }} />;
+  }
+  return <Monitor size={14} style={{ marginRight: '6px', flexShrink: 0 }} />;
+}
 
 function formatNumber(value) {
   return new Intl.NumberFormat('en-US').format(value);
@@ -42,18 +61,51 @@ export default function BundleDetailPage({
   user,
   loginWithGoogle,
 }) {
-  const presets = useMemo(() => bundle.ratioOptions || [], [bundle]);
-  const supportsLandscapeDownloads = bundle.orientation !== 'vertical';
+  const isPortrait = bundle.orientation === 'portrait' || bundle.orientation === 'vertical';
+  const isLandscape = !isPortrait;
+
+  const presets = useMemo(() => {
+    const rawPresets = bundle.ratioOptions || [];
+    if (isLandscape) {
+      // Filter out presets that are mobile/portrait
+      return rawPresets.filter(p => {
+        const id = p.id.toLowerCase();
+        const label = p.label.toLowerCase();
+        return !id.includes('mobile') && !id.includes('phone') && !id.includes('portrait') && !label.includes('mobile') && !label.includes('phone') && !label.includes('portrait');
+      });
+    } else {
+      // Portrait: Filter out presets that are desktop/landscape
+      return rawPresets.filter(p => {
+        const id = p.id.toLowerCase();
+        const label = p.label.toLowerCase();
+        return id.includes('mobile') || id.includes('phone') || id.includes('portrait') || label.includes('mobile') || label.includes('phone') || label.includes('portrait');
+      });
+    }
+  }, [bundle, isLandscape]);
+
+  const supportsLandscapeDownloads = true;
 
   const allOptions = useMemo(() => {
     return [...presets, { id: 'custom', label: 'Custom Ratio' }];
   }, [presets]);
 
   const [selectedDownloadId, setSelectedDownloadId] = useState(
-    supportsLandscapeDownloads && allOptions.length > 0 ? allOptions[0].id : 'original'
+    allOptions.length > 0 ? allOptions[0].id : 'custom'
   );
-  const [customRatioWidth, setCustomRatioWidth] = useState('16');
-  const [customRatioHeight, setCustomRatioHeight] = useState('9');
+  const [customRatioWidth, setCustomRatioWidth] = useState(isPortrait ? '9' : '16');
+  const [customRatioHeight, setCustomRatioHeight] = useState(isPortrait ? '16' : '9');
+
+  // Reset selected option and custom ratio inputs when bundle changes
+  useEffect(() => {
+    if (presets.length > 0) {
+      setSelectedDownloadId(presets[0].id);
+    } else {
+      setSelectedDownloadId('custom');
+    }
+    setCustomRatioWidth(isPortrait ? '9' : '16');
+    setCustomRatioHeight(isPortrait ? '16' : '9');
+  }, [bundle, presets, isPortrait]);
+
   const [downloadState, setDownloadState] = useState('idle');
   const [reaction, setReaction] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -75,34 +127,72 @@ export default function BundleDetailPage({
 
   // Custom aspect ratio is w:h typed by user
   const customRatio = `${customRatioWidth || activeSample.w}:${customRatioHeight || activeSample.h}`;
-  const customIsValid = Number(customRatioWidth) > 0 && Number(customRatioHeight) > 0;
+  const customIsValid = useMemo(() => {
+    const w = Number(customRatioWidth);
+    const h = Number(customRatioHeight);
+    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return false;
+    return isLandscape ? w >= h : h >= w;
+  }, [customRatioWidth, customRatioHeight, isLandscape]);
 
   const selectedDownload = useMemo(() => {
-    if (!supportsLandscapeDownloads) {
-      return { id: 'original', device: 'Original', ratio: bundle.ratio || 'Source', size: '12.5 MB' };
-    }
-
     if (selectedDownloadId === 'custom') {
       return { id: 'custom', device: 'Custom', ratio: customRatio, size: 'Estimate' };
     }
 
     const matchedPreset = presets.find((p) => p.id === selectedDownloadId);
-    return matchedPreset ? { id: matchedPreset.id, device: matchedPreset.label, ratio: matchedPreset.label.split(' ')[0], size: matchedPreset.size } : { id: 'unknown', device: 'Preset', ratio: '16:9', size: '15.4 MB' };
-  }, [bundle.ratio, customRatio, selectedDownloadId, supportsLandscapeDownloads, presets]);
+    return matchedPreset ? { id: matchedPreset.id, device: matchedPreset.label, ratio: matchedPreset.label.split(' ')[0], size: matchedPreset.size } : { id: 'unknown', device: 'Preset', ratio: isLandscape ? '16:9' : '9:16', size: '15.4 MB' };
+  }, [customRatio, selectedDownloadId, presets, isLandscape]);
 
   // Size label inside the download button
   const bundleSizeLabel = useMemo(() => {
+    const BUNDLE_RAW_SIZES = {
+      'aetherial-peak': [637538, 631633, 512515],
+      'spectral-drift': [691898, 733907, 646061],
+      'cyber-drift': [646061, 733907, 691898],
+      'solar-flare': [733907, 646061, 512515]
+    };
+
+    const rawSizes = BUNDLE_RAW_SIZES[bundle.id] || [600000, 600000, 600000];
+
+    let w = 16;
+    let h = 9;
+
     if (selectedDownloadId === 'custom') {
-      const w = Number(customRatioWidth) || 16;
-      const h = Number(customRatioHeight) || 9;
-      const baseCount = bundle.images.length;
-      // Estimate size based on w/h ratio
-      const factor = Math.min(2.5, Math.max(0.5, (w / h) / (16/9)));
-      return `${(baseCount * 4.2 * factor).toFixed(0)} MB ZIP`;
+      w = parseFloat(customRatioWidth) || 16;
+      h = parseFloat(customRatioHeight) || 9;
+    } else {
+      const matchedPreset = presets.find((p) => p.id === selectedDownloadId);
+      if (matchedPreset) {
+        const ratioStr = matchedPreset.label.split(' ')[0];
+        const [wStr, hStr] = ratioStr.split(':');
+        w = parseFloat(wStr) || 16;
+        h = parseFloat(hStr) || 9;
+      }
     }
-    const matchedPreset = presets.find((p) => p.id === selectedDownloadId);
-    return matchedPreset ? matchedPreset.size : '12.5 MB ZIP';
-  }, [selectedDownloadId, customRatioWidth, customRatioHeight, bundle.images.length, presets]);
+
+    const targetRatio = w / h;
+    const sourceRatio = 16 / 9; // source images are 16:9
+
+    let factor = 1.0;
+    if (targetRatio > sourceRatio) {
+      factor = sourceRatio / targetRatio;
+    } else {
+      factor = targetRatio / sourceRatio;
+    }
+
+    // Clamp factor to avoid division by zero or extreme crops
+    factor = Math.max(0.05, Math.min(1.0, factor));
+
+    const sumBytes = rawSizes.reduce((sum, size) => sum + size, 0);
+    // 0.95 factor represents ZIP compression on PNG files
+    const totalBytes = sumBytes * factor * 0.95;
+
+    if (totalBytes >= 1024 * 1024) {
+      return `${(totalBytes / (1024 * 1024)).toFixed(2)} MB ZIP`;
+    } else {
+      return `${(totalBytes / 1024).toFixed(0)} KB ZIP`;
+    }
+  }, [selectedDownloadId, customRatioWidth, customRatioHeight, bundle.id, presets]);
 
   const likeCount =
     bundle.stats.likes + (reaction === 'like' ? 1 : 0) - (reaction === 'dislike' ? 1 : 0);
@@ -117,38 +207,53 @@ export default function BundleDetailPage({
     action();
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (downloadState !== 'idle') return;
     if (selectedDownloadId === 'custom' && !customIsValid) return;
 
     setDownloadState('downloading');
 
-    window.setTimeout(() => {
-      const content = [
-        `Bundle: ${bundle.name}`,
-        `Device preset: ${selectedDownload.device}`,
-        `Ratio: ${selectedDownload.ratio}`,
-        '',
-        'Mock payload for future ratio conversion backend.',
-      ].join('\n');
+    try {
+      const ratioStr = selectedDownloadId === 'custom' ? customRatio : selectedDownload.ratio;
+      const [wStr, hStr] = ratioStr.split(':');
 
-      const blob = new Blob([content], { type: 'application/zip' });
-      const url = URL.createObjectURL(blob);
+      const response = await fetch(`${API_URL}/api/custom-ratio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bundleId: bundle.id,
+          widthRatio: wStr,
+          heightRatio: hStr,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process wallpaper bundle');
+      }
+
+      const data = await response.json();
+
+      // Trigger actual browser download pointing to Google Drive
       const link = document.createElement('a');
-
-      link.href = url;
-      link.download = `${bundle.id}_${selectedDownload.id}.zip`;
+      link.href = data.downloadUrl;
+      link.setAttribute('download', '');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       setDownloadState('completed');
-
+    } catch (error) {
+      console.error('Download error:', error);
+      alert(`Download failed: ${error.message}`);
+      setDownloadState('idle');
+    } finally {
       window.setTimeout(() => {
         setDownloadState('idle');
-      }, 1600);
-    }, 900);
+      }, 2000);
+    }
   };
 
   const handleLoginFromPrompt = async () => {
@@ -312,7 +417,7 @@ export default function BundleDetailPage({
 
           <div className="apple-download-panel">
             {supportsLandscapeDownloads ? (
-              <div className="apple-picker-wrapper">
+              <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
                 <div className="apple-picker-container">
                   {activeIndex !== -1 && allOptions.length > 0 && (
                     <div
@@ -329,6 +434,7 @@ export default function BundleDetailPage({
                       className={`apple-picker-option ${selectedDownloadId === option.id ? 'active' : ''}`}
                       onClick={() => setSelectedDownloadId(option.id)}
                     >
+                      {getOptionIcon(option.id)}
                       <span>{option.label}</span>
                     </button>
                   ))}
@@ -352,7 +458,13 @@ export default function BundleDetailPage({
                       className="apple-custom-input"
                     />
                     {!customIsValid && (
-                      <span className="apple-custom-error-text">Enter ratio</span>
+                      <span className="apple-custom-error-text" style={{ fontSize: '0.72rem', color: '#ef4444', minWidth: '120px', display: 'block', marginTop: '4px' }}>
+                        {Number(customRatioWidth) <= 0 || Number(customRatioHeight) <= 0
+                          ? 'Enter valid ratio'
+                          : isLandscape
+                          ? 'Width must be ≥ Height'
+                          : 'Height must be ≥ Width'}
+                      </span>
                     )}
                   </div>
                 )}
@@ -417,21 +529,7 @@ export default function BundleDetailPage({
           </div>
 
           <div className="sidebar-bundles-list">
-            {filteredRelatedBundles.slice(0, 3).map((item) => (
-              <BundleCard
-                key={item.id}
-                bundle={item}
-                onClick={() => onOpenBundle?.(item)}
-                showOverlay={true}
-                className="bundle-card--sidebar-grid"
-              />
-            ))}
-          </div>
-
-          {filteredRelatedBundles.length > 0 && <GoogleAd type="sidebar" />}
-
-          <div className="sidebar-bundles-list" style={{ marginTop: '1.25rem' }}>
-            {filteredRelatedBundles.slice(3).map((item) => (
+            {filteredRelatedBundles.map((item) => (
               <BundleCard
                 key={item.id}
                 bundle={item}
@@ -444,6 +542,8 @@ export default function BundleDetailPage({
               <span className="sidebar-empty-note">No other bundles in this genre.</span>
             )}
           </div>
+
+          {filteredRelatedBundles.length > 0 && <GoogleAd type="sidebar" />}
         </aside>
       </section>
 

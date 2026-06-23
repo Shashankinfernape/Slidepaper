@@ -22,27 +22,13 @@ export default function GoogleAd({ type = 'leaderboard' }) {
     <div className="ad-slot-in-grid">
       <span className="ad-label">Sponsored Ad</span>
       <div className="ad-accent-bar" style={{ width: '60px' }}></div>
-      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.5rem 0 0.25rem 0' }}>
+      <h3 className="ad-title">
         Looking for Custom Themes?
       </h3>
-      <p style={{ fontSize: '0.85rem', lineHeight: 1.5, opacity: 0.8, maxWidth: '240px' }}>
+      <p className="ad-desc">
         Discover curated designer accessories and workspace gear that match your screens.
       </p>
-      <button 
-        style={{
-          backgroundColor: 'var(--text-primary)',
-          color: 'var(--bg-primary)',
-          border: 'none',
-          padding: '0.65rem 1.25rem',
-          borderRadius: 'var(--radius-full)',
-          fontSize: '0.8rem',
-          fontWeight: 700,
-          cursor: 'pointer',
-          marginTop: '0.5rem',
-          transition: 'var(--transition-smooth)'
-        }}
-        onClick={() => window.open('https://google.com', '_blank')}
-      >
+      <button className="ad-cta-btn" onClick={() => window.open('https://google.com', '_blank')}>
         Learn More
       </button>
     </div>
