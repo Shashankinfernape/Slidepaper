@@ -804,14 +804,17 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     const bundleFolderId = folderResponse.data.id;
     console.log(`[Google Drive] Created bundle subfolder. ID: ${bundleFolderId}`);
 
-    // 2. Process, keep local copy, and upload each image to Google Drive in parallel (faster!)
-    console.log(`[Google Drive] Starting parallel upload of ${files.length} images...`);
-    const uploadPromises = files.map(async (file, i) => {
+    // 2. Process, keep local copy, and upload each image to Google Drive sequentially (saves RAM & prevents Render OOM crashes)
+    console.log(`[Google Drive] Starting sequential upload of ${files.length} images...`);
+    const uploadResults = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       const destFilename = `${i}_${file.originalname}`;
       const localDestPath = path.join(bundleAssetsDir, destFilename);
 
-      // Copy to persistent assets asynchronously (non-blocking!)
-      const copyPromise = fs.promises.copyFile(file.path, localDestPath);
+      // Copy to persistent assets
+      await fs.promises.copyFile(file.path, localDestPath);
 
       // Generate a compressed 1080p WebP preview file alongside the original (max width 1920px)
       const previewFilename = `${i}_preview_${file.originalname.split('.')[0]}.webp`;
@@ -825,7 +828,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
         const cmdPrefix = isWin ? 'magick' : 'convert';
         const convertCmd = `${cmdPrefix} "${file.path}" -resize 1920x1080\\> -quality 85 "${previewLocalPath}"`;
         
-        console.log(`[ImageMagick] Generating WebP preview: "${convertCmd}"`);
+        console.log(`[ImageMagick] Generating WebP preview sequentially: "${convertCmd}"`);
         await execPromise(convertCmd);
         previewUploaded = true;
       } catch (magickError) {
@@ -882,23 +885,19 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
         }
       }
 
-      // Wait for original copy to complete if it hasn't already
-      await copyPromise;
-
       // Clean up multer temporary file
       try {
         await fs.promises.unlink(file.path);
       } catch (_) {}
 
-      return {
+      uploadResults.push({
         index: i,
         url: downloadUrl,
         previewUrl: previewDownloadUrl || downloadUrl,
         label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`
-      };
-    });
+      });
+    }
 
-    const uploadResults = await Promise.all(uploadPromises);
     // Sort results to preserve the original selection order
     uploadResults.sort((a, b) => a.index - b.index);
     const imageUrls = uploadResults.map(r => ({ url: r.url, previewUrl: r.previewUrl, label: r.label }));
