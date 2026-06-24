@@ -4466,6 +4466,33 @@ h1, h2, h3, h4, h5, h6 {
   .sidebar-bundles-list {
     grid-template-columns: 1fr;
   }
+
+  /* Two-line ratio picker on phone: icon on top, label below */
+  .apple-picker-container {
+    height: 58px !important;
+  }
+
+  .apple-picker-option {
+    flex-direction: column !important;
+    gap: 3px !important;
+    padding: 0 0.4rem !important;
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    white-space: normal !important;
+    text-align: center !important;
+    line-height: 1.1 !important;
+  }
+
+  .apple-picker-option svg {
+    flex-shrink: 0;
+  }
+
+  .apple-picker-option span {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    text-align: center !important;
+  }
 }
 
 /* When custom ratio is active, collapse selector buttons to icons-only to fit inline perfectly without overlaying */
@@ -5066,10 +5093,5 @@ h1, h2, h3, h4, h5, h6 {
     gap: 0.4rem !important;
     white-space: nowrap !important;
     transition: var(--transition-smooth) !important;
-  }
-
-  /* Fix download page hero overlap on mobile */
-  .bundle-youtube-hero {
-    margin-top: 0.25rem !important;
   }
 }
