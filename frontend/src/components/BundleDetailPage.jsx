@@ -280,18 +280,9 @@ export default function BundleDetailPage({
 
       const data = await response.json();
 
-      // Trigger actual browser download pointing to Google Drive (mobile-friendly fallback)
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        window.location.href = data.downloadUrl;
-      } else {
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.setAttribute('download', '');
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      // Navigate directly to the download URL — avoids popup blockers.
+      // Google Drive's /uc?export=download URL redirects to the zip file directly.
+      window.location.href = data.downloadUrl;
 
       setDownloadState('completed');
     } catch (error) {
