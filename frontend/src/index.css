@@ -121,7 +121,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2.5rem;
+  gap: 1rem;
   position: relative;
   z-index: 30;
   transition: var(--transition-smooth);
@@ -399,6 +399,11 @@ h1, h2, h3, h4, h5, h6 {
   .wallpaper-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  /* Reduce bottom padding on stack container so cards don't add huge visual gap */
+  .stack-container {
+    padding-bottom: 0.6rem;
   }
 }
 
@@ -1100,15 +1105,17 @@ h1, h2, h3, h4, h5, h6 {
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
+    /* Prevent search bar from wrapping to line 2 (which would push genres to line 3) */
+    flex-wrap: wrap;
   }
-  .header-left {
-    flex-shrink: 0;
-  }
+  /* Force logo + search + icons to stay on one line */
+  .header-left,
   .header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
     flex-shrink: 0;
+  }
+  .search-container-header {
+    flex-shrink: 1;
+    min-width: 80px;
   }
   .search-container {
     max-width: 100%;
