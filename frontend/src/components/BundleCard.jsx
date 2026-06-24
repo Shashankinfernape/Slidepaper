@@ -76,6 +76,7 @@ export default function BundleCard({
                                     className.includes('bundle-card--sidebar-preview');
             
             let positionClass = '';
+            let styleProps = {};
 
             if (isSpecialLayout) {
               positionClass = 'hidden';
@@ -99,15 +100,21 @@ export default function BundleCard({
               // Dynamic stack layers (up to 6 layers)
               const distance = (i - activeSlideIndex + len) % len;
               const maxLayers = 6;
-              if (distance < Math.min(len, maxLayers)) {
-                positionClass += ` layer-${distance}`;
+              const visibleLayers = Math.min(len, maxLayers);
+              if (distance < visibleLayers) {
+                positionClass += ' layer-active-stack';
+                const factor = visibleLayers > 1 ? distance / (visibleLayers - 1) : 0;
+                styleProps = {
+                  '--layer-index': distance,
+                  '--layer-factor': factor,
+                };
               } else {
                 positionClass += ' hidden hidden-stack';
               }
             }
 
             return (
-              <div key={i} className={`stack-image-wrapper ${positionClass}`}>
+              <div key={i} className={`stack-image-wrapper ${positionClass}`} style={styleProps}>
                 <img
                   src={image.previewUrl || image.url}
                   alt={image.label}
