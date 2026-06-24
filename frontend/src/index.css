@@ -4385,7 +4385,6 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .bundle-youtube-info,
-  .bundle-youtube-author-block,
   .bundle-youtube-download-row,
   .bundle-youtube-custom-size,
   .bundle-auth-popup-actions {
@@ -4402,11 +4401,21 @@ h1, h2, h3, h4, h5, h6 {
     flex-wrap: wrap;
   }
 
+  .bundle-youtube-author-block {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .youtube-actions-group {
     display: flex;
+    width: 100%;
+    justify-content: flex-start;
     align-items: center;
-    gap: 0.4rem;
-    margin-left: auto;
+    gap: 0.5rem;
+    margin-left: 0;
+    margin-top: 0.5rem;
   }
 
   .apple-download-panel {

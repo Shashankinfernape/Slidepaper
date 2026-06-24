@@ -850,13 +850,14 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
         index: i,
         url: downloadUrl,
         previewUrl: previewDownloadUrl,
-        label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`
+        label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`,
+        size: file.size
       });
     }
 
     // Sort results to preserve the original selection order
     uploadResults.sort((a, b) => a.index - b.index);
-    const imageUrls = uploadResults.map(r => ({ url: r.url, previewUrl: r.previewUrl, label: r.label }));
+    const imageUrls = uploadResults.map(r => ({ url: r.url, previewUrl: r.previewUrl, label: r.label, size: r.size }));
 
     const tagsArray = tags ? tags.split(',').map(t => t.trim()) : [];
     const includesArray = includes ? includes.split(',').map(i => i.trim()) : [];

@@ -175,18 +175,16 @@ export default function BundleDetailPage({
 
   // Size label inside the download button
   const bundleSizeLabel = useMemo(() => {
-    const BUNDLE_RAW_SIZES = {
-      'aetherial-peak': [637538, 631633, 512515],
-      'spectral-drift': [691898, 733907, 646061],
-      'cyber-drift': [646061, 733907, 691898],
-      'solar-flare': [733907, 646061, 512515]
-    };
-
-    const rawSizes = BUNDLE_RAW_SIZES[bundle.id] || [600000, 600000, 600000];
+    // Sum up the sizes of all images in the bundle (with fallback of 1.5MB per image if not defined yet)
+    const sumBytes = bundle.images.reduce((sum, img) => sum + (img.size || 1500000), 0);
 
     if (selectedDownloadId === 'original') {
-      const matchedPreset = presets.find((p) => p.id === 'original');
-      return matchedPreset ? matchedPreset.size : 'Full Size ZIP';
+      const originalZipBytes = sumBytes * 0.95;
+      if (originalZipBytes >= 1024 * 1024) {
+        return `${(originalZipBytes / (1024 * 1024)).toFixed(2)} MB ZIP`;
+      } else {
+        return `${(originalZipBytes / 1024).toFixed(0)} KB ZIP`;
+      }
     }
 
     let w = 16;
@@ -206,7 +204,13 @@ export default function BundleDetailPage({
     }
 
     const targetRatio = w / h;
-    const sourceRatio = 16 / 9; // source images are 16:9
+    let sourceW = 16, sourceH = 9;
+    if (bundle.ratio && bundle.ratio.includes(':')) {
+      const parts = bundle.ratio.split(':');
+      sourceW = parseFloat(parts[0]) || 16;
+      sourceH = parseFloat(parts[1]) || 9;
+    }
+    const sourceRatio = sourceW / sourceH;
 
     let factor = 1.0;
     if (targetRatio > sourceRatio) {
@@ -218,7 +222,6 @@ export default function BundleDetailPage({
     // Clamp factor to avoid division by zero or extreme crops
     factor = Math.max(0.05, Math.min(1.0, factor));
 
-    const sumBytes = rawSizes.reduce((sum, size) => sum + size, 0);
     // 0.95 factor represents ZIP compression on PNG files
     const totalBytes = sumBytes * factor * 0.95;
 
@@ -227,7 +230,7 @@ export default function BundleDetailPage({
     } else {
       return `${(totalBytes / 1024).toFixed(0)} KB ZIP`;
     }
-  }, [selectedDownloadId, customRatioWidth, customRatioHeight, bundle.id, presets]);
+  }, [selectedDownloadId, customRatioWidth, customRatioHeight, bundle.images, bundle.ratio, presets]);
 
   const likeCount =
     bundle.stats.likes + (reaction === 'like' ? 1 : 0) - (reaction === 'dislike' ? 1 : 0);
