@@ -691,7 +691,7 @@ function AppContent() {
       </header>
 
       {/* Main Container Content */}
-      <main style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <main style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {currentView === 'landing' ? (
           <HeroSection onGetStarted={handleGetStarted} bundles={bundles} />
         ) : currentView === 'admin' && (isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') ? (
