@@ -252,6 +252,88 @@ if (!fs.existsSync(cacheDir)) {
   fs.mkdirSync(cacheDir, { recursive: true });
 }
 
+class Semaphore {
+  constructor(max) {
+    this.max = max;
+    this.current = 0;
+    this.queue = [];
+  }
+
+  async acquire() {
+    if (this.current < this.max) {
+      this.current++;
+      return;
+    }
+    return new Promise((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release() {
+    if (this.queue.length > 0) {
+      const next = this.queue.shift();
+      next();
+    } else {
+      this.current--;
+    }
+  }
+}
+
+const proxySemaphore = new Semaphore(2);
+const inFlightDownloads = new Map();
+
+async function pruneProxyCache() {
+  try {
+    const files = fs.readdirSync(cacheDir);
+    const imageFiles = files.filter(f => !f.endsWith('.mime') && !f.endsWith('.tmp'));
+    
+    if (imageFiles.length <= 100) {
+      return;
+    }
+    
+    console.log(`[Cache Prune] Cache size (${imageFiles.length}) exceeds limit of 100. Pruning...`);
+    
+    const fileStats = imageFiles.map(filename => {
+      const filePath = path.join(cacheDir, filename);
+      try {
+        const stat = fs.statSync(filePath);
+        return { filename, mtime: stat.mtimeMs };
+      } catch (e) {
+        return { filename, mtime: 0 };
+      }
+    });
+    
+    fileStats.sort((a, b) => a.mtime - b.mtime);
+    
+    const filesToPrune = fileStats.slice(0, 20);
+    
+    for (const item of filesToPrune) {
+      const filePath = path.join(cacheDir, item.filename);
+      const mimePath = filePath + '.mime';
+      
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (err) {
+        console.warn(`[Cache Prune] Failed to delete cache file ${filePath}:`, err.message);
+      }
+      
+      try {
+        if (fs.existsSync(mimePath)) {
+          fs.unlinkSync(mimePath);
+        }
+      } catch (err) {
+        console.warn(`[Cache Prune] Failed to delete mime file ${mimePath}:`, err.message);
+      }
+    }
+    
+    console.log(`[Cache Prune] Successfully pruned 20 oldest cache entries.`);
+  } catch (error) {
+    console.error('[Cache Prune] Failed to prune cache:', error);
+  }
+}
+
 const uploadsDir = path.join(tempDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -456,6 +538,7 @@ app.post('/api/custom-ratio', async (req, res) => {
   const jobDirName = `${bundleId}_custom_${Date.now()}`;
   const jobDirPath = path.join(tempDir, jobDirName);
   const outputDirPath = path.join(jobDirPath, 'output');
+  let zipPath = null;
 
   try {
     // Create temporary job and output folders
@@ -505,7 +588,7 @@ app.post('/api/custom-ratio', async (req, res) => {
 
     // 3. Package all cropped images into a ZIP archive
     const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
-    const zipPath = path.join(tempDir, zipFilename);
+    zipPath = path.join(tempDir, zipFilename);
     const outputStream = fs.createWriteStream(zipPath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
@@ -573,6 +656,12 @@ app.post('/api/custom-ratio', async (req, res) => {
     try {
       if (fs.existsSync(jobDirPath)) {
         fs.rmSync(jobDirPath, { recursive: true, force: true });
+      }
+    } catch (_) {}
+
+    try {
+      if (zipPath && fs.existsSync(zipPath)) {
+        fs.unlinkSync(zipPath);
       }
     } catch (_) {}
 
@@ -682,40 +771,72 @@ app.get('/api/proxy-image', async (req, res) => {
     }
   }
 
+  let downloadPromise = inFlightDownloads.get(id);
+  if (!downloadPromise) {
+    downloadPromise = (async () => {
+      await proxySemaphore.acquire();
+      const tempCachePath = cachePath + '.tmp';
+      try {
+        if (fs.existsSync(cachePath) && fs.existsSync(mimePath)) {
+          return;
+        }
+
+        // 1. Get file metadata to find mimeType
+        const metadata = await drive.files.get({
+          fileId: id,
+          fields: 'mimeType, size',
+        });
+
+        const mimeType = metadata.data.mimeType || 'image/png';
+
+        // 2. Download file as stream
+        const driveResponse = await drive.files.get(
+          { fileId: id, alt: 'media' },
+          { responseType: 'stream' }
+        );
+
+        const fileWriteStream = fs.createWriteStream(tempCachePath);
+
+        await new Promise((resolve, reject) => {
+          driveResponse.data
+            .pipe(fileWriteStream)
+            .on('finish', resolve)
+            .on('error', reject);
+        });
+
+        // Rename temp file to permanent cache path and write mime type
+        fs.renameSync(tempCachePath, cachePath);
+        fs.writeFileSync(mimePath, mimeType);
+
+        // Trigger cache pruning asynchronously
+        pruneProxyCache().catch(err => console.error('[Cache Pruning Error]:', err));
+
+      } catch (error) {
+        try {
+          if (fs.existsSync(tempCachePath)) {
+            fs.unlinkSync(tempCachePath);
+          }
+        } catch (_) {}
+        throw error;
+      } finally {
+        proxySemaphore.release();
+        inFlightDownloads.delete(id);
+      }
+    })();
+    inFlightDownloads.set(id, downloadPromise);
+  }
+
   try {
-    // 1. Get file metadata to find mimeType
-    const metadata = await drive.files.get({
-      fileId: id,
-      fields: 'mimeType, size',
-    });
+    await downloadPromise;
 
-    const mimeType = metadata.data.mimeType || 'image/png';
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    // 2. Download file as stream
-    const driveResponse = await drive.files.get(
-      { fileId: id, alt: 'media' },
-      { responseType: 'stream' }
-    );
-
-    const tempCachePath = cachePath + '.tmp';
-    const fileWriteStream = fs.createWriteStream(tempCachePath);
-
-    await new Promise((resolve, reject) => {
-      driveResponse.data
-        .pipe(fileWriteStream)
-        .on('finish', resolve)
-        .on('error', reject);
-    });
-
-    // Rename temp file to permanent cache path and write mime type
-    fs.renameSync(tempCachePath, cachePath);
-    fs.writeFileSync(mimePath, mimeType);
-
-    // Serve the cached file
-    return res.sendFile(cachePath);
-
+    if (fs.existsSync(cachePath) && fs.existsSync(mimePath)) {
+      const mimeType = fs.readFileSync(mimePath, 'utf8') || 'image/png';
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.sendFile(cachePath);
+    } else {
+      throw new Error('Cache file was not created successfully');
+    }
   } catch (error) {
     console.error('Error proxying image:', error);
     return res.status(500).json({ error: 'Failed to proxy image from Google Drive', details: error.message });
@@ -1006,6 +1127,18 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
         fs.rmSync(bundleAssetsDir, { recursive: true, force: true });
       }
     } catch (_) {}
+    
+    // Clean up any remaining multer temporary files
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+        } catch (_) {}
+      }
+    }
+
     return res.status(500).json({ error: 'Failed to process and upload new wallpaper bundle', details: error.message });
   }
 });
