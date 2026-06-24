@@ -414,12 +414,16 @@ function AppContent() {
 
   // Refs for closing dropdowns when clicking outside
   const sortRef = useRef(null);
+  const mobileSortRef = useRef(null);
   const profileRef = useRef(null);
 
   // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (sortRef.current && !sortRef.current.contains(event.target)) {
+      if (
+        sortRef.current && !sortRef.current.contains(event.target) &&
+        (!mobileSortRef.current || !mobileSortRef.current.contains(event.target))
+      ) {
         setShowSortMenu(false);
       }
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -681,6 +685,53 @@ function AppContent() {
         {currentView === 'feed' && (
           <div className="genre-tabs-bar">
             <div className="genre-tabs">
+              {/* Mobile Sort Dropdown inside genres scrollable bar */}
+              {(isFeedView || isBundleView) && (
+                <div className="dropdown-container mobile-sort-dropdown" ref={mobileSortRef}>
+                  <button
+                    className="dropdown-trigger"
+                    onClick={() => setShowSortMenu(!showSortMenu)}
+                  >
+                    <span>Sort</span>
+                    <ChevronDown size={14} />
+                  </button>
+                  {showSortMenu && (
+                    <div className="dropdown-menu">
+                      <div
+                        className={`dropdown-item ${sortOption === 'default' ? 'active' : ''}`}
+                        onClick={() => {
+                          setSortOption('default');
+                          setShowSortMenu(false);
+                        }}
+                      >
+                        <span>Default</span>
+                        {sortOption === 'default' && <Check size={14} />}
+                      </div>
+                      <div
+                        className={`dropdown-item ${sortOption === 'views' ? 'active' : ''}`}
+                        onClick={() => {
+                          setSortOption('views');
+                          setShowSortMenu(false);
+                        }}
+                      >
+                        <span>Popularity</span>
+                        {sortOption === 'views' && <Check size={14} />}
+                      </div>
+                      <div
+                        className={`dropdown-item ${sortOption === 'downloads' ? 'active' : ''}`}
+                        onClick={() => {
+                          setSortOption('downloads');
+                          setShowSortMenu(false);
+                        }}
+                      >
+                        <span>Downloads</span>
+                        {sortOption === 'downloads' && <Check size={14} />}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {genres.map((genre) => (
                 <button
                   key={genre}
