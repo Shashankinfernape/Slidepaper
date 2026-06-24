@@ -781,6 +781,11 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: name and image files' });
   }
 
+  // Sort files by original filename in natural ascending order (e.g. Screenshot1 before Screenshot2)
+  files.sort((a, b) => {
+    return a.originalname.localeCompare(b.originalname, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
   const bundleId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   const bundleAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
 

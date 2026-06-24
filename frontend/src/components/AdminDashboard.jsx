@@ -134,6 +134,12 @@ export default function AdminDashboard({ onBack, logout }) {
     setIsDragging(true);
   };
 
+  const sortFilesByName = (filesArray) => {
+    return [...filesArray].sort((a, b) => {
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -142,7 +148,7 @@ export default function AdminDashboard({ onBack, logout }) {
       file.type.startsWith('image/')
     );
     if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+      setSelectedFiles(prev => sortFilesByName([...prev, ...files]));
     }
   };
 
@@ -151,7 +157,7 @@ export default function AdminDashboard({ onBack, logout }) {
       file.type.startsWith('image/')
     );
     if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+      setSelectedFiles(prev => sortFilesByName([...prev, ...files]));
     }
   };
 
