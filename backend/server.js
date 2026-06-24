@@ -669,8 +669,8 @@ app.get('/api/proxy-image', async (req, res) => {
     return res.status(400).json({ error: 'Missing file id' });
   }
 
-  // Redirect the client directly to the Google Drive direct view URL to let browser render it inline
-  const redirectUrl = `https://drive.google.com/uc?export=view&id=${id}`;
+  // Redirect the client directly to the Google UserContent CDN domain which allows hotlinking and instant loading
+  const redirectUrl = `https://lh3.googleusercontent.com/d/${id}`;
   return res.redirect(redirectUrl);
 });
 

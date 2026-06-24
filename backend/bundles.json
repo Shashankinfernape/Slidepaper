@@ -1,1 +1,80 @@
-[]
+[
+  {
+    "id": "cars",
+    "name": "Cars",
+    "description": "No description provided.",
+    "type": "Landscape Wallpaper Pack",
+    "orientation": "landscape",
+    "ratio": "16:9",
+    "ratioOptions": [
+      {
+        "id": "original",
+        "label": "Original",
+        "subtitle": "Uncropped high-res wallpapers",
+        "resolution": "Original",
+        "size": "Full Size ZIP",
+        "formats": [
+          "PNG",
+          "JPG"
+        ]
+      },
+      {
+        "id": "desktop-16-9",
+        "label": "16:9 Desktop",
+        "subtitle": "Core wallpaper set",
+        "resolution": "3840 x 2160",
+        "size": "1.80 MB ZIP",
+        "formats": [
+          "PNG",
+          "JPG"
+        ]
+      },
+      {
+        "id": "ultrawide-21-9",
+        "label": "21:9 Ultrawide",
+        "subtitle": "Panoramic flow crop",
+        "resolution": "5120 x 2160",
+        "size": "1.50 MB ZIP",
+        "formats": [
+          "PNG",
+          "JPG"
+        ]
+      }
+    ],
+    "coverIndex": 0,
+    "images": [
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1JM6JLrv80vp7Mf5EH-OtXWPFeIk6mGv_",
+        "previewUrl": "https://drive.google.com/thumbnail?id=1JM6JLrv80vp7Mf5EH-OtXWPFeIk6mGv_&sz=w1920",
+        "label": "Screen 1: Screenshot634_result"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1VK-IAfb-S2VlpzAt8uJPl_xHWV_kiY4E",
+        "previewUrl": "https://drive.google.com/thumbnail?id=1VK-IAfb-S2VlpzAt8uJPl_xHWV_kiY4E&sz=w1920",
+        "label": "Screen 2: Screenshot632_result"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1Ek582Ykn5RtxgwF1Xh9Z7DH7rFUW8wEn",
+        "previewUrl": "https://drive.google.com/thumbnail?id=1Ek582Ykn5RtxgwF1Xh9Z7DH7rFUW8wEn&sz=w1920",
+        "label": "Screen 3: Screenshot630_result"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1-xG3kHXb8DZfBjPhvXf5-MK9xSg7Nq-V",
+        "previewUrl": "https://drive.google.com/thumbnail?id=1-xG3kHXb8DZfBjPhvXf5-MK9xSg7Nq-V&sz=w1920",
+        "label": "Screen 4: Screenshot628_result"
+      }
+    ],
+    "tags": [],
+    "includes": [],
+    "stats": {
+      "views": 100,
+      "likes": 5,
+      "downloads": 0
+    },
+    "author": {
+      "name": "Google Design Lab",
+      "subscribers": 68400,
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+    }
+  }
+]
