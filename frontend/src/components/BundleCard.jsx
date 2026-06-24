@@ -71,13 +71,39 @@ export default function BundleCard({
       <div className="stack-container">
         <div className="stack-wrapper">
           {images.map((image, i) => {
-            let positionClass = 'hidden';
-            if (i === activeSlideIndex) {
-              positionClass = 'active';
-            } else if (i === (activeSlideIndex + 1) % len) {
-              positionClass = 'next';
-            } else if (i === (activeSlideIndex - 1 + len) % len) {
-              positionClass = 'prev';
+            const isSpecialLayout = className.includes('bundle-card--watch-hero') ||
+                                    className.includes('bundle-card--sidebar-grid') ||
+                                    className.includes('bundle-card--sidebar-preview');
+            
+            let positionClass = '';
+
+            if (isSpecialLayout) {
+              positionClass = 'hidden';
+              if (i === activeSlideIndex) {
+                positionClass = 'active';
+              } else if (i === (activeSlideIndex + 1) % len) {
+                positionClass = 'next';
+              } else if (i === (activeSlideIndex - 1 + len) % len) {
+                positionClass = 'prev';
+              }
+            } else {
+              // Legacy classes for backwards compatibility/animations
+              if (i === activeSlideIndex) {
+                positionClass += ' active';
+              } else if (i === (activeSlideIndex + 1) % len) {
+                positionClass += ' next';
+              } else if (i === (activeSlideIndex - 1 + len) % len) {
+                positionClass += ' prev';
+              }
+
+              // Dynamic stack layers (up to 6 layers)
+              const distance = (i - activeSlideIndex + len) % len;
+              const maxLayers = 6;
+              if (distance < Math.min(len, maxLayers)) {
+                positionClass += ` layer-${distance}`;
+              } else {
+                positionClass += ' hidden hidden-stack';
+              }
             }
 
             return (

@@ -542,6 +542,98 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 1;
 }
 
+/* Dynamic Multi-layered Stacking (Default Cards) */
+.stack-image-wrapper.layer-0 {
+  transform: translate3d(0, 0, 20px) scale(1.02);
+  z-index: 10;
+  opacity: 1;
+}
+.stack-image-wrapper.layer-0 .stack-image-bg {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+
+.stack-image-wrapper.layer-1 {
+  transform: translate3d(-14px, -12px, -10px) scale(0.96);
+  z-index: 9;
+  opacity: 1;
+}
+
+.stack-image-wrapper.layer-2 {
+  transform: translate3d(-28px, -24px, -20px) scale(0.92);
+  z-index: 8;
+  opacity: 1;
+}
+
+.stack-image-wrapper.layer-3 {
+  transform: translate3d(-42px, -36px, -30px) scale(0.88);
+  z-index: 7;
+  opacity: 1;
+}
+
+.stack-image-wrapper.layer-4 {
+  transform: translate3d(-56px, -48px, -40px) scale(0.84);
+  z-index: 6;
+  opacity: 1;
+}
+
+.stack-image-wrapper.layer-5 {
+  transform: translate3d(-70px, -60px, -50px) scale(0.80);
+  z-index: 5;
+  opacity: 1;
+}
+
+.stack-image-wrapper.hidden-stack {
+  transform: translate3d(-84px, -72px, -60px) scale(0.76);
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Expanded stack view on hover */
+.bundle-card:hover .stack-image-wrapper.layer-0 {
+  transform: translate3d(0, 0, 35px) scale(1.03);
+}
+.bundle-card:hover .stack-image-wrapper.layer-0 .stack-image-bg {
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+}
+
+.bundle-card:hover .stack-image-wrapper.layer-1 {
+  transform: translate3d(-22px, -18px, 15px) scale(0.98);
+  opacity: 1;
+}
+
+.bundle-card:hover .stack-image-wrapper.layer-2 {
+  transform: translate3d(-44px, -36px, -5px) scale(0.94);
+  opacity: 1;
+}
+
+.bundle-card:hover .stack-image-wrapper.layer-3 {
+  transform: translate3d(-66px, -54px, -25px) scale(0.90);
+  opacity: 1;
+}
+
+.bundle-card:hover .stack-image-wrapper.layer-4 {
+  transform: translate3d(-88px, -72px, -45px) scale(0.86);
+  opacity: 1;
+}
+
+.bundle-card:hover .stack-image-wrapper.layer-5 {
+  transform: translate3d(-110px, -90px, -65px) scale(0.82);
+  opacity: 1;
+}
+
+/* Hide extra layers for layouts that only support 3 layers */
+.bundle-card--watch-hero .stack-image-wrapper.layer-3,
+.bundle-card--watch-hero .stack-image-wrapper.layer-4,
+.bundle-card--watch-hero .stack-image-wrapper.layer-5,
+.bundle-card--sidebar-grid .stack-image-wrapper.layer-3,
+.bundle-card--sidebar-grid .stack-image-wrapper.layer-4,
+.bundle-card--sidebar-grid .stack-image-wrapper.layer-5 {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
 .bundle-badge {
   position: absolute;
   top: 1.25rem;
