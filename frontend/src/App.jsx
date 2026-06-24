@@ -414,16 +414,12 @@ function AppContent() {
 
   // Refs for closing dropdowns when clicking outside
   const sortRef = useRef(null);
-  const mobileSortRef = useRef(null);
   const profileRef = useRef(null);
 
   // Close menus when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (
-        sortRef.current && !sortRef.current.contains(event.target) &&
-        (!mobileSortRef.current || !mobileSortRef.current.contains(event.target))
-      ) {
+      if (sortRef.current && !sortRef.current.contains(event.target)) {
         setShowSortMenu(false);
       }
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -551,63 +547,8 @@ function AppContent() {
           </div>
         )}
 
-        {/* Right Nav Utilities, Sort, & Authentication */}
+        {/* Right Nav Utilities & Authentication */}
         <div className="header-right">
-          {(isFeedView || isBundleView) && (
-            <div className="dropdown-container header-sort-dropdown" ref={sortRef}>
-              <button
-                className="dropdown-trigger"
-                onClick={() => setShowSortMenu(!showSortMenu)}
-              >
-                <span>Sort</span>
-                <ChevronDown size={14} />
-              </button>
-              {showSortMenu && (
-                <div className="dropdown-menu">
-                  <div
-                    className={`dropdown-item ${sortOption === 'default' ? 'active' : ''}`}
-                    onClick={() => {
-                      setSortOption('default');
-                      setShowSortMenu(false);
-                      if (currentView === 'bundle') {
-                        setCurrentView('feed');
-                      }
-                    }}
-                  >
-                    <span>Default</span>
-                    {sortOption === 'default' && <Check size={14} />}
-                  </div>
-                  <div
-                    className={`dropdown-item ${sortOption === 'views' ? 'active' : ''}`}
-                    onClick={() => {
-                      setSortOption('views');
-                      setShowSortMenu(false);
-                      if (currentView === 'bundle') {
-                        setCurrentView('feed');
-                      }
-                    }}
-                  >
-                    <span>Popularity</span>
-                    {sortOption === 'views' && <Check size={14} />}
-                  </div>
-                  <div
-                    className={`dropdown-item ${sortOption === 'downloads' ? 'active' : ''}`}
-                    onClick={() => {
-                      setSortOption('downloads');
-                      setShowSortMenu(false);
-                      if (currentView === 'bundle') {
-                        setCurrentView('feed');
-                      }
-                    }}
-                  >
-                    <span>Downloads</span>
-                    {sortOption === 'downloads' && <Check size={14} />}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Light/Dark Toggle */}
           <button
             className="theme-toggle-btn"
@@ -685,9 +626,9 @@ function AppContent() {
         {currentView === 'feed' && (
           <div className="genre-tabs-bar">
             <div className="genre-tabs">
-              {/* Mobile Sort Dropdown inside genres scrollable bar */}
+              {/* Sort Dropdown inside genres scrollable bar (both PC & mobile) */}
               {(isFeedView || isBundleView) && (
-                <div className="dropdown-container mobile-sort-dropdown" ref={mobileSortRef}>
+                <div className="dropdown-container genres-sort-dropdown" ref={sortRef}>
                   <button
                     className="dropdown-trigger"
                     onClick={() => setShowSortMenu(!showSortMenu)}
@@ -702,6 +643,7 @@ function AppContent() {
                         onClick={() => {
                           setSortOption('default');
                           setShowSortMenu(false);
+                          if (currentView === 'bundle') setCurrentView('feed');
                         }}
                       >
                         <span>Default</span>
@@ -712,6 +654,7 @@ function AppContent() {
                         onClick={() => {
                           setSortOption('views');
                           setShowSortMenu(false);
+                          if (currentView === 'bundle') setCurrentView('feed');
                         }}
                       >
                         <span>Popularity</span>
@@ -722,6 +665,7 @@ function AppContent() {
                         onClick={() => {
                           setSortOption('downloads');
                           setShowSortMenu(false);
+                          if (currentView === 'bundle') setCurrentView('feed');
                         }}
                       >
                         <span>Downloads</span>
@@ -747,7 +691,7 @@ function AppContent() {
       </header>
 
       {/* Main Container Content */}
-      <main style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <main style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {currentView === 'landing' ? (
           <HeroSection onGetStarted={handleGetStarted} bundles={bundles} />
         ) : currentView === 'admin' && (isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') ? (
