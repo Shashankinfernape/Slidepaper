@@ -8,7 +8,18 @@ import BundleDetailPage from './components/BundleDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminDashboard from './components/AdminDashboard';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+// Automatically upgrade HTTP to HTTPS in production to avoid mixed content block on mobile
+if (
+  typeof window !== 'undefined' &&
+  window.location.protocol === 'https:' &&
+  API_URL.startsWith('http://') &&
+  !API_URL.includes('localhost') &&
+  !API_URL.includes('127.0.0.1')
+) {
+  API_URL = API_URL.replace('http://', 'https://');
+}
 
 const getProxiedImageUrl = (url) => {
   if (!url) return '';

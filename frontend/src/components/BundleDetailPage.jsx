@@ -11,7 +11,18 @@ import { WALLPAPER_BUNDLES } from '../data';
 import BundleCard from './BundleCard';
 import GoogleAd from './GoogleAd';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+// Automatically upgrade HTTP to HTTPS in production to avoid mixed content block on mobile
+if (
+  typeof window !== 'undefined' &&
+  window.location.protocol === 'https:' &&
+  API_URL.startsWith('http://') &&
+  !API_URL.includes('localhost') &&
+  !API_URL.includes('127.0.0.1')
+) {
+  API_URL = API_URL.replace('http://', 'https://');
+}
 
 const SAMPLE_RATIOS = [
   { w: '16', h: '9' },
@@ -266,13 +277,18 @@ export default function BundleDetailPage({
 
       const data = await response.json();
 
-      // Trigger actual browser download pointing to Google Drive
-      const link = document.createElement('a');
-      link.href = data.downloadUrl;
-      link.setAttribute('download', '');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Trigger actual browser download pointing to Google Drive (mobile-friendly fallback)
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        window.location.href = data.downloadUrl;
+      } else {
+        const link = document.createElement('a');
+        link.href = data.downloadUrl;
+        link.setAttribute('download', '');
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
       setDownloadState('completed');
     } catch (error) {
