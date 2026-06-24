@@ -550,7 +550,7 @@ function AppContent() {
         {/* Right Nav Utilities, Sort, & Authentication */}
         <div className="header-right">
           {(isFeedView || isBundleView) && (
-            <div className="dropdown-container" ref={sortRef}>
+            <div className="dropdown-container header-sort-dropdown" ref={sortRef}>
               <button
                 className="dropdown-trigger"
                 onClick={() => setShowSortMenu(!showSortMenu)}
@@ -633,7 +633,7 @@ function AppContent() {
 
           {/* Firebase Authentication controls */}
           {user ? (
-            <div className="dropdown-container" ref={profileRef}>
+            <div className="dropdown-container header-profile-dropdown" ref={profileRef}>
               <div
                 className="profile-badge"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -676,6 +676,23 @@ function AppContent() {
             </button>
           )}
         </div>
+
+        {/* Genre Tabs Bar (Only on feed view) */}
+        {currentView === 'feed' && (
+          <div className="genre-tabs-bar">
+            <div className="genre-tabs">
+              {genres.map((genre) => (
+                <button
+                  key={genre}
+                  className={`genre-tab-btn ${selectedGenre === genre ? 'active' : ''}`}
+                  onClick={() => setSelectedGenre(genre)}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Container Content */}
@@ -699,20 +716,6 @@ function AppContent() {
           />
         ) : (
           <>
-            <div className="genre-tabs-bar">
-              <div className="genre-tabs">
-                {genres.map((genre) => (
-                  <button
-                    key={genre}
-                    className={`genre-tab-btn ${selectedGenre === genre ? 'active' : ''}`}
-                    onClick={() => setSelectedGenre(genre)}
-                  >
-                    {genre}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div>
               <WallpaperGrid
                 bundles={sortedBundles}
