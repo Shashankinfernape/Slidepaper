@@ -248,8 +248,15 @@ export default function AdminDashboard({ onBack, logout }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to publish wallpaper bundle.');
+        const errorText = await response.text();
+        let errorMessage = 'Failed to publish wallpaper bundle.';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch (_) {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       alert('Wallpaper bundle uploaded and published successfully!');
@@ -268,7 +275,11 @@ export default function AdminDashboard({ onBack, logout }) {
       setActiveTab('bundles');
     } catch (error) {
       console.error('Upload failed:', error);
-      alert(`Publishing failed: ${error.message}`);
+      let msg = error.message;
+      if (msg.includes('Failed to fetch')) {
+        msg = 'Failed to connect to the backend server. Please make sure your backend server is running (npm start in the backend directory).';
+      }
+      alert(`Publishing failed: ${msg}`);
     } finally {
       setUploading(false);
     }

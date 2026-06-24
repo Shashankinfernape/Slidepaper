@@ -296,7 +296,7 @@ export default function BundleDetailPage({
   };
 
   const allBundlesList = useMemo(() => {
-    return bundles && bundles.length > 0 ? bundles : WALLPAPER_BUNDLES;
+    return bundles || [];
   }, [bundles]);
 
   const genres = useMemo(() => {

@@ -865,12 +865,20 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       const previewFilename = `${i}_preview_${file.originalname.split('.')[0]}.webp`;
       const previewLocalPath = path.join(bundleAssetsDir, previewFilename);
       
-      const isWin = process.platform === 'win32';
-      const cmdPrefix = isWin ? 'magick' : 'convert';
-      const convertCmd = `${cmdPrefix} "${file.path}" -resize 1920x1080\\> -quality 85 "${previewLocalPath}"`;
-      
-      console.log(`[ImageMagick] Generating WebP preview: "${convertCmd}"`);
-      await execPromise(convertCmd);
+      let previewUploaded = false;
+      let previewDownloadUrl = null;
+
+      try {
+        const isWin = process.platform === 'win32';
+        const cmdPrefix = isWin ? 'magick' : 'convert';
+        const convertCmd = `${cmdPrefix} "${file.path}" -resize 1920x1080\\> -quality 85 "${previewLocalPath}"`;
+        
+        console.log(`[ImageMagick] Generating WebP preview: "${convertCmd}"`);
+        await execPromise(convertCmd);
+        previewUploaded = true;
+      } catch (magickError) {
+        console.warn(`[ImageMagick] WebP conversion failed or ImageMagick is not installed. Falling back to original image for preview. Error:`, magickError.message);
+      }
 
       // Upload original file to Google Drive
       const fileMetadata = {
@@ -894,27 +902,33 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       });
       const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
 
-      // Upload WebP preview file to Google Drive
-      const previewMetadata = {
-        name: previewFilename,
-        parents: [bundleFolderId]
-      };
-      const previewMedia = {
-        mimeType: 'image/webp',
-        body: fs.createReadStream(previewLocalPath)
-      };
-      const drivePreviewFile = await drive.files.create({
-        requestBody: previewMetadata,
-        media: previewMedia,
-        fields: 'id, name'
-      });
-      const previewFileId = drivePreviewFile.data.id;
-      console.log(`[Google Drive] Uploaded preview WebP "${previewFilename}" ID: ${previewFileId}`);
-      await drive.permissions.create({
-        fileId: previewFileId,
-        requestBody: { role: 'reader', type: 'anyone' }
-      });
-      const previewDownloadUrl = `https://drive.google.com/uc?export=download&id=${previewFileId}`;
+      // Upload WebP preview file to Google Drive if successfully converted
+      if (previewUploaded) {
+        try {
+          const previewMetadata = {
+            name: previewFilename,
+            parents: [bundleFolderId]
+          };
+          const previewMedia = {
+            mimeType: 'image/webp',
+            body: fs.createReadStream(previewLocalPath)
+          };
+          const drivePreviewFile = await drive.files.create({
+            requestBody: previewMetadata,
+            media: previewMedia,
+            fields: 'id, name'
+          });
+          const previewFileId = drivePreviewFile.data.id;
+          console.log(`[Google Drive] Uploaded preview WebP "${previewFilename}" ID: ${previewFileId}`);
+          await drive.permissions.create({
+            fileId: previewFileId,
+            requestBody: { role: 'reader', type: 'anyone' }
+          });
+          previewDownloadUrl = `https://drive.google.com/uc?export=download&id=${previewFileId}`;
+        } catch (uploadPreviewError) {
+          console.error(`[Google Drive] Failed to upload preview WebP "${previewFilename}":`, uploadPreviewError.message);
+        }
+      }
 
       // Wait for original copy to complete if it hasn't already
       await copyPromise;
@@ -927,7 +941,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       return {
         index: i,
         url: downloadUrl,
-        previewUrl: previewDownloadUrl,
+        previewUrl: previewDownloadUrl || downloadUrl,
         label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`
       };
     });

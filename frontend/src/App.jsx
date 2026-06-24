@@ -27,9 +27,20 @@ function HeroSection({ onGetStarted, bundles }) {
     return bundles.find(b => b.isHero) || bundles[0];
   }, [bundles]);
 
-  const sampleImages = heroBundle && heroBundle.images && heroBundle.images.length >= 3
-    ? heroBundle.images 
-    : WALLPAPER_BUNDLES[0].images;
+  const sampleImages = useMemo(() => {
+    if (!heroBundle || !heroBundle.images || heroBundle.images.length === 0) {
+      return null;
+    }
+    const imgs = heroBundle.images;
+    if (imgs.length >= 3) {
+      return [imgs[0], imgs[1], imgs[2]];
+    } else if (imgs.length === 2) {
+      return [imgs[0], imgs[1], imgs[0]];
+    } else if (imgs.length === 1) {
+      return [imgs[0], imgs[0], imgs[0]];
+    }
+    return null;
+  }, [heroBundle]);
 
   return (
     <section className="hero-section">
@@ -38,203 +49,212 @@ function HeroSection({ onGetStarted, bundles }) {
 
       {/* Horizontal Sequence Row (1 -> Cinematic Double Chevron -> 2 -> Cinematic Double Chevron -> 3) */}
       <div className="hero-visual-row">
-        <div className="sequence-card">
-          <img src={sampleImages[0].previewUrl || sampleImages[0].url} alt={sampleImages[0].label} className="sequence-img" />
-        </div>
+        {sampleImages ? (
+          <>
+            <div className="sequence-card">
+              <img src={sampleImages[0].previewUrl || sampleImages[0].url} alt={sampleImages[0].label} className="sequence-img" />
+            </div>
 
-        {/* Cinematic Double-Chevron Crystal Arrow */}
-        <div className="glassy-arrow" title="Transition Sequence">
-          <svg width="80" height="50" viewBox="0 0 80 50" style={{ overflow: 'visible' }}>
-            <defs>
-              {/* Cinematic Chrome-Glass Gradient */}
-              <linearGradient id="cinematicGlass" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-                <stop offset="30%" stopColor="#e5e7eb" stopOpacity="0.35" />
-                <stop offset="70%" stopColor="#ffffff" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#9ca3af" stopOpacity="0.15" />
-              </linearGradient>
+            {/* Cinematic Double-Chevron Crystal Arrow */}
+            <div className="glassy-arrow" title="Transition Sequence">
+              <svg width="80" height="50" viewBox="0 0 80 50" style={{ overflow: 'visible' }}>
+                <defs>
+                  {/* Cinematic Chrome-Glass Gradient */}
+                  <linearGradient id="cinematicGlass" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                    <stop offset="30%" stopColor="#e5e7eb" stopOpacity="0.35" />
+                    <stop offset="70%" stopColor="#ffffff" stopOpacity="0.85" />
+                    <stop offset="100%" stopColor="#9ca3af" stopOpacity="0.15" />
+                  </linearGradient>
 
-              {/* Anamorphic Flare Gradient */}
-              <linearGradient id="flareGrad" x1="0%" y1="50%" x2="100%" y2="50%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-              </linearGradient>
+                  {/* Anamorphic Flare Gradient */}
+                  <linearGradient id="flareGrad" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+                    <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                  </linearGradient>
 
-              {/* Cinematic Glass Shadow & Glow */}
-              <filter id="cinematicGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.6" />
-                <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#ffffff" floodOpacity="0.15" />
-              </filter>
-            </defs>
+                  {/* Cinematic Glass Shadow & Glow */}
+                  <filter id="cinematicGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.6" />
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#ffffff" floodOpacity="0.15" />
+                  </filter>
+                </defs>
 
-            {/* Left Chevron (Faded glass motion trail) */}
-            <path
-              d="M16 10l15 15-15 15"
-              fill="none"
-              stroke="url(#cinematicGlass)"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.25"
-            />
-            <path
-              d="M15.5 10.5l14.5 14.5-14.5 14.5"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.35"
-            />
+                {/* Left Chevron (Faded glass motion trail) */}
+                <path
+                  d="M16 10l15 15-15 15"
+                  fill="none"
+                  stroke="url(#cinematicGlass)"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.25"
+                />
+                <path
+                  d="M15.5 10.5l14.5 14.5-14.5 14.5"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.35"
+                />
 
-            {/* Right Chevron (Main solid glass body shadow) */}
-            <path
-              d="M32 10l15 15-15 15"
-              fill="none"
-              stroke="#000000"
-              strokeWidth="9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.5"
-              style={{ filter: 'blur(3px)' }}
-            />
+                {/* Right Chevron (Main solid glass body shadow) */}
+                <path
+                  d="M32 10l15 15-15 15"
+                  fill="none"
+                  stroke="#000000"
+                  strokeWidth="9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.5"
+                  style={{ filter: 'blur(3px)' }}
+                />
 
-            {/* Right Chevron (Main solid glass body) */}
-            <path
-              d="M32 10l15 15-15 15"
-              fill="none"
-              stroke="url(#cinematicGlass)"
-              strokeWidth="7.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter="url(#cinematicGlow)"
-            />
+                {/* Right Chevron (Main solid glass body) */}
+                <path
+                  d="M32 10l15 15-15 15"
+                  fill="none"
+                  stroke="url(#cinematicGlass)"
+                  strokeWidth="7.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  filter="url(#cinematicGlow)"
+                />
 
-            {/* Specular Light Reflection (Caught on upper edge) */}
-            <path
-              d="M30.5 11l14 14-14 14"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.95"
-            />
+                {/* Specular Light Reflection (Caught on upper edge) */}
+                <path
+                  d="M30.5 11l14 14-14 14"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.95"
+                />
 
-            {/* Anamorphic Light Flare on the main chevron apex */}
-            <path
-              d="M45 13l4 12-4 12"
-              fill="none"
-              stroke="url(#flareGrad)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              opacity="0.8"
-              style={{ filter: 'blur(0.5px)' }}
-            />
-          </svg>
-        </div>
+                {/* Anamorphic Light Flare on the main chevron apex */}
+                <path
+                  d="M45 13l4 12-4 12"
+                  fill="none"
+                  stroke="url(#flareGrad)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  opacity="0.8"
+                  style={{ filter: 'blur(0.5px)' }}
+                />
+              </svg>
+            </div>
 
-        <div className="sequence-card">
-          <img src={sampleImages[1].previewUrl || sampleImages[1].url} alt={sampleImages[1].label} className="sequence-img" />
-        </div>
+            <div className="sequence-card">
+              <img src={sampleImages[1].previewUrl || sampleImages[1].url} alt={sampleImages[1].label} className="sequence-img" />
+            </div>
 
-        {/* Cinematic Double-Chevron Crystal Arrow */}
-        <div className="glassy-arrow" title="Transition Sequence">
-          <svg width="80" height="50" viewBox="0 0 80 50" style={{ overflow: 'visible' }}>
-            <defs>
-              {/* Cinematic Chrome-Glass Gradient */}
-              <linearGradient id="cinematicGlass3" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-                <stop offset="30%" stopColor="#e5e7eb" stopOpacity="0.35" />
-                <stop offset="70%" stopColor="#ffffff" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#9ca3af" stopOpacity="0.15" />
-              </linearGradient>
+            {/* Cinematic Double-Chevron Crystal Arrow */}
+            <div className="glassy-arrow" title="Transition Sequence">
+              <svg width="80" height="50" viewBox="0 0 80 50" style={{ overflow: 'visible' }}>
+                <defs>
+                  {/* Cinematic Chrome-Glass Gradient */}
+                  <linearGradient id="cinematicGlass3" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                    <stop offset="30%" stopColor="#e5e7eb" stopOpacity="0.35" />
+                    <stop offset="70%" stopColor="#ffffff" stopOpacity="0.85" />
+                    <stop offset="100%" stopColor="#9ca3af" stopOpacity="0.15" />
+                  </linearGradient>
 
-              {/* Anamorphic Flare Gradient */}
-              <linearGradient id="flareGrad3" x1="0%" y1="50%" x2="100%" y2="50%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-              </linearGradient>
+                  {/* Anamorphic Flare Gradient */}
+                  <linearGradient id="flareGrad3" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+                    <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+                  </linearGradient>
 
-              {/* Cinematic Glass Shadow & Glow */}
-              <filter id="cinematicGlow3" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.6" />
-                <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#ffffff" floodOpacity="0.15" />
-              </filter>
-            </defs>
+                  {/* Cinematic Glass Shadow & Glow */}
+                  <filter id="cinematicGlow3" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000000" floodOpacity="0.6" />
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#ffffff" floodOpacity="0.15" />
+                  </filter>
+                </defs>
 
-            {/* Left Chevron (Faded glass motion trail) */}
-            <path
-              d="M16 10l15 15-15 15"
-              fill="none"
-              stroke="url(#cinematicGlass3)"
-              strokeWidth="5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.25"
-            />
-            <path
-              d="M15.5 10.5l14.5 14.5-14.5 14.5"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.35"
-            />
+                {/* Left Chevron (Faded glass motion trail) */}
+                <path
+                  d="M16 10l15 15-15 15"
+                  fill="none"
+                  stroke="url(#cinematicGlass3)"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.25"
+                />
+                <path
+                  d="M15.5 10.5l14.5 14.5-14.5 14.5"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.35"
+                />
 
-            {/* Right Chevron (Main solid glass body shadow) */}
-            <path
-              d="M32 10l15 15-15 15"
-              fill="none"
-              stroke="#000000"
-              strokeWidth="9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.5"
-              style={{ filter: 'blur(3px)' }}
-            />
+                {/* Right Chevron (Main solid glass body shadow) */}
+                <path
+                  d="M32 10l15 15-15 15"
+                  fill="none"
+                  stroke="#000000"
+                  strokeWidth="9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.5"
+                  style={{ filter: 'blur(3px)' }}
+                />
 
-            {/* Right Chevron (Main solid glass body) */}
-            <path
-              d="M32 10l15 15-15 15"
-              fill="none"
-              stroke="url(#cinematicGlass3)"
-              strokeWidth="7.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter="url(#cinematicGlow3)"
-            />
+                {/* Right Chevron (Main solid glass body) */}
+                <path
+                  d="M32 10l15 15-15 15"
+                  fill="none"
+                  stroke="url(#cinematicGlass3)"
+                  strokeWidth="7.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  filter="url(#cinematicGlow3)"
+                />
 
-            {/* Specular Light Reflection (Caught on upper edge) */}
-            <path
-              d="M30.5 11l14 14-14 14"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.95"
-            />
+                {/* Specular Light Reflection (Caught on upper edge) */}
+                <path
+                  d="M30.5 11l14 14-14 14"
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  opacity="0.95"
+                />
 
-            {/* Anamorphic Light Flare on the main chevron apex */}
-            <path
-              d="M45 13l4 12-4 12"
-              fill="none"
-              stroke="url(#flareGrad3)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              opacity="0.8"
-              style={{ filter: 'blur(0.5px)' }}
-            />
-          </svg>
-        </div>
+                {/* Anamorphic Light Flare on the main chevron apex */}
+                <path
+                  d="M45 13l4 12-4 12"
+                  fill="none"
+                  stroke="url(#flareGrad3)"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  opacity="0.8"
+                  style={{ filter: 'blur(0.5px)' }}
+                />
+              </svg>
+            </div>
 
-        <div className="sequence-card">
-          <img src={sampleImages[2].previewUrl || sampleImages[2].url} alt={sampleImages[2].label} className="sequence-img" />
-        </div>
+            <div className="sequence-card">
+              <img src={sampleImages[2].previewUrl || sampleImages[2].url} alt={sampleImages[2].label} className="sequence-img" />
+            </div>
+          </>
+        ) : (
+          <div style={{ color: 'var(--text-secondary)', padding: '2rem', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            <div className="download-spinner-tiny" style={{ borderTopColor: 'var(--color-google-blue)', width: '20px', height: '20px' }}></div>
+            <span style={{ marginLeft: '10px' }}>Loading screen sequence...</span>
+          </div>
+        )}
       </div>
 
       {/* Underneath Action Button */}
@@ -348,7 +368,7 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
   const [sortOption, setSortOption] = useState('default'); // default, views, downloads
-  const [bundles, setBundles] = useState(WALLPAPER_BUNDLES);
+  const [bundles, setBundles] = useState([]);
   const [activeBundle, setActiveBundle] = useState(null);
 
   // Fetch bundles dynamically from backend JSON database
@@ -359,7 +379,7 @@ function AppContent() {
         throw new Error('API server returned error status');
       })
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           // Normalize image URLs by replacing localhost:5001 and proxying Google Drive links
           const normalized = data.map(bundle => ({
             ...bundle,
