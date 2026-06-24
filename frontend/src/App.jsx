@@ -22,8 +22,13 @@ const getProxiedImageUrl = (url) => {
 };
 
 function HeroSection({ onGetStarted, bundles }) {
-  const sampleImages = bundles && bundles.length > 0 && bundles[0].images && bundles[0].images.length >= 3
-    ? bundles[0].images 
+  const heroBundle = useMemo(() => {
+    if (!bundles || bundles.length === 0) return null;
+    return bundles.find(b => b.isHero) || bundles[0];
+  }, [bundles]);
+
+  const sampleImages = heroBundle && heroBundle.images && heroBundle.images.length >= 3
+    ? heroBundle.images 
     : WALLPAPER_BUNDLES[0].images;
 
   return (
@@ -34,7 +39,7 @@ function HeroSection({ onGetStarted, bundles }) {
       {/* Horizontal Sequence Row (1 -> Cinematic Double Chevron -> 2 -> Cinematic Double Chevron -> 3) */}
       <div className="hero-visual-row">
         <div className="sequence-card">
-          <img src={sampleImages[0].url} alt={sampleImages[0].label} className="sequence-img" />
+          <img src={sampleImages[0].previewUrl || sampleImages[0].url} alt={sampleImages[0].label} className="sequence-img" />
         </div>
 
         {/* Cinematic Double-Chevron Crystal Arrow */}
@@ -131,7 +136,7 @@ function HeroSection({ onGetStarted, bundles }) {
         </div>
 
         <div className="sequence-card">
-          <img src={sampleImages[1].url} alt={sampleImages[1].label} className="sequence-img" />
+          <img src={sampleImages[1].previewUrl || sampleImages[1].url} alt={sampleImages[1].label} className="sequence-img" />
         </div>
 
         {/* Cinematic Double-Chevron Crystal Arrow */}
@@ -228,7 +233,7 @@ function HeroSection({ onGetStarted, bundles }) {
         </div>
 
         <div className="sequence-card">
-          <img src={sampleImages[2].url} alt={sampleImages[2].label} className="sequence-img" />
+          <img src={sampleImages[2].previewUrl || sampleImages[2].url} alt={sampleImages[2].label} className="sequence-img" />
         </div>
       </div>
 
@@ -360,7 +365,8 @@ function AppContent() {
             ...bundle,
             images: bundle.images.map(img => ({
               ...img,
-              url: getProxiedImageUrl(img.url)
+              url: getProxiedImageUrl(img.url),
+              previewUrl: img.previewUrl ? getProxiedImageUrl(img.previewUrl) : undefined
             }))
           }));
           setBundles(normalized);

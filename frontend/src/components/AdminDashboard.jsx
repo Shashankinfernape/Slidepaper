@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign
+  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
@@ -157,6 +157,33 @@ export default function AdminDashboard({ onBack, logout }) {
 
   const removeFile = (indexToRemove) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleSetHeroBundle = async (bundleId, bundleName) => {
+    try {
+      const response = await fetch(`${API_URL}/api/set-hero-bundle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bundleId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update hero bundle.');
+      }
+
+      alert(`"${bundleName}" pinned as the Home Page Hero successfully!`);
+      // Update local bundles state to reflect the change
+      setBundles(prev => prev.map(b => ({
+        ...b,
+        isHero: b.id === bundleId
+      })));
+    } catch (err) {
+      console.error('Error setting hero bundle:', err);
+      alert(`Setting hero failed: ${err.message}`);
+    }
   };
 
   const handleDeleteBundle = async (bundleId, bundleName) => {
@@ -550,6 +577,43 @@ export default function AdminDashboard({ onBack, logout }) {
                         <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.likes || 0}</span>
                       </div>
                     </div>
+
+                    {bundle.isHero ? (
+                      <span style={{
+                        padding: '6px 12px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        background: 'rgba(66, 133, 244, 0.1)',
+                        color: 'var(--color-google-blue)',
+                        border: '1px solid rgba(66, 133, 244, 0.2)',
+                        borderRadius: '6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <Check size={14} /> Pinned Hero
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleSetHeroBundle(bundle.id, bundle.name)}
+                        className="admin-btn secondary"
+                        style={{
+                          padding: '8px 12px',
+                          border: '1px solid var(--border-color)',
+                          background: 'var(--bg-secondary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          borderRadius: '6px',
+                          fontWeight: 500,
+                          transition: 'all 0.2s ease',
+                          fontSize: '0.78rem'
+                        }}
+                      >
+                        Pin as Hero
+                      </button>
+                    )}
 
                     <button 
                       onClick={() => handleDeleteBundle(bundle.id, bundle.name)}

@@ -83,7 +83,7 @@ export default function BundleCard({
             return (
               <div key={i} className={`stack-image-wrapper ${positionClass}`}>
                 <img
-                  src={image.url}
+                  src={image.previewUrl || image.url}
                   alt={image.label}
                   className="stack-image-bg"
                 />

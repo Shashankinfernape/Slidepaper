@@ -134,7 +134,7 @@ export default function ContinuityPreviewer({ bundle, onClose }) {
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
                   {/* Monitor Body */}
                   <div className="monitor-frame">
-                    <SecureCanvas key={img.url} imageUrl={img.url} />
+                    <SecureCanvas key={img.previewUrl || img.url} imageUrl={img.previewUrl || img.url} />
                   </div>
                   {/* Monitor Stand */}
                   <div className="monitor-stand"></div>

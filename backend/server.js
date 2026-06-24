@@ -758,17 +758,61 @@ app.get('/api/drive-status', async (req, res) => {
   }
 });
 
-// Endpoint: Fetch all wallpaper bundles
+// Endpoint: Fetch all wallpaper bundles (sorted alphabetically)
 app.get('/api/bundles', (req, res) => {
   try {
     if (!fs.existsSync(BUNDLES_PATH)) {
       fs.writeFileSync(BUNDLES_PATH, JSON.stringify(INITIAL_BUNDLES, null, 2));
     }
     const data = fs.readFileSync(BUNDLES_PATH, 'utf-8');
-    return res.status(200).json(JSON.parse(data));
+    const bundles = JSON.parse(data);
+    
+    // Alphanumeric name sort (natural sort)
+    bundles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    
+    return res.status(200).json(bundles);
   } catch (error) {
     console.error('Error fetching bundles database:', error);
     return res.status(500).json({ error: 'Failed to retrieve wallpaper bundles list' });
+  }
+});
+
+// Endpoint: Pin a wallpaper bundle to the Home Page Hero Animation
+app.post('/api/set-hero-bundle', async (req, res) => {
+  const { bundleId } = req.body;
+  if (!bundleId) {
+    return res.status(400).json({ error: 'Missing bundleId parameter' });
+  }
+
+  try {
+    const data = fs.readFileSync(BUNDLES_PATH, 'utf-8');
+    const bundles = JSON.parse(data);
+    
+    let found = false;
+    const updated = bundles.map(b => {
+      if (b.id === bundleId) {
+        b.isHero = true;
+        found = true;
+      } else {
+        b.isHero = false;
+      }
+      return b;
+    });
+
+    if (!found) {
+      return res.status(404).json({ error: `Bundle ${bundleId} not found` });
+    }
+
+    fs.writeFileSync(BUNDLES_PATH, JSON.stringify(updated, null, 2));
+    console.log(`[Database] Set bundle "${bundleId}" as home hero.`);
+    
+    // Sync update to Google Drive
+    await saveBundlesToDrive();
+
+    return res.status(200).json({ success: true, message: `Successfully pinned bundle "${bundleId}" as home hero.` });
+  } catch (error) {
+    console.error('Failed to set hero bundle:', error);
+    return res.status(500).json({ error: 'Failed to update hero bundle setting', details: error.message });
   }
 });
 
@@ -817,34 +861,62 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       // Copy to persistent assets asynchronously (non-blocking!)
       const copyPromise = fs.promises.copyFile(file.path, localDestPath);
 
+      // Generate a compressed 1080p WebP preview file alongside the original (max width 1920px)
+      const previewFilename = `${i}_preview_${file.originalname.split('.')[0]}.webp`;
+      const previewLocalPath = path.join(bundleAssetsDir, previewFilename);
+      
+      const isWin = process.platform === 'win32';
+      const cmdPrefix = isWin ? 'magick' : 'convert';
+      const convertCmd = `${cmdPrefix} "${file.path}" -resize 1920x1080\\> -quality 85 "${previewLocalPath}"`;
+      
+      console.log(`[ImageMagick] Generating WebP preview: "${convertCmd}"`);
+      await execPromise(convertCmd);
+
+      // Upload original file to Google Drive
       const fileMetadata = {
         name: file.originalname,
         parents: [bundleFolderId]
       };
-      
       const media = {
         mimeType: file.mimetype,
         body: fs.createReadStream(file.path)
       };
-      
       const driveFile = await drive.files.create({
         requestBody: fileMetadata,
         media: media,
         fields: 'id, name'
       });
-      
       const fileId = driveFile.data.id;
-      console.log(`[Google Drive] Uploaded file "${file.originalname}" ID: ${fileId}`);
-      
-      // Make file publicly readable
+      console.log(`[Google Drive] Uploaded original file "${file.originalname}" ID: ${fileId}`);
       await drive.permissions.create({
         fileId: fileId,
         requestBody: { role: 'reader', type: 'anyone' }
       });
-      
       const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      
-      // Wait for copy to complete if it hasn't already
+
+      // Upload WebP preview file to Google Drive
+      const previewMetadata = {
+        name: previewFilename,
+        parents: [bundleFolderId]
+      };
+      const previewMedia = {
+        mimeType: 'image/webp',
+        body: fs.createReadStream(previewLocalPath)
+      };
+      const drivePreviewFile = await drive.files.create({
+        requestBody: previewMetadata,
+        media: previewMedia,
+        fields: 'id, name'
+      });
+      const previewFileId = drivePreviewFile.data.id;
+      console.log(`[Google Drive] Uploaded preview WebP "${previewFilename}" ID: ${previewFileId}`);
+      await drive.permissions.create({
+        fileId: previewFileId,
+        requestBody: { role: 'reader', type: 'anyone' }
+      });
+      const previewDownloadUrl = `https://drive.google.com/uc?export=download&id=${previewFileId}`;
+
+      // Wait for original copy to complete if it hasn't already
       await copyPromise;
 
       // Clean up multer temporary file
@@ -855,6 +927,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       return {
         index: i,
         url: downloadUrl,
+        previewUrl: previewDownloadUrl,
         label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`
       };
     });
@@ -862,7 +935,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     const uploadResults = await Promise.all(uploadPromises);
     // Sort results to preserve the original selection order
     uploadResults.sort((a, b) => a.index - b.index);
-    const imageUrls = uploadResults.map(r => ({ url: r.url, label: r.label }));
+    const imageUrls = uploadResults.map(r => ({ url: r.url, previewUrl: r.previewUrl, label: r.label }));
 
     const tagsArray = tags ? tags.split(',').map(t => t.trim()) : [];
     const includesArray = includes ? includes.split(',').map(i => i.trim()) : [];

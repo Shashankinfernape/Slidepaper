@@ -1,295 +1,5 @@
 [
   {
-    "id": "aetherial-peak",
-    "name": "Aetherial Peak",
-    "description": "A majestic three-screen panorama featuring ethereal neon mountain trails winding through deep canyons under a starry violet sky. Perfect for side-by-side multi-monitor setups or panoramic phone locks.",
-    "type": "Panoramic Landscape Split",
-    "orientation": "landscape",
-    "ratio": "48:9",
-    "ratioOptions": [
-      {
-        "id": "triple-48-9",
-        "label": "48:9 Triple",
-        "subtitle": "Full continuity spread",
-        "resolution": "11520 x 2160",
-        "size": "1.69 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      },
-      {
-        "id": "ultrawide-21-9",
-        "label": "21:9 Ultrawide",
-        "subtitle": "Centered cinematic crop",
-        "resolution": "5120 x 2160",
-        "size": "1.29 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      },
-      {
-        "id": "desktop-16-9",
-        "label": "16:9 Desktop",
-        "subtitle": "Single-screen hero crop",
-        "resolution": "3840 x 2160",
-        "size": "1.61 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      }
-    ],
-    "coverIndex": 1,
-    "images": [
-      {
-        "url": "http://localhost:5001/assets/peak_left.png",
-        "label": "Screen 1: Western Ridgeline"
-      },
-      {
-        "url": "http://localhost:5001/assets/peak_center.png",
-        "label": "Screen 2: Lunar Ascent (Face)"
-      },
-      {
-        "url": "http://localhost:5001/assets/peak_right.png",
-        "label": "Screen 3: Horizon Drift"
-      }
-    ],
-    "tags": [
-      "Nature",
-      "Space",
-      "Minimalist"
-    ],
-    "includes": [
-      "Triple-monitor synchronized sequence",
-      "Ultrawide and desktop crops",
-      "Clean and subtle vignette variants"
-    ],
-    "stats": {
-      "views": 24800,
-      "likes": 1240,
-      "downloads": 892
-    },
-    "author": {
-      "name": "Google Design Lab",
-      "subscribers": 68400,
-      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    "id": "spectral-drift",
-    "name": "Spectral Drift",
-    "description": "An abstract, fluid-dynamic liquid wave bundle displaying dynamic glass-like shapes that transition smoothly from cool electric cyan, through royal magenta, into elegant luxury gold.",
-    "type": "Fluid Gradient Flow",
-    "orientation": "landscape",
-    "ratio": "16:9 x3",
-    "ratioOptions": [
-      {
-        "id": "desktop-16-9",
-        "label": "16:9 Desktop",
-        "subtitle": "Core wallpaper set",
-        "resolution": "3840 x 2160",
-        "size": "1.97 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      },
-      {
-        "id": "mobile-9-19",
-        "label": "9:19.5 Mobile",
-        "subtitle": "Lockscreen vertical pack",
-        "resolution": "1290 x 2796",
-        "size": "511 KB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      },
-      {
-        "id": "ultrawide-21-9",
-        "label": "21:9 Ultrawide",
-        "subtitle": "Panoramic flow crop",
-        "resolution": "5120 x 2160",
-        "size": "1.50 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      }
-    ],
-    "coverIndex": 0,
-    "images": [
-      {
-        "url": "http://localhost:5001/assets/drift_cyan.png",
-        "label": "Fluid Phase A: Electric Cyan (Face)"
-      },
-      {
-        "url": "http://localhost:5001/assets/drift_magenta.png",
-        "label": "Fluid Phase B: Royal Magenta"
-      },
-      {
-        "url": "http://localhost:5001/assets/drift_gold.png",
-        "label": "Fluid Phase C: Luxury Gold"
-      }
-    ],
-    "tags": [
-      "Gradient",
-      "Abstract",
-      "Minimalist"
-    ],
-    "includes": [
-      "Desktop and mobile-friendly exports",
-      "Ultrawide panoramic crop set",
-      "Color-matched alternate brightness passes"
-    ],
-    "stats": {
-      "views": 18200,
-      "likes": 980,
-      "downloads": 624
-    },
-    "author": {
-      "name": "Ethereal Lab",
-      "subscribers": 41200,
-      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    "id": "cyber-drift",
-    "name": "Cyber Drift",
-    "description": "A neon-drenched retro-futuristic city sequence featuring glowing grid lanes, rain-slicked asphalt reflections, and distant holographic skyscrapers.",
-    "type": "Synthwave Panoramic",
-    "orientation": "landscape",
-    "ratio": "16:9",
-    "ratioOptions": [
-      {
-        "id": "desktop-16-9",
-        "label": "16:9 Desktop",
-        "subtitle": "Core city crop",
-        "resolution": "3840 x 2160",
-        "size": "1.97 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      },
-      {
-        "id": "mobile-9-19",
-        "label": "9:19.5 Mobile",
-        "subtitle": "Tall lockscreen pack",
-        "resolution": "1290 x 2796",
-        "size": "511 KB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      }
-    ],
-    "coverIndex": 1,
-    "images": [
-      {
-        "url": "http://localhost:5001/assets/drift_magenta.png",
-        "label": "Neon Rain Ridgeline"
-      },
-      {
-        "url": "http://localhost:5001/assets/drift_gold.png",
-        "label": "Holographic Horizon"
-      },
-      {
-        "url": "http://localhost:5001/assets/drift_cyan.png",
-        "label": "Electric Grid Flow"
-      }
-    ],
-    "tags": [
-      "Space",
-      "Minimalist",
-      "Gradient"
-    ],
-    "includes": [
-      "Synchronized multi-screen sequence",
-      "High-contrast lockscreen layouts",
-      "Synthwave color-grading variants"
-    ],
-    "stats": {
-      "views": 31200,
-      "likes": 1980,
-      "downloads": 1420
-    },
-    "author": {
-      "name": "Google Design Lab",
-      "subscribers": 68400,
-      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
-    "id": "solar-flare",
-    "name": "Solar Flare",
-    "description": "A dramatic solar landscape featuring fiery corona arches, magnetic plasma loops, and cosmic dust trails in deep space gold and amber tones.",
-    "type": "Cinematic Space Split",
-    "orientation": "landscape",
-    "ratio": "16:9",
-    "ratioOptions": [
-      {
-        "id": "desktop-16-9",
-        "label": "16:9 Desktop",
-        "subtitle": "Core solar crop",
-        "resolution": "3840 x 2160",
-        "size": "1.80 MB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      },
-      {
-        "id": "mobile-9-19",
-        "label": "9:19.5 Mobile",
-        "subtitle": "Corona vertical lockscreen",
-        "resolution": "1290 x 2796",
-        "size": "466 KB ZIP",
-        "formats": [
-          "PNG",
-          "JPG"
-        ]
-      }
-    ],
-    "coverIndex": 0,
-    "images": [
-      {
-        "url": "http://localhost:5001/assets/drift_gold.png",
-        "label": "Fiery Corona Arch"
-      },
-      {
-        "url": "http://localhost:5001/assets/drift_magenta.png",
-        "label": "Magnetic Plasma Loop"
-      },
-      {
-        "url": "http://localhost:5001/assets/peak_right.png",
-        "label": "Cosmic Amber Dust"
-      }
-    ],
-    "tags": [
-      "Space",
-      "Nature",
-      "Gradient"
-    ],
-    "includes": [
-      "Cinematic solar flares flow",
-      "Ultra high definition space maps",
-      "Synchronized multi-monitor sequence"
-    ],
-    "stats": {
-      "views": 29800,
-      "likes": 1840,
-      "downloads": 1210
-    },
-    "author": {
-      "name": "Google Design Lab",
-      "subscribers": 68400,
-      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-    }
-  },
-  {
     "id": "cars",
     "name": "Cars",
     "description": "JDX special",
@@ -430,6 +140,146 @@
     ],
     "tags": [
       "cars"
+    ],
+    "includes": [],
+    "stats": {
+      "views": 100,
+      "likes": 5,
+      "downloads": 0
+    },
+    "author": {
+      "name": "Google Design Lab",
+      "subscribers": 68400,
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
+    }
+  },
+  {
+    "id": "cote",
+    "name": "COTE",
+    "description": "No description provided.",
+    "type": "Landscape Wallpaper Pack",
+    "orientation": "landscape",
+    "ratio": "16:9",
+    "ratioOptions": [
+      {
+        "id": "original",
+        "label": "Original",
+        "subtitle": "Uncropped high-res wallpapers",
+        "resolution": "Original",
+        "size": "Full Size ZIP",
+        "formats": [
+          "PNG",
+          "JPG"
+        ]
+      },
+      {
+        "id": "desktop-16-9",
+        "label": "16:9 Desktop",
+        "subtitle": "Core wallpaper set",
+        "resolution": "3840 x 2160",
+        "size": "1.80 MB ZIP",
+        "formats": [
+          "PNG",
+          "JPG"
+        ]
+      },
+      {
+        "id": "ultrawide-21-9",
+        "label": "21:9 Ultrawide",
+        "subtitle": "Panoramic flow crop",
+        "resolution": "5120 x 2160",
+        "size": "1.50 MB ZIP",
+        "formats": [
+          "PNG",
+          "JPG"
+        ]
+      }
+    ],
+    "coverIndex": 0,
+    "images": [
+      {
+        "url": "https://drive.google.com/uc?export=download&id=18se2l1qs06m4A1-RWqRrCBAklCNNq1PP",
+        "label": "Screen 1: cote (146)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1SKJ4R0B1qVRapZfIygBMiVJ3CyVRDCcK",
+        "label": "Screen 2: cote (153)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1sVe_MmTytyGKfefF09BYwD3ghg4EoJis",
+        "label": "Screen 3: cote (155)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1wRs18a3tMxRZR1B4cyo0RclybKvd0ubC",
+        "label": "Screen 4: cote (156)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1ypUqbL5DJ-aoeqHDtMa00nB20WTqopAs",
+        "label": "Screen 5: cote (188)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=13AQXasQr08z2aUR8-df5WhGaQQAtIP9N",
+        "label": "Screen 6: cote (189)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1ZCd3-_mAIbu57Wxdnl1uA-oQzuE02q5B",
+        "label": "Screen 7: cote (193)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1ofQLHoH9HasqaevPG31hMydStrMKN3nf",
+        "label": "Screen 8: cote (201)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=18O7WGNzoReHVJHiUTJLYmlDb32bEFbTm",
+        "label": "Screen 9: cote (204)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1d_OQvdt8jAcVYEAigqeeDLheY7JQOTWf",
+        "label": "Screen 10: cote (60)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1uIb2iRE5ryNR4bk22CJRv_YgbDKOLlVF",
+        "label": "Screen 11: cote (61)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1zK3eA56Vh6FxvEfwvtEx6vwM4ZtTqRB5",
+        "label": "Screen 12: cote (76)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1FWTspPe0BPXQz5gCdcwU2-VpxQ3c7jrz",
+        "label": "Screen 13: cote (77)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1WwC3EjupjTI-cHehHb4WlQ2SDS6iDKLH",
+        "label": "Screen 14: cote (78)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1G6e3kZvrGzy-O1bE2ZjlLR7hzf4VHDy6",
+        "label": "Screen 15: cote (104)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1p1v0SgSlcDd6213wAqUw4wYPrvw5z3sY",
+        "label": "Screen 16: cote (105)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1o2fTbiy1fIzBJTZbMAXBLQMp5CUPFCvH",
+        "label": "Screen 17: cote (131)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1TSO7P6kNG48FTzdWY55uopmJML_sbFH6",
+        "label": "Screen 18: cote (136)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1W98oZLrXzC-Mfs7lFFWL4_YOnC-Fk3xJ",
+        "label": "Screen 19: cote (137)"
+      },
+      {
+        "url": "https://drive.google.com/uc?export=download&id=1xuM-vcGAyvg-HXDlcIcgDtjH7Qg1qmlf",
+        "label": "Screen 20: cote (138)"
+      }
+    ],
+    "tags": [
+      "Anime"
     ],
     "includes": [],
     "stats": {
