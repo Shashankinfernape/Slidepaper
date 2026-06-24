@@ -625,57 +625,45 @@ function AppContent() {
         {/* Genre Tabs Bar (Only on feed view) */}
         {currentView === 'feed' && (
           <div className="genre-tabs-bar">
-            <div className="genre-tabs">
-              {/* Sort Dropdown inside genres scrollable bar (both PC & mobile) */}
-              {(isFeedView || isBundleView) && (
-                <div className="dropdown-container genres-sort-dropdown" ref={sortRef}>
-                  <button
-                    className="dropdown-trigger"
-                    onClick={() => setShowSortMenu(!showSortMenu)}
-                  >
-                    <span>Sort</span>
-                    <ChevronDown size={14} />
-                  </button>
-                  {showSortMenu && (
-                    <div className="dropdown-menu">
-                      <div
-                        className={`dropdown-item ${sortOption === 'default' ? 'active' : ''}`}
-                        onClick={() => {
-                          setSortOption('default');
-                          setShowSortMenu(false);
-                          if (currentView === 'bundle') setCurrentView('feed');
-                        }}
-                      >
-                        <span>Default</span>
-                        {sortOption === 'default' && <Check size={14} />}
-                      </div>
-                      <div
-                        className={`dropdown-item ${sortOption === 'views' ? 'active' : ''}`}
-                        onClick={() => {
-                          setSortOption('views');
-                          setShowSortMenu(false);
-                          if (currentView === 'bundle') setCurrentView('feed');
-                        }}
-                      >
-                        <span>Popularity</span>
-                        {sortOption === 'views' && <Check size={14} />}
-                      </div>
-                      <div
-                        className={`dropdown-item ${sortOption === 'downloads' ? 'active' : ''}`}
-                        onClick={() => {
-                          setSortOption('downloads');
-                          setShowSortMenu(false);
-                          if (currentView === 'bundle') setCurrentView('feed');
-                        }}
-                      >
-                        <span>Downloads</span>
-                        {sortOption === 'downloads' && <Check size={14} />}
-                      </div>
+            {/* Sort Dropdown — outside the scrollable div so dropdown isn't clipped */}
+            {isFeedView && (
+              <div className="dropdown-container genres-sort-dropdown" ref={sortRef}>
+                <button
+                  className="dropdown-trigger"
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                >
+                  <span>Sort</span>
+                  <ChevronDown size={14} />
+                </button>
+                {showSortMenu && (
+                  <div className="dropdown-menu">
+                    <div
+                      className={`dropdown-item ${sortOption === 'default' ? 'active' : ''}`}
+                      onClick={() => { setSortOption('default'); setShowSortMenu(false); }}
+                    >
+                      <span>Default</span>
+                      {sortOption === 'default' && <Check size={14} />}
                     </div>
-                  )}
-                </div>
-              )}
+                    <div
+                      className={`dropdown-item ${sortOption === 'views' ? 'active' : ''}`}
+                      onClick={() => { setSortOption('views'); setShowSortMenu(false); }}
+                    >
+                      <span>Popularity</span>
+                      {sortOption === 'views' && <Check size={14} />}
+                    </div>
+                    <div
+                      className={`dropdown-item ${sortOption === 'downloads' ? 'active' : ''}`}
+                      onClick={() => { setSortOption('downloads'); setShowSortMenu(false); }}
+                    >
+                      <span>Downloads</span>
+                      {sortOption === 'downloads' && <Check size={14} />}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
+            <div className="genre-tabs">
               {genres.map((genre) => (
                 <button
                   key={genre}
