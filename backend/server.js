@@ -92,27 +92,40 @@ async function seedDatabase() {
       console.log(`[MongoDB] Successfully seeded ${seedBundles.length} bundles.`);
     }
 
-    // Migration: Update any existing bundles without author.uid in MongoDB
+    // Migration: Update any legacy bundles in MongoDB to belong to the default admin (admin-mock-999)
     const migrationResult = await Bundle.updateMany(
-      { $or: [ { 'author.uid': { $exists: false } }, { 'author.uid': null } ] },
-      { $set: { 'author.uid': 'google-mock-101', 'author.email': 'designer@google.com' } }
+      { $or: [ 
+        { 'author.uid': { $exists: false } }, 
+        { 'author.uid': null }, 
+        { 'author.uid': 'google-mock-101' } 
+      ] },
+      { 
+        $set: { 
+          'author.uid': 'admin-mock-999', 
+          'author.email': 'admin@slidepapers.com',
+          'author.name': 'Admin (Local Bypass)',
+          'author.avatar': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'
+        } 
+      }
     );
     if (migrationResult.modifiedCount > 0) {
-      console.log(`[MongoDB] Migrated ${migrationResult.modifiedCount} legacy bundles to have author.uid.`);
+      console.log(`[MongoDB] Migrated ${migrationResult.modifiedCount} legacy bundles to have default admin author.uid.`);
     }
 
-    // Seed default Google Design Lab user
-    let defaultAuthor = await User.findOne({ uid: 'google-mock-101' });
-    if (!defaultAuthor) {
+    // Seed default Admin profile in MongoDB
+    let defaultAdmin = await User.findOne({ uid: 'admin-mock-999' });
+    if (!defaultAdmin) {
       await User.create({
-        uid: 'google-mock-101',
-        displayName: 'Google Design Lab',
-        email: 'designer@google.com',
-        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        uid: 'admin-mock-999',
+        displayName: 'Admin (Local Bypass)',
+        email: 'admin@slidepapers.com',
+        photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80',
         subscribers: 68400,
-        subscriberUids: []
+        subscriberUids: [],
+        about: 'Digital artist & wallpaper curator.',
+        accentGradient: 'midnight'
       });
-      console.log('[MongoDB] Seeded default Google Design Lab author profile with 68,400 subscribers.');
+      console.log('[MongoDB] Seeded default Admin author profile with 68,400 subscribers.');
     }
   } catch (err) {
     console.error('[MongoDB] Error seeding database:', err);

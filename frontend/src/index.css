@@ -5109,38 +5109,17 @@ h1, h2, h3, h4, h5, h6 {
    Creator About Section and Avatar Cropper CSS
    ========================================================================== */
 
-/* Gradient Preset Styling */
-.gradient-accent-midnight {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-  color: #fff !important;
-}
-.gradient-accent-sunset {
-  background: linear-gradient(135deg, #ea580c 0%, #ca8a04 100%) !important;
-  color: #fff !important;
-}
-.gradient-accent-cyberpunk {
-  background: linear-gradient(135deg, #c084fc 0%, #db2777 50%, #06b6d4 100%) !important;
-  color: #fff !important;
-}
-.gradient-accent-youtube {
-  background: linear-gradient(135deg, #e11d48 0%, #991b1b 100%) !important;
-  color: #fff !important;
-}
-.gradient-accent-emerald {
-  background: linear-gradient(135deg, #059669 0%, #064e3b 100%) !important;
-  color: #fff !important;
-}
-.gradient-accent-google {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-  color: #fff !important;
-}
-
-/* Card Gradient Border Wrapper style */
+/* Gradient Preset Top Borders & Borders */
 .creator-about-section {
   position: relative;
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  font-family: 'Outfit', sans-serif !important;
 }
+
 .creator-about-section::before {
   content: '';
   position: absolute;
@@ -5148,7 +5127,78 @@ h1, h2, h3, h4, h5, h6 {
   left: 0;
   right: 0;
   height: 4px;
-  background: inherit;
+  background: transparent;
+  z-index: 2;
+}
+
+.creator-about-section.gradient-accent-midnight::before {
+  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%) !important;
+}
+.creator-about-section.gradient-accent-sunset::before {
+  background: linear-gradient(90deg, #f97316 0%, #db2777 100%) !important;
+}
+.creator-about-section.gradient-accent-cyberpunk::before {
+  background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%) !important;
+}
+.creator-about-section.gradient-accent-youtube::before {
+  background: linear-gradient(90deg, #ef4444 0%, #991b1b 100%) !important;
+}
+.creator-about-section.gradient-accent-emerald::before {
+  background: linear-gradient(90deg, #10b981 0%, #047857 100%) !important;
+}
+.creator-about-section.gradient-accent-google::before {
+  background: linear-gradient(90deg, #4285F4 0%, #34A853 100%) !important;
+}
+
+/* Accent borders for avatar based on theme */
+.creator-about-section.gradient-accent-midnight img.creator-avatar-img {
+  border: 2px solid #3b82f6 !important;
+}
+.creator-about-section.gradient-accent-sunset img.creator-avatar-img {
+  border: 2px solid #f97316 !important;
+}
+.creator-about-section.gradient-accent-cyberpunk img.creator-avatar-img {
+  border: 2px solid #a855f7 !important;
+}
+.creator-about-section.gradient-accent-youtube img.creator-avatar-img {
+  border: 2px solid #ef4444 !important;
+}
+.creator-about-section.gradient-accent-emerald img.creator-avatar-img {
+  border: 2px solid #10b981 !important;
+}
+.creator-about-section.gradient-accent-google img.creator-avatar-img {
+  border: 2px solid #4285F4 !important;
+}
+
+/* Preset buttons styling in settings */
+.preset-btn.gradient-accent-midnight {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+  color: #fff !important;
+}
+.preset-btn.gradient-accent-sunset {
+  background: linear-gradient(135deg, #4c1d01 0%, #2e1001 100%) !important;
+  color: #fff !important;
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+.preset-btn.gradient-accent-cyberpunk {
+  background: linear-gradient(135deg, #3b0764 0%, #1e1b4b 100%) !important;
+  color: #fff !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+}
+.preset-btn.gradient-accent-youtube {
+  background: linear-gradient(135deg, #450a0a 0%, #1c0505 100%) !important;
+  color: #fff !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.preset-btn.gradient-accent-emerald {
+  background: linear-gradient(135deg, #022c22 0%, #061c16 100%) !important;
+  color: #fff !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+.preset-btn.gradient-accent-google {
+  background: linear-gradient(135deg, #172554 0%, #0f172a 100%) !important;
+  color: #fff !important;
+  border-color: rgba(66, 133, 244, 0.3) !important;
 }
 
 /* Social links and buttons styling */
@@ -5189,6 +5239,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 [data-theme="light"] .creator-social-icon.twitter:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* WhatsApp Avatar Container and Overlay */
+.whatsapp-avatar-container:hover .whatsapp-avatar-overlay {
+  opacity: 1 !important;
 }
 
 /* Avatar cropper custom styles */
@@ -5308,5 +5363,86 @@ h1, h2, h3, h4, h5, h6 {
 .preset-btn:hover:not(.active) {
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Responsive collapsible sidebar layout */
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  padding: 1.5rem 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 240px;
+  position: relative;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.admin-sidebar.shrunk {
+  width: 72px;
+  padding: 1.5rem 0.5rem;
+}
+
+.admin-sidebar.shrunk .admin-sidebar-title h2,
+.admin-sidebar.shrunk .admin-nav-item span {
+  display: none;
+}
+
+.admin-sidebar.shrunk .admin-nav-item {
+  justify-content: center;
+  padding: 0.65rem 0;
+  gap: 0;
+}
+
+.admin-sidebar.shrunk .admin-sidebar-title {
+  justify-content: center;
+}
+
+/* Mobile responsive layout */
+@media (max-width: 768px) {
+  .admin-dashboard-container {
+    flex-direction: column !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  
+  .mobile-admin-header {
+    display: flex !important;
+  }
+  
+  .admin-mobile-backdrop {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+  }
+  
+  .sidebar-collapse-toggle {
+    display: none !important;
+  }
+  
+  .admin-sidebar {
+    position: fixed !important;
+    top: 0;
+    right: 0; /* slide out overlay from the right side of the screen */
+    bottom: 0;
+    height: 100vh;
+    width: 240px;
+    border-right: none;
+    border-left: 1px solid var(--border-color);
+    transform: translateX(100%);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+    z-index: 100;
+  }
+  
+  .admin-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
 }
 

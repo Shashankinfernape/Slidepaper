@@ -684,12 +684,12 @@ export default function BundleDetailPage({
               <img
                 src={authorProfile?.photoURL || bundle.author.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
                 alt={authorProfile?.displayName || bundle.author.name}
+                className="creator-avatar-img"
                 style={{
                   width: '60px',
                   height: '60px',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
                   background: 'var(--bg-secondary)'
                 }}
               />

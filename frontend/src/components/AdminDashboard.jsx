@@ -51,6 +51,8 @@ function FilePreviewItem({ file, index, removeFile }) {
 export default function AdminDashboard({ onBack, logout }) {
   const { user, userProfile, updateUserProfileState } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isSidebarShrunk, setIsSidebarShrunk] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
   const [driveStatus, setDriveStatus] = useState(null);
@@ -448,88 +450,139 @@ export default function AdminDashboard({ onBack, logout }) {
     }
   };
 
+  const sidebarClassName = `admin-sidebar ${isSidebarShrunk ? 'shrunk' : ''} ${isMobileSidebarOpen ? 'mobile-open' : ''}`;
+
   return (
-    <div className="admin-dashboard-container" style={{
-      display: 'flex',
-      minHeight: '85vh',
-      background: 'var(--bg-secondary)',
-      borderRadius: '16px',
-      overflow: 'hidden',
-      border: '1px solid var(--border-color)',
-      color: 'var(--text-primary)',
-      marginTop: '1rem'
-    }}>
-      {/* Sidebar navigation */}
-      <aside className="admin-sidebar" style={{
-        width: '240px',
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      {/* Mobile Top Navbar with Hamburger */}
+      <div className="mobile-admin-header" style={{
+        display: 'none',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.85rem 1.25rem',
         background: 'var(--bg-primary)',
-        borderRight: '1px solid var(--border-color)',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2rem'
+        borderBottom: '1px solid var(--border-color)',
+        boxSizing: 'border-box'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Shield size={20} style={{ color: 'var(--color-google-yellow)' }} />
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, letterSpacing: '0.5px', margin: 0 }}>Slidepapers Studio</h2>
+          <Shield size={18} style={{ color: 'var(--color-google-yellow)' }} />
+          <span style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.3px' }}>Slidepapers Studio</span>
         </div>
+        <button 
+          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
+            {isMobileSidebarOpen ? (
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            ) : (
+              <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+          </svg>
+        </button>
+      </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-          <button 
-            onClick={() => setActiveTab('overview')} 
-            className={`admin-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
-          >
-            <BarChart2 size={16} />
-            <span>Overview</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('drive')} 
-            className={`admin-nav-item ${activeTab === 'drive' ? 'active' : ''}`}
-          >
-            <Folder size={16} />
-            <span>Google Drive</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('bundles')} 
-            className={`admin-nav-item ${activeTab === 'bundles' ? 'active' : ''}`}
-          >
-            <HardDrive size={16} />
-            <span>Bundles Manager</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('upload')} 
-            className={`admin-nav-item ${activeTab === 'upload' ? 'active' : ''}`}
-          >
-            <Plus size={16} />
-            <span>Create Bundle</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('monetize')} 
-            className={`admin-nav-item ${activeTab === 'monetize' ? 'active' : ''}`}
-          >
-            <DollarSign size={16} />
-            <span>Monetization</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('profile')} 
-            className={`admin-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-          >
-            <User size={16} />
-            <span>Profile Settings</span>
-          </button>
-        </nav>
+      {/* Mobile Sidebar overlay backdrop */}
+      {isMobileSidebarOpen && (
+        <div 
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="admin-mobile-backdrop"
+        />
+      )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <button onClick={onBack} className="admin-nav-item" style={{ border: '1px solid var(--border-color)' }}>
-            <ArrowLeft size={16} />
-            <span>Back to Site</span>
+      <div className="admin-dashboard-container" style={{
+        display: 'flex',
+        minHeight: '85vh',
+        background: 'var(--bg-secondary)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        border: '1px solid var(--border-color)',
+        color: 'var(--text-primary)',
+        marginTop: '1rem',
+        position: 'relative'
+      }}>
+        {/* Sidebar navigation */}
+        <aside className={sidebarClassName}>
+          {/* Desktop Collapse Arrow Button */}
+          <button 
+            onClick={() => setIsSidebarShrunk(!isSidebarShrunk)}
+            className="sidebar-collapse-toggle"
+          >
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" style={{ transform: isSidebarShrunk ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+              <path d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <button onClick={logout} className="admin-nav-item logout" style={{ color: '#ef4444' }}>
-            <LogOut size={16} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </aside>
+
+          <div className="admin-sidebar-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Shield size={20} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '0.5px', margin: 0, whiteSpace: 'nowrap' }}>Slidepapers Studio</h2>
+          </div>
+
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, width: '100%' }}>
+            <button 
+              onClick={() => { setActiveTab('overview'); setIsMobileSidebarOpen(false); }} 
+              className={`admin-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
+            >
+              <BarChart2 size={16} style={{ flexShrink: 0 }} />
+              <span>Overview</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('drive'); setIsMobileSidebarOpen(false); }} 
+              className={`admin-nav-item ${activeTab === 'drive' ? 'active' : ''}`}
+            >
+              <Folder size={16} style={{ flexShrink: 0 }} />
+              <span>Google Drive</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('bundles'); setIsMobileSidebarOpen(false); }} 
+              className={`admin-nav-item ${activeTab === 'bundles' ? 'active' : ''}`}
+            >
+              <HardDrive size={16} style={{ flexShrink: 0 }} />
+              <span>Bundles Manager</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('upload'); setIsMobileSidebarOpen(false); }} 
+              className={`admin-nav-item ${activeTab === 'upload' ? 'active' : ''}`}
+            >
+              <Plus size={16} style={{ flexShrink: 0 }} />
+              <span>Create Bundle</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('monetize'); setIsMobileSidebarOpen(false); }} 
+              className={`admin-nav-item ${activeTab === 'monetize' ? 'active' : ''}`}
+            >
+              <DollarSign size={16} style={{ flexShrink: 0 }} />
+              <span>Monetization</span>
+            </button>
+            <button 
+              onClick={() => { setActiveTab('profile'); setIsMobileSidebarOpen(false); }} 
+              className={`admin-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+            >
+              <User size={16} style={{ flexShrink: 0 }} />
+              <span>Profile Settings</span>
+            </button>
+          </nav>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+            <button onClick={onBack} className="admin-nav-item" style={{ border: '1px solid var(--border-color)', justifyContent: isSidebarShrunk ? 'center' : 'flex-start' }}>
+              <ArrowLeft size={16} style={{ flexShrink: 0 }} />
+              <span>Back to Site</span>
+            </button>
+            <button onClick={logout} className="admin-nav-item logout" style={{ color: '#ef4444', justifyContent: isSidebarShrunk ? 'center' : 'flex-start' }}>
+              <LogOut size={16} style={{ flexShrink: 0 }} />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </aside>
 
       {/* Main dashboard content */}
       <main style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
@@ -1091,6 +1144,74 @@ export default function AdminDashboard({ onBack, logout }) {
               
               {/* Form Column */}
               <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                
+                {/* WhatsApp style Avatar Changer directly above the display name */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div 
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setImageSrc(event.target.result);
+                          setZoom(1);
+                          setPosX(0);
+                          setPosY(0);
+                        };
+                        reader.readAsDataURL(file);
+                      };
+                      input.click();
+                    }}
+                    className="whatsapp-avatar-container"
+                    style={{
+                      position: 'relative',
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: '3px solid var(--border-color)',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                      background: 'var(--bg-secondary)'
+                    }}
+                  >
+                    <img
+                      src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                      alt="Avatar"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div className="whatsapp-avatar-overlay" style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0, 0, 0, 0.65)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      opacity: 0,
+                      transition: 'opacity 0.2s ease',
+                      textAlign: 'center',
+                      padding: '8px',
+                      boxSizing: 'border-box'
+                    }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginBottom: '4px' }}>
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Change Photo</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '8px' }}>Click avatar to crop & upload</span>
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Display Name / Channel Name</label>
                   <input
@@ -1186,46 +1307,6 @@ export default function AdminDashboard({ onBack, logout }) {
 
               {/* Media & Preview Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                
-                {/* Profile Picture section */}
-                <div className="admin-card" style={{ padding: '1.25rem', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block' }}>Creator Profile Picture</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                    <img
-                      src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
-                      alt="Avatar"
-                      style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)' }}
-                    />
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.accept = 'image/*';
-                          input.onchange = (e) => {
-                            const file = e.target.files[0];
-                            if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              setImageSrc(event.target.result);
-                              setZoom(1);
-                              setPosX(0);
-                              setPosY(0);
-                            };
-                            reader.readAsDataURL(file);
-                          };
-                          input.click();
-                        }}
-                        className="admin-btn secondary"
-                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}
-                      >
-                        Upload Custom Avatar
-                      </button>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', margin: '4px 0 0 0' }}>JPG or PNG. Square ratio cropped via helper tools.</p>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Real-time cropper interface */}
                 {imageSrc && (
@@ -1333,12 +1414,12 @@ export default function AdminDashboard({ onBack, logout }) {
                       <img
                         src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
                         alt="Avatar Preview"
+                        className="creator-avatar-img"
                         style={{
                           width: '56px',
                           height: '56px',
                           borderRadius: '50%',
                           objectFit: 'cover',
-                          border: '2px solid var(--border-color)',
                           background: 'var(--bg-secondary)'
                         }}
                       />
