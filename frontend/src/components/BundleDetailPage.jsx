@@ -73,6 +73,17 @@ export default function BundleDetailPage({
   loginWithGoogle,
   bundles = [],
 }) {
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const isPortrait = bundle.orientation === 'portrait' || bundle.orientation === 'vertical';
   const isLandscape = !isPortrait;
 
@@ -341,10 +352,10 @@ export default function BundleDetailPage({
   }, [selectedDownloadId, allOptions]);
 
   return (
-    <div className="bundle-youtube-page">
+    <div className="bundle-youtube-page" style={{ marginTop: isMobile ? '5.5rem' : '4rem' }}>
       <section className="bundle-youtube-layout">
         <div className="bundle-youtube-main">
-          <div className="bundle-youtube-hero">
+          <div className="bundle-youtube-hero" style={{ marginTop: isMobile ? '3.5rem' : '2.5rem' }}>
             <BundleCard
               bundle={bundle}
               showOverlay={false}
