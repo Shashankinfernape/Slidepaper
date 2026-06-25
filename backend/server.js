@@ -9,8 +9,90 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import archiver from 'archiver';
 import multer from 'multer';
+import mongoose from 'mongoose';
 
 dotenv.config();
+
+// Connect to MongoDB
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/slidepapers';
+console.log('[MongoDB] Connecting to:', MONGODB_URI);
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('[MongoDB] Connected successfully to MongoDB.'))
+  .catch(err => console.error('[MongoDB] Connection error:', err));
+
+// Define User/Author Schema
+const userSchema = new mongoose.Schema({
+  uid: { type: String, required: true, unique: true },
+  displayName: String,
+  email: String,
+  photoURL: String,
+  subscribers: { type: Number, default: 0 },
+  subscriberUids: { type: [String], default: [] }
+});
+
+const User = mongoose.model('User', userSchema);
+
+// Define Bundle Schema
+const bundleSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  description: String,
+  type: String,
+  orientation: String,
+  ratio: String,
+  ratioOptions: Array,
+  coverIndex: { type: Number, default: 0 },
+  images: Array,
+  tags: [String],
+  includes: [String],
+  stats: {
+    views: { type: Number, default: 100 },
+    likes: { type: Number, default: 5 },
+    downloads: { type: Number, default: 0 }
+  },
+  likedBy: { type: [String], default: [] },
+  author: {
+    uid: String,
+    name: String,
+    avatar: String,
+    email: String,
+    subscribers: { type: Number, default: 0 }
+  },
+  isHero: { type: Boolean, default: false }
+});
+
+const Bundle = mongoose.model('Bundle', bundleSchema);
+
+// Seeding logic for first run
+async function seedDatabase() {
+  try {
+    const count = await Bundle.countDocuments();
+    if (count === 0) {
+      console.log('[MongoDB] Database is empty. Seeding initial bundles...');
+      let seedBundles = [];
+      if (fs.existsSync(BUNDLES_PATH)) {
+        try {
+          seedBundles = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
+          console.log('[MongoDB] Loaded seed data from bundles.json');
+        } catch (e) {
+          console.error('[MongoDB] Failed to parse bundles.json, falling back to INITIAL_BUNDLES:', e.message);
+          seedBundles = INITIAL_BUNDLES;
+        }
+      } else {
+        seedBundles = INITIAL_BUNDLES;
+      }
+      
+      await Bundle.insertMany(seedBundles);
+      console.log(`[MongoDB] Successfully seeded ${seedBundles.length} bundles.`);
+    }
+  } catch (err) {
+    console.error('[MongoDB] Error seeding database:', err);
+  }
+}
+
+mongoose.connection.once('open', () => {
+  seedDatabase();
+});
 
 const execPromise = promisify(exec);
 
@@ -97,6 +179,10 @@ async function syncBundlesWithDrive() {
 async function saveBundlesToDrive() {
   if (!drive) return;
   try {
+    // Write MongoDB database data into the local JSON file first as a backup
+    const bundles = await Bundle.find({});
+    fs.writeFileSync(BUNDLES_PATH, JSON.stringify(bundles, null, 2));
+
     const parentFolderId = await getOrCreateFolder();
     const fileId = await getBundlesFileId(parentFolderId);
     const media = {
@@ -109,7 +195,7 @@ async function saveBundlesToDrive() {
         fileId: fileId,
         media: media,
       });
-      console.log('[Google Drive] Saved updated bundles.json to Google Drive.');
+      console.log('[Google Drive] Saved updated bundles.json backup to Google Drive.');
     } else {
       await drive.files.create({
         requestBody: {
@@ -119,10 +205,10 @@ async function saveBundlesToDrive() {
         media: media,
         fields: 'id',
       });
-      console.log('[Google Drive] Created and saved bundles.json to Google Drive.');
+      console.log('[Google Drive] Created and saved bundles.json backup to Google Drive.');
     }
   } catch (error) {
-    console.error('[Google Drive] Failed to save database to Drive:', error);
+    console.error('[Google Drive] Failed to save database backup to Drive:', error);
   }
 }
 
@@ -711,17 +797,11 @@ app.get('/api/drive-status', async (req, res) => {
 });
 
 // Endpoint: Fetch all wallpaper bundles (sorted alphabetically)
-app.get('/api/bundles', (req, res) => {
+app.get('/api/bundles', async (req, res) => {
   try {
-    if (!fs.existsSync(BUNDLES_PATH)) {
-      fs.writeFileSync(BUNDLES_PATH, JSON.stringify(INITIAL_BUNDLES, null, 2));
-    }
-    const data = fs.readFileSync(BUNDLES_PATH, 'utf-8');
-    const bundles = JSON.parse(data);
-    
+    const bundles = await Bundle.find({});
     // Alphanumeric name sort (natural sort)
     bundles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-    
     return res.status(200).json(bundles);
   } catch (error) {
     console.error('Error fetching bundles database:', error);
@@ -737,25 +817,13 @@ app.post('/api/set-hero-bundle', async (req, res) => {
   }
 
   try {
-    const data = fs.readFileSync(BUNDLES_PATH, 'utf-8');
-    const bundles = JSON.parse(data);
+    await Bundle.updateMany({}, { isHero: false });
+    const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { isHero: true }, { new: true });
     
-    let found = false;
-    const updated = bundles.map(b => {
-      if (b.id === bundleId) {
-        b.isHero = true;
-        found = true;
-      } else {
-        b.isHero = false;
-      }
-      return b;
-    });
-
-    if (!found) {
+    if (!updatedBundle) {
       return res.status(404).json({ error: `Bundle ${bundleId} not found` });
     }
 
-    fs.writeFileSync(BUNDLES_PATH, JSON.stringify(updated, null, 2));
     console.log(`[Database] Set bundle "${bundleId}" as home hero.`);
     
     // Sync update to Google Drive
@@ -774,7 +842,10 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     return res.status(401).json({ error: 'Google Drive client not authenticated. Please authenticate by visiting http://localhost:5001/api/auth' });
   }
 
-  const { name, description, type, orientation, ratio, tags, includes } = req.body;
+  const { 
+    name, description, type, orientation, ratio, tags, includes,
+    authorId, authorName, authorAvatar, authorEmail
+  } = req.body;
   const files = req.files;
 
   if (!name || !files || files.length === 0) {
@@ -878,6 +949,14 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       );
     }
 
+    let subscribersCount = 0;
+    if (authorId) {
+      const authorUser = await User.findOne({ uid: authorId });
+      if (authorUser) {
+        subscribersCount = authorUser.subscribers || 0;
+      }
+    }
+
     const newBundle = {
       id: bundleId,
       name: name,
@@ -890,22 +969,24 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       images: imageUrls,
       tags: tagsArray,
       includes: includesArray,
-      stats: { views: 100, likes: 5, downloads: 0 },
-      author: { name: 'Google Design Lab', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
+      stats: { views: 0, likes: 0, downloads: 0 },
+      author: {
+        uid: authorId || 'google-mock-101',
+        name: authorName || 'Google Design Lab',
+        avatar: authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        email: authorEmail || 'designer@google.com',
+        subscribers: subscribersCount
+      }
     };
 
-    // Load existing bundles database
-    const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
-    bundlesData.push(newBundle);
-
-    // Save back to JSON DB
-    fs.writeFileSync(BUNDLES_PATH, JSON.stringify(bundlesData, null, 2));
-    console.log(`[Database] Bundle "${name}" saved to database successfully.`);
+    // Save to MongoDB
+    const createdBundle = await Bundle.create(newBundle);
+    console.log(`[Database] Bundle "${name}" saved to MongoDB successfully.`);
 
     // Sync the updated database to Google Drive for persistence across server restarts
     await saveBundlesToDrive();
 
-    return res.status(200).json({ success: true, message: 'Bundle uploaded and published successfully!', bundle: newBundle });
+    return res.status(200).json({ success: true, message: 'Bundle uploaded and published successfully!', bundle: createdBundle });
 
   } catch (error) {
     console.error('Bundle upload failed:', error);
@@ -939,20 +1020,15 @@ app.delete('/api/bundles/:bundleId', async (req, res) => {
   const { bundleId } = req.params;
 
   try {
-    // 1. Read existing database
-    const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
-    const bundleIndex = bundlesData.findIndex(b => b.id === bundleId);
-
-    if (bundleIndex === -1) {
+    // 1. Find the bundle in MongoDB
+    const bundle = await Bundle.findOne({ id: bundleId });
+    if (!bundle) {
       return res.status(404).json({ error: `Bundle ${bundleId} not found` });
     }
 
-    const bundle = bundlesData[bundleIndex];
-
-    // 2. Remove the bundle from database array
-    bundlesData.splice(bundleIndex, 1);
-    fs.writeFileSync(BUNDLES_PATH, JSON.stringify(bundlesData, null, 2));
-    console.log(`[Database] Deleted bundle "${bundle.name}" from local JSON.`);
+    // 2. Delete the bundle from MongoDB
+    await Bundle.deleteOne({ id: bundleId });
+    console.log(`[Database] Deleted bundle "${bundle.name}" from MongoDB.`);
 
     // 3. Delete local assets backup folder (if exists)
     const bundleAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
@@ -975,7 +1051,7 @@ app.delete('/api/bundles/:bundleId', async (req, res) => {
       console.log(`[Google Drive] Deleted bundle folder: "${bundle.name}" (${driveFolderId})`);
     }
 
-    // 5. Save updated bundles database back to Google Drive
+    // 5. Save updated bundles database back to Google Drive (backup)
     await saveBundlesToDrive();
 
     return res.status(200).json({ success: true, message: `Bundle "${bundle.name}" deleted successfully` });
@@ -985,6 +1061,179 @@ app.delete('/api/bundles/:bundleId', async (req, res) => {
     return res.status(500).json({ error: 'Failed to delete wallpaper bundle', details: error.message });
   }
 });
+
+// Endpoint: Sync user profile when they login/authenticate
+app.post('/api/users/sync-profile', async (req, res) => {
+  const { uid, displayName, email, photoURL } = req.body;
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing uid' });
+  }
+
+  try {
+    let user = await User.findOne({ uid });
+    if (user) {
+      user.displayName = displayName || user.displayName;
+      user.email = email || user.email;
+      user.photoURL = photoURL || user.photoURL;
+      await user.save();
+    } else {
+      user = await User.create({
+        uid,
+        displayName,
+        email,
+        photoURL,
+        subscribers: 0,
+        subscriberUids: []
+      });
+      console.log(`[Database] Created new user profile for UID: ${uid}`);
+    }
+
+    // Also update any bundles uploaded by this author so that name/avatar updates everywhere!
+    await Bundle.updateMany(
+      { 'author.uid': uid },
+      { 
+        $set: { 
+          'author.name': displayName || user.displayName, 
+          'author.avatar': photoURL || user.photoURL,
+          'author.email': email || user.email 
+        } 
+      }
+    );
+
+    return res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.error('Error syncing user profile:', error);
+    return res.status(500).json({ error: 'Failed to sync user profile' });
+  }
+});
+
+// Endpoint: Toggle like/unlike on a wallpaper bundle
+app.post('/api/bundles/:bundleId/like', async (req, res) => {
+  const { bundleId } = req.params;
+  const { uid } = req.body; // user UID
+
+  if (!uid) {
+    return res.status(400).json({ error: 'Authentication required to like' });
+  }
+
+  try {
+    const bundle = await Bundle.findOne({ id: bundleId });
+    if (!bundle) {
+      return res.status(404).json({ error: 'Bundle not found' });
+    }
+
+    const likedIndex = bundle.likedBy.indexOf(uid);
+    let liked = false;
+
+    if (likedIndex > -1) {
+      // Unlike
+      bundle.likedBy.splice(likedIndex, 1);
+      bundle.stats.likes = Math.max(0, bundle.stats.likes - 1);
+    } else {
+      // Like
+      bundle.likedBy.push(uid);
+      bundle.stats.likes += 1;
+      liked = true;
+    }
+
+    await bundle.save();
+    console.log(`[Database] User ${uid} ${liked ? 'liked' : 'unliked'} bundle "${bundle.name}". Total likes: ${bundle.stats.likes}`);
+
+    // Trigger Drive sync backup in background
+    saveBundlesToDrive().catch(err => console.error('[Sync] Background sync error:', err));
+
+    return res.status(200).json({ success: true, liked, likes: bundle.stats.likes, likedBy: bundle.likedBy });
+  } catch (error) {
+    console.error('Error toggling like:', error);
+    return res.status(500).json({ error: 'Failed to toggle like' });
+  }
+});
+
+// Endpoint: Toggle subscribe/unsubscribe to an author
+app.post('/api/authors/:authorUid/subscribe', async (req, res) => {
+  const { authorUid } = req.params;
+  const { uid } = req.body; // logged-in user UID
+
+  if (!uid) {
+    return res.status(400).json({ error: 'Authentication required to subscribe' });
+  }
+
+  if (uid === authorUid) {
+    return res.status(400).json({ error: 'You cannot subscribe to yourself' });
+  }
+
+  try {
+    // 1. Find or create the author profile
+    let author = await User.findOne({ uid: authorUid });
+    if (!author) {
+      author = await User.create({
+        uid: authorUid,
+        displayName: 'Author',
+        email: '',
+        photoURL: '',
+        subscribers: 0,
+        subscriberUids: []
+      });
+    }
+
+    const subIndex = author.subscriberUids.indexOf(uid);
+    let subscribed = false;
+
+    if (subIndex > -1) {
+      // Unsubscribe
+      author.subscriberUids.splice(subIndex, 1);
+      author.subscribers = Math.max(0, author.subscribers - 1);
+    } else {
+      // Subscribe
+      author.subscriberUids.push(uid);
+      author.subscribers += 1;
+      subscribed = true;
+    }
+
+    await author.save();
+    console.log(`[Database] User ${uid} ${subscribed ? 'subscribed to' : 'unsubscribed from'} author ${authorUid}. Total subscribers: ${author.subscribers}`);
+
+    // 2. Keep the cached subscriber count inside all bundles uploaded by this author updated!
+    await Bundle.updateMany(
+      { 'author.uid': authorUid },
+      { $set: { 'author.subscribers': author.subscribers } }
+    );
+
+    // Trigger Drive sync backup in background
+    saveBundlesToDrive().catch(err => console.error('[Sync] Background sync error:', err));
+
+    return res.status(200).json({ 
+      success: true, 
+      subscribed, 
+      subscribers: author.subscribers,
+      subscriberUids: author.subscriberUids
+    });
+  } catch (error) {
+    console.error('Error toggling subscription:', error);
+    return res.status(500).json({ error: 'Failed to toggle subscription' });
+  }
+// Endpoint: Get author status and subscription state for a user
+app.get('/api/authors/:authorUid/status', async (req, res) => {
+  const { authorUid } = req.params;
+  const { uid } = req.query; // Logged in user UID
+
+  try {
+    const author = await User.findOne({ uid: authorUid });
+    if (!author) {
+      return res.status(200).json({ subscribers: 0, isSubscribed: false });
+    }
+
+    const isSubscribed = uid ? author.subscriberUids.includes(uid) : false;
+    return res.status(200).json({ 
+      subscribers: author.subscribers, 
+      isSubscribed 
+    });
+  } catch (error) {
+    console.error('Error fetching author status:', error);
+    return res.status(500).json({ error: 'Failed to fetch author status' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Slidepapers backend server running at http://localhost:${PORT}`);

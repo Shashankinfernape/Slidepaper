@@ -9,6 +9,19 @@ import {
 } from 'firebase/auth';
 import { auth, isConfigured } from '../firebase';
 
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+// Automatically upgrade HTTP to HTTPS in production to avoid mixed content block on mobile
+if (
+  typeof window !== 'undefined' &&
+  window.location.protocol === 'https:' &&
+  API_URL.startsWith('http://') &&
+  !API_URL.includes('localhost') &&
+  !API_URL.includes('127.0.0.1')
+) {
+  API_URL = API_URL.replace('http://', 'https://');
+}
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -29,6 +42,27 @@ export function AuthProvider({ children }) {
   });
   const [initialLoading, setInitialLoading] = useState(!!(isConfigured && auth));
   const [loading, setLoading] = useState(false);
+
+  const syncUserProfile = async (currentUser) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`${API_URL}/api/users/sync-profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: currentUser.uid,
+          displayName: currentUser.displayName,
+          email: currentUser.email,
+          photoURL: currentUser.photoURL
+        })
+      });
+      if (res.ok) {
+        console.log('[AuthContext] Profile synced successfully.');
+      }
+    } catch (err) {
+      console.error('[AuthContext] Failed to sync user profile with backend:', err);
+    }
+  };
 
   // Monitor Firebase Auth state if configured
   useEffect(() => {
@@ -56,6 +90,7 @@ export function AuthProvider({ children }) {
 
       setUser(currentUser);
       if (currentUser) {
+        syncUserProfile(currentUser);
         const isEmailPassword = currentUser.providerData.some(p => p.providerId === 'password');
         const computedAdmin = isEmailPassword || currentUser.email === 'admin@slidepapers.com' || isAdminSession;
         console.log('[AuthContext] User exists. computedAdmin:', computedAdmin);
@@ -96,6 +131,7 @@ export function AuthProvider({ children }) {
             photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
           };
           setUser(mockUser);
+          syncUserProfile(mockUser);
           setIsAdmin(false);
           setLoading(false);
           resolve(mockUser);

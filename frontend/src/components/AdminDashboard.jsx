@@ -3,6 +3,7 @@ import {
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
   CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -48,6 +49,7 @@ function FilePreviewItem({ file, index, removeFile }) {
 }
 
 export default function AdminDashboard({ onBack, logout }) {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
@@ -257,6 +259,17 @@ export default function AdminDashboard({ onBack, logout }) {
     selectedFiles.forEach((file) => {
       formData.append('images', file);
     });
+
+    if (user) {
+      formData.append('authorId', user.uid);
+      formData.append('authorName', user.displayName || user.email);
+      if (user.photoURL) {
+        formData.append('authorAvatar', user.photoURL);
+      }
+      if (user.email) {
+        formData.append('authorEmail', user.email);
+      }
+    }
 
     try {
       const response = await fetch(`${API_URL}/api/bundles/upload`, {

@@ -155,9 +155,87 @@ export default function BundleDetailPage({
   const [downloadState, setDownloadState] = useState('idle');
   const [reaction, setReaction] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribersCount, setSubscribersCount] = useState(bundle.author.subscribers || 0);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authActionLabel, setAuthActionLabel] = useState('continue');
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
+
+  // Fetch real subscriber count and subscription status
+  useEffect(() => {
+    if (user && bundle.likedBy && Array.isArray(bundle.likedBy)) {
+      if (bundle.likedBy.includes(user.uid)) {
+        setReaction('like');
+      } else {
+        setReaction(null);
+      }
+    } else {
+      setReaction(null);
+    }
+    
+    const fetchSubscriptionStatus = async () => {
+      if (!bundle.author || !bundle.author.uid) return;
+      try {
+        const uidParam = user ? `?uid=${user.uid}` : '';
+        const res = await fetch(`${API_URL}/api/authors/${bundle.author.uid}/status${uidParam}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsSubscribed(data.isSubscribed);
+          setSubscribersCount(data.subscribers);
+        }
+      } catch (err) {
+        console.error('Failed to fetch author subscription status:', err);
+      }
+    };
+
+    fetchSubscriptionStatus();
+  }, [bundle, user]);
+
+  const handleLikeToggle = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/bundles/${bundle.id}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReaction(data.liked ? 'like' : null);
+        bundle.stats.likes = data.likes;
+        bundle.likedBy = data.likedBy;
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  };
+
+  const handleDislikeToggle = async () => {
+    if (reaction === 'like') {
+      await handleLikeToggle();
+    }
+    setReaction(prev => prev === 'dislike' ? null : 'dislike');
+  };
+
+  const handleSubscribeToggle = async () => {
+    if (!bundle.author || !bundle.author.uid) return;
+    if (user.uid === bundle.author.uid) {
+      alert('You cannot subscribe to yourself!');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/authors/${bundle.author.uid}/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user.uid })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsSubscribed(data.subscribed);
+        setSubscribersCount(data.subscribers);
+      }
+    } catch (err) {
+      console.error('Failed to toggle subscription:', err);
+    }
+  };
 
   // Rotating example placeholder states
   const [sampleIndex, setSampleIndex] = useState(0);
@@ -391,18 +469,16 @@ export default function BundleDetailPage({
                       </span>
                     </span>
                     <span className="bundle-youtube-author-subs">
-                      {formatSubscribers(bundle.author.subscribers)}
+                      {formatSubscribers(subscribersCount)}
                     </span>
                   </div>
                 </div>
-
+ 
                 <div className="bundle-youtube-author-actions">
                   <button
                     className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                     onClick={() =>
-                      runAuthedAction('subscribe to this author', () => {
-                        setIsSubscribed((prev) => !prev);
-                      })
+                      runAuthedAction('subscribe to this author', handleSubscribeToggle)
                     }
                   >
                     {isSubscribed ? (
@@ -416,21 +492,19 @@ export default function BundleDetailPage({
                   </button>
                 </div>
               </div>
-
+ 
               <div className="youtube-actions-group">
                 <div className="youtube-like-dislike-pill">
                   <button
                     className={`youtube-like-btn ${reaction === 'like' ? 'active' : ''}`}
                     onClick={() =>
-                      runAuthedAction('like this bundle', () => {
-                        setReaction((prev) => (prev === 'like' ? null : 'like'));
-                      })
+                      runAuthedAction('like this bundle', handleLikeToggle)
                     }
                     title="I like this"
                   >
                     {reaction === 'like' ? (
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }}>
-                        <path d="M3 11h3v10H3zm15.3-1c0-1.66-1.34-3-3-3h-3.3l.9-3.6.1-.3c0-.4-.1-.8-.4-1L11.6 2 6.4 7.2C6.1 7.5 6 7.8 6 8.2V19c0 1.1.9 2 2 2h7.3c.8 0 1.5-.5 1.8-1.2l3-7c.1-.2.2-.5.2-.8v-2z" />
+                        <path d="M3 11h3v10H3zm15.3-1c0-1.66-1.34-3-3-3h-3.3l.9-3.6.1-.3c0-.4-.1-.8-.4-1L11.6 2 6.4 7.2C6.1 7.5 6 7.8 6 8.2V19c0 1.1.9 2 2 2h7.3c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.8v-2z" />
                       </svg>
                     ) : (
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
@@ -443,9 +517,7 @@ export default function BundleDetailPage({
                   <button
                     className={`youtube-dislike-btn ${reaction === 'dislike' ? 'active' : ''}`}
                     onClick={() =>
-                      runAuthedAction('dislike this bundle', () => {
-                        setReaction((prev) => (prev === 'dislike' ? null : 'dislike'));
-                      })
+                      runAuthedAction('dislike this bundle', handleDislikeToggle)
                     }
                     title="I dislike this"
                   >

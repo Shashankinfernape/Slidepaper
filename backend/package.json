@@ -11,9 +11,10 @@
   "dependencies": {
     "archiver": "^7.0.1",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^4.19.2",
     "googleapis": "^137.1.0",
+    "mongoose": "^9.7.2",
     "multer": "^2.2.0",
     "sharp": "^0.33.3"
   },
