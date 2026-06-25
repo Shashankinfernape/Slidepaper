@@ -1231,6 +1231,8 @@ app.post('/api/authors/:authorUid/subscribe', async (req, res) => {
     console.error('Error toggling subscription:', error);
     return res.status(500).json({ error: 'Failed to toggle subscription' });
   }
+});
+
 // Endpoint: Get author status and subscription state for a user
 app.get('/api/authors/:authorUid/status', async (req, res) => {
   const { authorUid } = req.params;
