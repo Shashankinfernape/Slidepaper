@@ -123,7 +123,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: space-between;
   gap: 1rem;
   position: relative;
-  z-index: 30;
+  z-index: 200;
   transition: var(--transition-smooth);
   flex-wrap: wrap;
 }
@@ -3411,7 +3411,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-page {
-  margin-top: -0.5rem;
+  margin-top: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -3493,7 +3493,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 !important;
   border-radius: 0 !important;
   overflow: visible !important;
-  margin-top: -1.35rem;
+  margin-top: 0.5rem;
 }
 
 .bundle-youtube-info {
@@ -4389,6 +4389,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 768px) {
+  .bundle-youtube-page {
+    margin-top: 1.75rem !important;
+  }
+
+  .bundle-youtube-hero {
+    margin-top: 1rem !important;
+  }
+
   .bundle-card--watch-hero .stack-wrapper {
     width: 88%;
   }
