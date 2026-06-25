@@ -357,10 +357,10 @@ export default function BundleDetailPage({
   }, [selectedDownloadId, allOptions]);
 
   return (
-    <div className="bundle-youtube-page" style={{ marginTop: isMobile ? '1rem' : '1.5rem' }}>
+    <div className="bundle-youtube-page" style={{ marginTop: isMobile ? '0.25rem' : '0.4rem' }}>
       <section className="bundle-youtube-layout">
         <div className="bundle-youtube-main">
-          <div className="bundle-youtube-hero" style={{ marginTop: isMobile ? '0.75rem' : '1.25rem' }}>
+          <div className="bundle-youtube-hero">
             <BundleCard
               bundle={bundle}
               showOverlay={false}
