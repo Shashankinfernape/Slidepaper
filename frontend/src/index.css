@@ -3412,7 +3412,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-page {
-  margin-top: 1.5rem;
+  margin-top: 0.25rem !important;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -3494,7 +3494,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 !important;
   border-radius: 0 !important;
   overflow: visible !important;
-  margin-top: 1.25rem;
+  margin-top: 0 !important;
 }
 
 .bundle-youtube-info {
@@ -4391,11 +4391,10 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 768px) {
   .bundle-youtube-page {
-    margin-top: 1rem !important;
+    margin-top: 0.25rem !important;
   }
-
   .bundle-youtube-hero {
-    margin-top: 0.75rem !important;
+    margin-top: 0 !important;
   }
 
   .bundle-card--watch-hero .stack-wrapper {
