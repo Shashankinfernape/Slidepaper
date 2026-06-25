@@ -85,6 +85,29 @@ async function seedDatabase() {
       await Bundle.insertMany(seedBundles);
       console.log(`[MongoDB] Successfully seeded ${seedBundles.length} bundles.`);
     }
+
+    // Migration: Update any existing bundles without author.uid in MongoDB
+    const migrationResult = await Bundle.updateMany(
+      { $or: [ { 'author.uid': { $exists: false } }, { 'author.uid': null } ] },
+      { $set: { 'author.uid': 'google-mock-101', 'author.email': 'designer@google.com' } }
+    );
+    if (migrationResult.modifiedCount > 0) {
+      console.log(`[MongoDB] Migrated ${migrationResult.modifiedCount} legacy bundles to have author.uid.`);
+    }
+
+    // Seed default Google Design Lab user
+    let defaultAuthor = await User.findOne({ uid: 'google-mock-101' });
+    if (!defaultAuthor) {
+      await User.create({
+        uid: 'google-mock-101',
+        displayName: 'Google Design Lab',
+        email: 'designer@google.com',
+        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        subscribers: 68400,
+        subscriberUids: []
+      });
+      console.log('[MongoDB] Seeded default Google Design Lab author profile with 68,400 subscribers.');
+    }
   } catch (err) {
     console.error('[MongoDB] Error seeding database:', err);
   }

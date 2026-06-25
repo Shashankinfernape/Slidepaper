@@ -105,6 +105,13 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  // Sync user profile with backend database whenever user state changes
+  useEffect(() => {
+    if (user) {
+      syncUserProfile(user);
+    }
+  }, [user]);
+
   // Google sign in helper
   const loginWithGoogle = async () => {
     setLoading(true);
