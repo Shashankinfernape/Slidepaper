@@ -1107,6 +1107,25 @@ app.post('/api/users/sync-profile', async (req, res) => {
   }
 });
 
+// Endpoint: Increment views on a wallpaper bundle
+app.post('/api/bundles/:bundleId/view', async (req, res) => {
+  const { bundleId } = req.params;
+  try {
+    const bundle = await Bundle.findOneAndUpdate(
+      { id: bundleId },
+      { $inc: { 'stats.views': 1 } },
+      { new: true }
+    );
+    if (!bundle) {
+      return res.status(404).json({ error: 'Bundle not found' });
+    }
+    return res.status(200).json({ success: true, views: bundle.stats.views });
+  } catch (error) {
+    console.error('Error incrementing views:', error);
+    return res.status(500).json({ error: 'Failed to increment views' });
+  }
+});
+
 // Endpoint: Toggle like/unlike on a wallpaper bundle
 app.post('/api/bundles/:bundleId/like', async (req, res) => {
   const { bundleId } = req.params;

@@ -187,7 +187,16 @@ export default function BundleDetailPage({
       }
     };
 
+    const incrementViewCount = async () => {
+      try {
+        await fetch(`${API_URL}/api/bundles/${bundle.id}/view`, { method: 'POST' });
+      } catch (err) {
+        console.error('Failed to increment views:', err);
+      }
+    };
+
     fetchSubscriptionStatus();
+    incrementViewCount();
   }, [bundle, user]);
 
   const handleLikeToggle = async () => {
