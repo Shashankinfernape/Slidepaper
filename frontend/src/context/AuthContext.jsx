@@ -151,9 +151,29 @@ export function AuthProvider({ children }) {
   const loginAdminWithGoogle = async () => {
     setLoading(true);
     try {
+      const googleUser = await loginWithGoogle();
+      const emailClean = (googleUser.email || '').trim().toLowerCase();
+      
+      const ALLOWED_ADMIN_EMAILS = [
+        'admin@slidepapers.com',
+        'infernapeshashank@gmail.com',
+        'jasondomnic@gmail.com',
+        'jasondomnii@gmail.com'
+      ];
+      
+      const isMockUser = googleUser.uid === 'google-mock-101';
+      if (!ALLOWED_ADMIN_EMAILS.includes(emailClean) && !isMockUser) {
+        if (isConfigured && auth) {
+          await firebaseSignOut(auth);
+        }
+        setUser(null);
+        setIsAdmin(false);
+        localStorage.removeItem('slidepapers_admin_session');
+        throw new Error('This Google Account is not registered as an Admin.');
+      }
+      
       localStorage.setItem('slidepapers_admin_session', 'true');
       setIsAdmin(true);
-      const googleUser = await loginWithGoogle();
       setLoading(false);
       return googleUser;
     } catch (error) {
