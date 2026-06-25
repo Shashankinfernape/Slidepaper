@@ -5104,3 +5104,209 @@ h1, h2, h3, h4, h5, h6 {
     transition: var(--transition-smooth) !important;
   }
 }
+
+/* ==========================================================================
+   Creator About Section and Avatar Cropper CSS
+   ========================================================================== */
+
+/* Gradient Preset Styling */
+.gradient-accent-midnight {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  color: #fff !important;
+}
+.gradient-accent-sunset {
+  background: linear-gradient(135deg, #ea580c 0%, #ca8a04 100%) !important;
+  color: #fff !important;
+}
+.gradient-accent-cyberpunk {
+  background: linear-gradient(135deg, #c084fc 0%, #db2777 50%, #06b6d4 100%) !important;
+  color: #fff !important;
+}
+.gradient-accent-youtube {
+  background: linear-gradient(135deg, #e11d48 0%, #991b1b 100%) !important;
+  color: #fff !important;
+}
+.gradient-accent-emerald {
+  background: linear-gradient(135deg, #059669 0%, #064e3b 100%) !important;
+  color: #fff !important;
+}
+.gradient-accent-google {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #fff !important;
+}
+
+/* Card Gradient Border Wrapper style */
+.creator-about-section {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.creator-about-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: inherit;
+}
+
+/* Social links and buttons styling */
+.creator-social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="light"] .creator-social-icon {
+  background: rgba(0, 0, 0, 0.03);
+}
+.creator-social-icon:hover {
+  transform: translateY(-3px) scale(1.05);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.creator-social-icon.youtube:hover {
+  color: #ff0000;
+  border-color: rgba(255, 0, 0, 0.4);
+  background: rgba(255, 0, 0, 0.1);
+}
+.creator-social-icon.instagram:hover {
+  color: #e1306c;
+  border-color: rgba(225, 48, 108, 0.4);
+  background: rgba(225, 48, 108, 0.1);
+}
+.creator-social-icon.twitter:hover {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+[data-theme="light"] .creator-social-icon.twitter:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Avatar cropper custom styles */
+.cropper-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 100%;
+}
+.cropper-canvas-wrapper {
+  position: relative;
+  width: 256px;
+  height: 256px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  background: #000;
+}
+.cropper-grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+.cropper-grid-overlay::before,
+.cropper-grid-overlay::after {
+  content: '';
+  border: 1px dashed rgba(255,255,255,0.25);
+}
+.cropper-grid-line-h {
+  border-top: 1px dashed rgba(255,255,255,0.25);
+  border-bottom: 1px dashed rgba(255,255,255,0.25);
+  grid-column: span 3;
+}
+.cropper-grid-line-v {
+  border-left: 1px dashed rgba(255,255,255,0.25);
+  border-right: 1px dashed rgba(255,255,255,0.25);
+  grid-row: span 3;
+}
+.cropper-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.cropper-control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cropper-control-row label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+}
+.cropper-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 5px;
+  background: var(--border-color);
+  outline: none;
+  transition: background 0.2s;
+}
+.cropper-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--color-google-blue);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* Preset accent selector layout */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 0.5rem;
+}
+.preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.2s ease;
+  min-height: 50px;
+}
+.preset-btn.active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-primary);
+  transform: scale(1.03);
+}
+.preset-btn:hover:not(.active) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+

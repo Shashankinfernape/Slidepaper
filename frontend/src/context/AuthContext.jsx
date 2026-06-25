@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   signInWithPopup, 
   signOut as firebaseSignOut, 
@@ -43,6 +43,21 @@ export function AuthProvider({ children }) {
   const [initialLoading, setInitialLoading] = useState(!!(isConfigured && auth));
   const [loading, setLoading] = useState(false);
 
+  const hasSynced = useRef(false);
+  const [userProfile, setUserProfile] = useState(null);
+
+  const updateUserProfileState = (updatedProfile) => {
+    setUserProfile(updatedProfile);
+    setUser(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        displayName: updatedProfile.displayName || prev.displayName,
+        photoURL: updatedProfile.photoURL || prev.photoURL
+      };
+    });
+  };
+
   const syncUserProfile = async (currentUser) => {
     if (!currentUser) return;
     try {
@@ -57,7 +72,20 @@ export function AuthProvider({ children }) {
         })
       });
       if (res.ok) {
-        console.log('[AuthContext] Profile synced successfully.');
+        const data = await res.json();
+        console.log('[AuthContext] Profile synced successfully.', data);
+        if (data.success && data.user) {
+          hasSynced.current = true;
+          setUserProfile(data.user);
+          setUser(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              displayName: data.user.displayName || prev.displayName,
+              photoURL: data.user.photoURL || prev.photoURL
+            };
+          });
+        }
       }
     } catch (err) {
       console.error('[AuthContext] Failed to sync user profile with backend:', err);
@@ -90,7 +118,6 @@ export function AuthProvider({ children }) {
 
       setUser(currentUser);
       if (currentUser) {
-        syncUserProfile(currentUser);
         const isEmailPassword = currentUser.providerData.some(p => p.providerId === 'password');
         const computedAdmin = isEmailPassword || currentUser.email === 'admin@slidepapers.com' || isAdminSession;
         console.log('[AuthContext] User exists. computedAdmin:', computedAdmin);
@@ -108,7 +135,12 @@ export function AuthProvider({ children }) {
   // Sync user profile with backend database whenever user state changes
   useEffect(() => {
     if (user) {
-      syncUserProfile(user);
+      if (!hasSynced.current) {
+        syncUserProfile(user);
+      }
+    } else {
+      hasSynced.current = false;
+      setUserProfile(null);
     }
   }, [user]);
 
@@ -285,6 +317,8 @@ export function AuthProvider({ children }) {
     setLoading(true);
     setIsAdmin(false);
     localStorage.removeItem('slidepapers_admin_session');
+    hasSynced.current = false;
+    setUserProfile(null);
     if (isConfigured && auth) {
       try {
         await firebaseSignOut(auth);
@@ -302,6 +336,8 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    userProfile,
+    updateUserProfileState,
     isAdmin,
     loading,
     loginWithGoogle,

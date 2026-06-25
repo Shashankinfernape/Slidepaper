@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check
+  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -49,7 +49,7 @@ function FilePreviewItem({ file, index, removeFile }) {
 }
 
 export default function AdminDashboard({ onBack, logout }) {
-  const { user } = useAuth();
+  const { user, userProfile, updateUserProfileState } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
@@ -69,6 +69,139 @@ export default function AdminDashboard({ onBack, logout }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   const [bundleRatio, setBundleRatio] = useState('16:9');
+
+  // Form states for profile editing
+  const [editedDisplayName, setEditedDisplayName] = useState('');
+  const [editedPhotoURL, setEditedPhotoURL] = useState('');
+  const [editedAbout, setEditedAbout] = useState('');
+  const [editedYoutube, setEditedYoutube] = useState('');
+  const [editedInstagram, setEditedInstagram] = useState('');
+  const [editedTwitter, setEditedTwitter] = useState('');
+  const [editedAccent, setEditedAccent] = useState('midnight');
+
+  // Cropper states
+  const canvasRef = useRef(null);
+  const [imageSrc, setImageSrc] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [posX, setPosX] = useState(0);
+  const [posY, setPosY] = useState(0);
+  const [imageMeta, setImageMeta] = useState({ width: 0, height: 0 });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (userProfile) {
+      setEditedDisplayName(userProfile.displayName || '');
+      setEditedPhotoURL(userProfile.photoURL || '');
+      setEditedAbout(userProfile.about || '');
+      setEditedYoutube(userProfile.youtubeUrl || '');
+      setEditedInstagram(userProfile.instagramUrl || '');
+      setEditedTwitter(userProfile.twitterUrl || '');
+      setEditedAccent(userProfile.accentGradient || 'midnight');
+    } else if (user) {
+      setEditedDisplayName(user.displayName || '');
+      setEditedPhotoURL(user.photoURL || '');
+    }
+  }, [userProfile, user]);
+
+  useEffect(() => {
+    if (!imageSrc) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.src = imageSrc;
+    img.onload = () => {
+      setImageMeta({ width: img.width, height: img.height });
+      ctx.clearRect(0, 0, 256, 256);
+      
+      const minSize = Math.min(img.width, img.height);
+      const sSize = minSize / zoom;
+      
+      const maxOffsetX = Math.max(0, (img.width - sSize) / 2);
+      const maxOffsetY = Math.max(0, (img.height - sSize) / 2);
+      
+      const currentPosX = Math.max(-maxOffsetX, Math.min(maxOffsetX, posX));
+      const currentPosY = Math.max(-maxOffsetY, Math.min(maxOffsetY, posY));
+      
+      const sx = (img.width - sSize) / 2 + currentPosX;
+      const sy = (img.height - sSize) / 2 + currentPosY;
+      
+      ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, 256, 256);
+    };
+  }, [imageSrc, zoom, posX, posY]);
+
+  const applyCrop = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      
+      setUploadingAvatar(true);
+      const formData = new FormData();
+      formData.append('avatar', blob, 'avatar.png');
+      
+      try {
+        const res = await fetch(`${API_URL}/api/users/upload-avatar`, {
+          method: 'POST',
+          body: formData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEditedPhotoURL(data.photoURL);
+          setImageSrc(null);
+          alert('Profile picture cropped and uploaded successfully!');
+        } else {
+          alert('Failed to upload cropped image.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error uploading avatar image.');
+      } finally {
+        setUploadingAvatar(false);
+      }
+    }, 'image/png');
+  };
+
+  const handleSubmitProfile = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`${API_URL}/api/users/update-profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: user.uid,
+          displayName: editedDisplayName,
+          photoURL: editedPhotoURL,
+          about: editedAbout,
+          youtubeUrl: editedYoutube,
+          instagramUrl: editedInstagram,
+          twitterUrl: editedTwitter,
+          accentGradient: editedAccent
+        })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          updateUserProfileState(data.user);
+          alert('Profile updated successfully!');
+        } else {
+          alert('Failed to update profile.');
+        }
+      } else {
+        alert('Failed to update profile.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating profile settings.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   useEffect(() => {
     setBundleRatio(bundleOrientation === 'landscape' ? '16:9' : '9:16');
@@ -377,6 +510,13 @@ export default function AdminDashboard({ onBack, logout }) {
             <DollarSign size={16} />
             <span>Monetization</span>
           </button>
+          <button 
+            onClick={() => setActiveTab('profile')} 
+            className={`admin-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+          >
+            <User size={16} />
+            <span>Profile Settings</span>
+          </button>
         </nav>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -401,6 +541,7 @@ export default function AdminDashboard({ onBack, logout }) {
               {activeTab === 'bundles' && 'Bundles Manager'}
               {activeTab === 'upload' && 'Publish New Bundle'}
               {activeTab === 'monetize' && 'Partner Earnings Studio'}
+              {activeTab === 'profile' && 'Creator Profile Settings'}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.25rem' }}>
               {activeTab === 'overview' && 'System diagnostics, wallpaper caching and API metrics'}
@@ -408,6 +549,7 @@ export default function AdminDashboard({ onBack, logout }) {
               {activeTab === 'bundles' && 'List, edit, and delete active wallpaper sets'}
               {activeTab === 'upload' && 'Upload high-resolution images dynamically to your Google Drive'}
               {activeTab === 'monetize' && 'YouTube Studio-style revenue sharing, ad metrics, and CPM'}
+              {activeTab === 'profile' && 'Customize display name, channel about details, brand accents and socials'}
             </p>
           </div>
           
@@ -939,6 +1081,319 @@ export default function AdminDashboard({ onBack, logout }) {
                   </label>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="admin-card" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2.5rem', alignItems: 'flex-start' }} className="profile-layout-grid">
+              
+              {/* Form Column */}
+              <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Display Name / Channel Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Google Design Lab"
+                    value={editedDisplayName}
+                    onChange={(e) => setEditedDisplayName(e.target.value)}
+                    className="admin-modal-input"
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Channel Bio / About</label>
+                  <textarea
+                    rows="4"
+                    placeholder="Describe your design workflow, device specialties or wallpaper style..."
+                    value={editedAbout}
+                    onChange={(e) => setEditedAbout(e.target.value)}
+                    className="admin-modal-input"
+                    style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>YouTube Link</label>
+                    <input
+                      type="text"
+                      placeholder="https://youtube.com/@channel"
+                      value={editedYoutube}
+                      onChange={(e) => setEditedYoutube(e.target.value)}
+                      className="admin-modal-input"
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Instagram Link</label>
+                    <input
+                      type="text"
+                      placeholder="https://instagram.com/username"
+                      value={editedInstagram}
+                      onChange={(e) => setEditedInstagram(e.target.value)}
+                      className="admin-modal-input"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Twitter / X Link</label>
+                  <input
+                    type="text"
+                    placeholder="https://x.com/username"
+                    value={editedTwitter}
+                    onChange={(e) => setEditedTwitter(e.target.value)}
+                    className="admin-modal-input"
+                  />
+                </div>
+
+                {/* Accent Gradient presets */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Creator Accent Gradient</label>
+                  <div className="preset-grid">
+                    {[
+                      { id: 'midnight', name: 'Midnight', className: 'gradient-accent-midnight' },
+                      { id: 'sunset', name: 'Sunset Glow', className: 'gradient-accent-sunset' },
+                      { id: 'cyberpunk', name: 'Cyberpunk', className: 'gradient-accent-cyberpunk' },
+                      { id: 'youtube', name: 'Creator Red', className: 'gradient-accent-youtube' },
+                      { id: 'emerald', name: 'Emerald Forest', className: 'gradient-accent-emerald' },
+                      { id: 'google', name: 'Google Blue', className: 'gradient-accent-google' }
+                    ].map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setEditedAccent(preset.id)}
+                        className={`preset-btn ${preset.className} ${editedAccent === preset.id ? 'active' : ''}`}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="admin-btn primary"
+                  style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.92rem', marginTop: '1rem' }}
+                >
+                  {savingProfile ? 'Saving Changes...' : 'Save Profile Settings'}
+                </button>
+              </form>
+
+              {/* Media & Preview Column */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                
+                {/* Profile Picture section */}
+                <div className="admin-card" style={{ padding: '1.25rem', background: 'var(--bg-secondary)', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, display: 'block' }}>Creator Profile Picture</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <img
+                      src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                      alt="Avatar"
+                      style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-color)' }}
+                    />
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setImageSrc(event.target.result);
+                              setZoom(1);
+                              setPosX(0);
+                              setPosY(0);
+                            };
+                            reader.readAsDataURL(file);
+                          };
+                          input.click();
+                        }}
+                        className="admin-btn secondary"
+                        style={{ fontSize: '0.8rem', padding: '0.45rem 0.8rem' }}
+                      >
+                        Upload Custom Avatar
+                      </button>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', margin: '4px 0 0 0' }}>JPG or PNG. Square ratio cropped via helper tools.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Real-time cropper interface */}
+                {imageSrc && (
+                  <div className="cropper-container">
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700 }}>Adjust Crop (Square Profile)</span>
+                    <div className="cropper-canvas-wrapper">
+                      <canvas ref={canvasRef} width={256} height={256} style={{ width: '100%', height: '100%', display: 'block' }} />
+                      <div className="cropper-grid-overlay">
+                        <div className="cropper-grid-line-h"></div>
+                        <div className="cropper-grid-line-h"></div>
+                        <div className="cropper-grid-line-v"></div>
+                        <div className="cropper-grid-line-v"></div>
+                      </div>
+                    </div>
+
+                    <div className="cropper-controls">
+                      <div className="cropper-control-row">
+                        <label>
+                          <span>Zoom</span>
+                          <span>{zoom.toFixed(1)}x</span>
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="3"
+                          step="0.05"
+                          value={zoom}
+                          onChange={(e) => setZoom(parseFloat(e.target.value))}
+                          className="cropper-slider"
+                        />
+                      </div>
+
+                      {imageMeta.width > 0 && (
+                        <>
+                          <div className="cropper-control-row">
+                            <label>
+                              <span>Horizontal Shift</span>
+                              <span>{Math.round(posX)}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min={-Math.max(0, (imageMeta.width - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
+                              max={Math.max(0, (imageMeta.width - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
+                              value={posX}
+                              onChange={(e) => setPosX(parseFloat(e.target.value))}
+                              className="cropper-slider"
+                            />
+                          </div>
+
+                          <div className="cropper-control-row">
+                            <label>
+                              <span>Vertical Shift</span>
+                              <span>{Math.round(posY)}px</span>
+                            </label>
+                            <input
+                              type="range"
+                              min={-Math.max(0, (imageMeta.height - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
+                              max={Math.max(0, (imageMeta.height - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
+                              value={posY}
+                              onChange={(e) => setPosY(parseFloat(e.target.value))}
+                              className="cropper-slider"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={applyCrop}
+                          disabled={uploadingAvatar}
+                          className="admin-btn primary"
+                          style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}
+                        >
+                          {uploadingAvatar ? 'Uploading...' : 'Apply & Save Crop'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageSrc(null)}
+                          className="admin-btn secondary"
+                          style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Card Preview */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Live Creator Card Preview</span>
+                  
+                  <div className={`creator-about-section gradient-accent-${editedAccent}`} style={{
+                    padding: '1.25rem',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    background: 'var(--bg-primary)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
+                  }}>
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }} className="creator-about-body">
+                      <img
+                        src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                        alt="Avatar Preview"
+                        style={{
+                          width: '56px',
+                          height: '56px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '2px solid var(--border-color)',
+                          background: 'var(--bg-secondary)'
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              {editedDisplayName || 'Creator Name'}
+                              <span className="verified-badge-circle" title="Verified Creator" style={{ width: '13px', height: '13px', margin: 0, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
+                                <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
+                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
+                                </svg>
+                              </span>
+                            </span>
+                            <span style={{ fontSize: '0.74rem', color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginTop: '1px' }}>
+                              {userProfile?.joined ? `Joined ${new Date(userProfile.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : 'Joined today'}
+                            </span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {editedYoutube && (
+                              <div className="creator-social-icon youtube" style={{ width: '28px', height: '28px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.524 3.545 12 3.545 12 3.545s-7.525 0-9.387.51C1.05 4.382.518 5.42.518 6.163C0 8.025 0 12 0 12s0 3.975.518 5.837c.252.743.785 1.282 2.095 1.51C4.475 19.855 12 19.855 12 19.855s7.524 0 9.388-.508c1.312-.228 1.844-1.267 2.095-1.51c.517-1.862.517-5.837.517-5.837s0-3.975-.517-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                </svg>
+                              </div>
+                            )}
+                            {editedInstagram && (
+                              <div className="creator-social-icon instagram" style={{ width: '28px', height: '28px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                                </svg>
+                              </div>
+                            )}
+                            {editedTwitter && (
+                              <div className="creator-social-icon twitter" style={{ width: '28px', height: '28px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.85)', lineHeight: '1.4' }}>
+                          {editedAbout || 'No additional bio details set yet. Write something nice!'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
           </div>
         )}

@@ -27,7 +27,13 @@ const userSchema = new mongoose.Schema({
   email: String,
   photoURL: String,
   subscribers: { type: Number, default: 0 },
-  subscriberUids: { type: [String], default: [] }
+  subscriberUids: { type: [String], default: [] },
+  about: { type: String, default: '' },
+  joined: { type: Date, default: Date.now },
+  youtubeUrl: { type: String, default: '' },
+  instagramUrl: { type: String, default: '' },
+  twitterUrl: { type: String, default: '' },
+  accentGradient: { type: String, default: 'midnight' }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -1264,17 +1270,106 @@ app.get('/api/authors/:authorUid/status', async (req, res) => {
   try {
     const author = await User.findOne({ uid: authorUid });
     if (!author) {
-      return res.status(200).json({ subscribers: 0, isSubscribed: false });
+      return res.status(200).json({ subscribers: 0, isSubscribed: false, profile: null });
     }
 
     const isSubscribed = uid ? author.subscriberUids.includes(uid) : false;
     return res.status(200).json({ 
       subscribers: author.subscribers, 
-      isSubscribed 
+      isSubscribed,
+      profile: author
     });
   } catch (error) {
     console.error('Error fetching author status:', error);
     return res.status(500).json({ error: 'Failed to fetch author status' });
+  }
+});
+
+// Endpoint: Update user profile
+app.post('/api/users/update-profile', async (req, res) => {
+  const { uid, displayName, photoURL, about, youtubeUrl, instagramUrl, twitterUrl, accentGradient } = req.body;
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing uid' });
+  }
+
+  try {
+    const user = await User.findOneAndUpdate(
+      { uid },
+      { 
+        displayName, 
+        photoURL, 
+        about, 
+        youtubeUrl, 
+        instagramUrl, 
+        twitterUrl,
+        accentGradient
+      },
+      { new: true, upsert: true }
+    );
+
+    // Also update any bundles uploaded by this author so that name/avatar updates everywhere!
+    await Bundle.updateMany(
+      { 'author.uid': uid },
+      { 
+        $set: { 
+          'author.name': user.displayName, 
+          'author.avatar': user.photoURL
+        } 
+      }
+    );
+
+    // Trigger Drive sync backup in background
+    saveBundlesToDrive().catch(err => console.error('[Sync] Background sync error:', err));
+
+    return res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Endpoint: Upload avatar image to Google Drive
+app.post('/api/users/upload-avatar', upload.single('avatar'), async (req, res) => {
+  if (!drive) {
+    return res.status(401).json({ error: 'Google Drive client not authenticated.' });
+  }
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ error: 'No file uploaded.' });
+  }
+
+  try {
+    const parentFolderId = await getOrCreateFolder();
+    const fileMetadata = {
+      name: `avatar-${Date.now()}-${file.originalname}`,
+      parents: [parentFolderId]
+    };
+    const media = {
+      mimeType: file.mimetype,
+      body: fs.createReadStream(file.path)
+    };
+    const driveFile = await drive.files.create({
+      requestBody: fileMetadata,
+      media: media,
+      fields: 'id'
+    });
+    const fileId = driveFile.data.id;
+
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: { role: 'reader', type: 'anyone' }
+    });
+
+    // Clean up local temp file
+    try {
+      await fs.promises.unlink(file.path);
+    } catch (_) {}
+
+    const photoURL = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    return res.status(200).json({ success: true, photoURL });
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    return res.status(500).json({ error: 'Failed to upload profile picture' });
   }
 });
 
