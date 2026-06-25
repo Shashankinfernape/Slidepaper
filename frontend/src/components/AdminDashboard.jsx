@@ -1479,6 +1479,7 @@ export default function AdminDashboard({ onBack, logout }) {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }
