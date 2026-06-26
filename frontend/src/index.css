@@ -5366,83 +5366,76 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Responsive collapsible sidebar layout */
+/* Admin sidebar — universal right-side overlay */
 .admin-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   background: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
   padding: 1.5rem 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 240px;
-  position: relative;
-  z-index: 100;
+  width: 260px;
+  min-width: 260px;
   box-sizing: border-box;
+
+  /* Fixed right-side overlay */
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh;
+  z-index: 200;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.25);
+
+  /* Hidden by default — slide out to the right */
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
 }
 
-.admin-sidebar.shrunk {
-  width: 72px;
-  padding: 1.5rem 0.5rem;
+.admin-sidebar.open {
+  transform: translateX(0);
 }
 
-.admin-sidebar.shrunk .admin-sidebar-title h2,
-.admin-sidebar.shrunk .admin-nav-item span {
-  display: none;
+/* Dark backdrop behind open sidebar */
+.admin-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 199;
+  animation: fadeInBackdrop 0.2s ease;
 }
 
-.admin-sidebar.shrunk .admin-nav-item {
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Hamburger button in the topbar */
+.admin-hamburger {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 0.65rem 0;
-  gap: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 7px;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
 }
 
-.admin-sidebar.shrunk .admin-sidebar-title {
-  justify-content: center;
+.admin-hamburger:hover {
+  background: var(--bg-tertiary, rgba(255,255,255,0.08));
+  border-color: var(--color-google-blue);
 }
 
-/* Mobile responsive layout */
+/* Mobile: full-width main area (sidebar is overlay, no sidebar in flex layout) */
 @media (max-width: 768px) {
   .admin-dashboard-container {
-    flex-direction: column !important;
     border-radius: 0 !important;
     border: none !important;
-  }
-  
-  .mobile-admin-header {
-    display: flex !important;
-  }
-  
-  .admin-mobile-backdrop {
-    display: block !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 99;
-  }
-  
-  .sidebar-collapse-toggle {
-    display: none !important;
-  }
-  
-  .admin-sidebar {
-    position: fixed !important;
-    top: 0;
-    right: 0; /* slide out overlay from the right side of the screen */
-    bottom: 0;
-    height: 100vh;
-    width: 240px;
-    border-right: none;
-    border-left: 1px solid var(--border-color);
-    transform: translateX(100%);
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
-    z-index: 100;
-  }
-  
-  .admin-sidebar.mobile-open {
-    transform: translateX(0) !important;
   }
 }
 

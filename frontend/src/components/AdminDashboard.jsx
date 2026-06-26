@@ -51,8 +51,7 @@ function FilePreviewItem({ file, index, removeFile }) {
 export default function AdminDashboard({ onBack, logout }) {
   const { user, userProfile, updateUserProfileState } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [isSidebarShrunk, setIsSidebarShrunk] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
   const [driveStatus, setDriveStatus] = useState(null);
@@ -81,13 +80,14 @@ export default function AdminDashboard({ onBack, logout }) {
   const [editedTwitter, setEditedTwitter] = useState('');
   const [editedAccent, setEditedAccent] = useState('midnight');
 
-  // Cropper states
+  // WhatsApp-style Cropper states
   const canvasRef = useRef(null);
+  const cropperRef = useRef(null); // the interactive canvas container
   const [imageSrc, setImageSrc] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [posX, setPosX] = useState(0);
-  const [posY, setPosY] = useState(0);
-  const [imageMeta, setImageMeta] = useState({ width: 0, height: 0 });
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropRotate, setCropRotate] = useState(0);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const dragState = useRef(null); // { startX, startY, startOX, startOY }
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -106,6 +106,7 @@ export default function AdminDashboard({ onBack, logout }) {
     }
   }, [userProfile, user]);
 
+  // Draw the crop preview onto canvas whenever inputs change
   useEffect(() => {
     if (!imageSrc) return;
     const canvas = canvasRef.current;
@@ -114,35 +115,59 @@ export default function AdminDashboard({ onBack, logout }) {
     const img = new Image();
     img.src = imageSrc;
     img.onload = () => {
-      setImageMeta({ width: img.width, height: img.height });
-      ctx.clearRect(0, 0, 256, 256);
-      
-      const minSize = Math.min(img.width, img.height);
-      const sSize = minSize / zoom;
-      
-      const maxOffsetX = Math.max(0, (img.width - sSize) / 2);
-      const maxOffsetY = Math.max(0, (img.height - sSize) / 2);
-      
-      const currentPosX = Math.max(-maxOffsetX, Math.min(maxOffsetX, posX));
-      const currentPosY = Math.max(-maxOffsetY, Math.min(maxOffsetY, posY));
-      
-      const sx = (img.width - sSize) / 2 + currentPosX;
-      const sy = (img.height - sSize) / 2 + currentPosY;
-      
-      ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, 256, 256);
+      const SIZE = 256;
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.save();
+      // Clip to circle
+      ctx.beginPath();
+      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+      ctx.clip();
+      // Center, rotate, zoom, then draw
+      ctx.translate(SIZE / 2 + cropOffset.x, SIZE / 2 + cropOffset.y);
+      ctx.rotate((cropRotate * Math.PI) / 180);
+      ctx.scale(cropZoom, cropZoom);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      ctx.restore();
     };
-  }, [imageSrc, zoom, posX, posY]);
+  }, [imageSrc, cropZoom, cropRotate, cropOffset]);
+
+  // Drag handlers for panning the crop
+  const onCropMouseDown = (e) => {
+    e.preventDefault();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragState.current = { startX: clientX, startY: clientY, startOX: cropOffset.x, startOY: cropOffset.y };
+  };
+  const onCropMouseMove = (e) => {
+    if (!dragState.current) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - dragState.current.startX;
+    const dy = clientY - dragState.current.startY;
+    setCropOffset({ x: dragState.current.startOX + dx, y: dragState.current.startOY + dy });
+  };
+  const onCropMouseUp = () => { dragState.current = null; };
+
+  // Wheel zoom
+  const onCropWheel = (e) => {
+    e.preventDefault();
+    setCropZoom(z => Math.min(4, Math.max(0.5, z - e.deltaY * 0.002)));
+  };
 
   const applyCrop = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    // Instantly show the cropped image as a data URL (optimistic)
+    const dataUrl = canvas.toDataURL('image/png');
+    setEditedPhotoURL(dataUrl);
+    setImageSrc(null);
+
+    // Upload in background
     canvas.toBlob(async (blob) => {
       if (!blob) return;
-      
       setUploadingAvatar(true);
       const formData = new FormData();
       formData.append('avatar', blob, 'avatar.png');
-      
       try {
         const res = await fetch(`${API_URL}/api/users/upload-avatar`, {
           method: 'POST',
@@ -150,15 +175,10 @@ export default function AdminDashboard({ onBack, logout }) {
         });
         if (res.ok) {
           const data = await res.json();
-          setEditedPhotoURL(data.photoURL);
-          setImageSrc(null);
-          alert('Profile picture cropped and uploaded successfully!');
-        } else {
-          alert('Failed to upload cropped image.');
+          setEditedPhotoURL(data.photoURL); // replace with permanent URL
         }
       } catch (err) {
         console.error(err);
-        alert('Error uploading avatar image.');
       } finally {
         setUploadingAvatar(false);
       }
@@ -450,52 +470,13 @@ export default function AdminDashboard({ onBack, logout }) {
     }
   };
 
-  const sidebarClassName = `admin-sidebar ${isSidebarShrunk ? 'shrunk' : ''} ${isMobileSidebarOpen ? 'mobile-open' : ''}`;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      {/* Mobile Top Navbar with Hamburger */}
-      <div className="mobile-admin-header" style={{
-        display: 'none',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0.85rem 1.25rem',
-        background: 'var(--bg-primary)',
-        borderBottom: '1px solid var(--border-color)',
-        boxSizing: 'border-box'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Shield size={18} style={{ color: 'var(--color-google-yellow)' }} />
-          <span style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '0.3px' }}>Slidepapers Studio</span>
-        </div>
-        <button 
-          onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-primary)',
-            cursor: 'pointer',
-            padding: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5">
-            {isMobileSidebarOpen ? (
-              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-            ) : (
-              <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-          </svg>
-        </button>
-      </div>
-
-      {/* Mobile Sidebar overlay backdrop */}
-      {isMobileSidebarOpen && (
-        <div 
-          onClick={() => setIsMobileSidebarOpen(false)}
-          className="admin-mobile-backdrop"
+      {/* Sidebar backdrop overlay (all screen sizes) */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="admin-sidebar-backdrop"
         />
       )}
 
@@ -510,61 +491,62 @@ export default function AdminDashboard({ onBack, logout }) {
         marginTop: '1rem',
         position: 'relative'
       }}>
-        {/* Sidebar navigation */}
-        <aside className={sidebarClassName}>
-          {/* Desktop Collapse Arrow Button */}
-          <button 
-            onClick={() => setIsSidebarShrunk(!isSidebarShrunk)}
-            className="sidebar-collapse-toggle"
-          >
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" style={{ transform: isSidebarShrunk ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
-              <path d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          <div className="admin-sidebar-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Shield size={20} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '0.5px', margin: 0, whiteSpace: 'nowrap' }}>Slidepapers Studio</h2>
+        {/* Sidebar navigation — right-side overlay */}
+        <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+          {/* Close button inside sidebar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <div className="admin-sidebar-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={20} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.5px', margin: 0, whiteSpace: 'nowrap' }}>Studio</h2>
+            </div>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'flex', lineHeight: 1 }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, width: '100%' }}>
-            <button 
-              onClick={() => { setActiveTab('overview'); setIsMobileSidebarOpen(false); }} 
+            <button
+              onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
             >
               <BarChart2 size={16} style={{ flexShrink: 0 }} />
               <span>Overview</span>
             </button>
-            <button 
-              onClick={() => { setActiveTab('drive'); setIsMobileSidebarOpen(false); }} 
+            <button
+              onClick={() => { setActiveTab('drive'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'drive' ? 'active' : ''}`}
             >
               <Folder size={16} style={{ flexShrink: 0 }} />
               <span>Google Drive</span>
             </button>
-            <button 
-              onClick={() => { setActiveTab('bundles'); setIsMobileSidebarOpen(false); }} 
+            <button
+              onClick={() => { setActiveTab('bundles'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'bundles' ? 'active' : ''}`}
             >
               <HardDrive size={16} style={{ flexShrink: 0 }} />
               <span>Bundles Manager</span>
             </button>
-            <button 
-              onClick={() => { setActiveTab('upload'); setIsMobileSidebarOpen(false); }} 
+            <button
+              onClick={() => { setActiveTab('upload'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'upload' ? 'active' : ''}`}
             >
               <Plus size={16} style={{ flexShrink: 0 }} />
               <span>Create Bundle</span>
             </button>
-            <button 
-              onClick={() => { setActiveTab('monetize'); setIsMobileSidebarOpen(false); }} 
+            <button
+              onClick={() => { setActiveTab('monetize'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'monetize' ? 'active' : ''}`}
             >
               <DollarSign size={16} style={{ flexShrink: 0 }} />
               <span>Monetization</span>
             </button>
-            <button 
-              onClick={() => { setActiveTab('profile'); setIsMobileSidebarOpen(false); }} 
+            <button
+              onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
             >
               <User size={16} style={{ flexShrink: 0 }} />
@@ -573,11 +555,11 @@ export default function AdminDashboard({ onBack, logout }) {
           </nav>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
-            <button onClick={onBack} className="admin-nav-item" style={{ border: '1px solid var(--border-color)', justifyContent: isSidebarShrunk ? 'center' : 'flex-start' }}>
+            <button onClick={onBack} className="admin-nav-item" style={{ border: '1px solid var(--border-color)' }}>
               <ArrowLeft size={16} style={{ flexShrink: 0 }} />
               <span>Back to Site</span>
             </button>
-            <button onClick={logout} className="admin-nav-item logout" style={{ color: '#ef4444', justifyContent: isSidebarShrunk ? 'center' : 'flex-start' }}>
+            <button onClick={logout} className="admin-nav-item logout" style={{ color: '#ef4444' }}>
               <LogOut size={16} style={{ flexShrink: 0 }} />
               <span>Sign Out</span>
             </button>
@@ -585,7 +567,7 @@ export default function AdminDashboard({ onBack, logout }) {
         </aside>
 
       {/* Main dashboard content */}
-      <main style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', minWidth: 0 }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0 }}>
@@ -605,14 +587,24 @@ export default function AdminDashboard({ onBack, logout }) {
               {activeTab === 'profile' && 'Customize display name, channel about details, brand accents and socials'}
             </p>
           </div>
-          
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <span className="admin-status-pill green">
-              <span className="status-dot"></span> Firebase Auth Active
+
+          {/* Right-side: status pills + hamburger */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span className="admin-status-pill green" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span className="status-dot"></span> Auth
             </span>
-            <span className={`admin-status-pill ${driveStatus?.authenticated ? 'green' : 'yellow'}`}>
-              <span className="status-dot"></span> Drive: {driveStatus?.authenticated ? 'Linked' : 'Offline'}
+            <span className={`admin-status-pill ${driveStatus?.authenticated ? 'green' : 'yellow'}`} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span className="status-dot"></span> Drive
             </span>
+            {/* Hamburger — always visible, right side */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="admin-hamburger"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
         </header>
 
@@ -1308,86 +1300,67 @@ export default function AdminDashboard({ onBack, logout }) {
               {/* Media & Preview Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-                {/* Real-time cropper interface */}
+                {/* WhatsApp-style cropper */}
                 {imageSrc && (
                   <div className="cropper-container">
-                    <span style={{ fontSize: '0.84rem', fontWeight: 700 }}>Adjust Crop (Square Profile)</span>
-                    <div className="cropper-canvas-wrapper">
-                      <canvas ref={canvasRef} width={256} height={256} style={{ width: '100%', height: '100%', display: 'block' }} />
-                      <div className="cropper-grid-overlay">
-                        <div className="cropper-grid-line-h"></div>
-                        <div className="cropper-grid-line-h"></div>
-                        <div className="cropper-grid-line-v"></div>
-                        <div className="cropper-grid-line-v"></div>
-                      </div>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>Drag to adjust · Scroll to zoom</span>
+
+                    {/* Circular crop canvas — drag to pan, scroll to zoom */}
+                    <div
+                      ref={cropperRef}
+                      className="cropper-canvas-wrapper"
+                      style={{ cursor: 'grab', borderRadius: '50%', overflow: 'hidden', userSelect: 'none', touchAction: 'none' }}
+                      onMouseDown={onCropMouseDown}
+                      onMouseMove={onCropMouseMove}
+                      onMouseUp={onCropMouseUp}
+                      onMouseLeave={onCropMouseUp}
+                      onTouchStart={onCropMouseDown}
+                      onTouchMove={onCropMouseMove}
+                      onTouchEnd={onCropMouseUp}
+                      onWheel={onCropWheel}
+                    >
+                      <canvas ref={canvasRef} width={256} height={256} style={{ width: '100%', height: '100%', display: 'block', borderRadius: '50%' }} />
                     </div>
 
+                    {/* Only Zoom + Rotate sliders */}
                     <div className="cropper-controls">
                       <div className="cropper-control-row">
                         <label>
                           <span>Zoom</span>
-                          <span>{zoom.toFixed(1)}x</span>
+                          <span>{cropZoom.toFixed(1)}x</span>
                         </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="3"
-                          step="0.05"
-                          value={zoom}
-                          onChange={(e) => setZoom(parseFloat(e.target.value))}
+                        <input type="range" min="0.5" max="4" step="0.05"
+                          value={cropZoom}
+                          onChange={(e) => setCropZoom(parseFloat(e.target.value))}
                           className="cropper-slider"
                         />
                       </div>
-
-                      {imageMeta.width > 0 && (
-                        <>
-                          <div className="cropper-control-row">
-                            <label>
-                              <span>Horizontal Shift</span>
-                              <span>{Math.round(posX)}px</span>
-                            </label>
-                            <input
-                              type="range"
-                              min={-Math.max(0, (imageMeta.width - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
-                              max={Math.max(0, (imageMeta.width - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
-                              value={posX}
-                              onChange={(e) => setPosX(parseFloat(e.target.value))}
-                              className="cropper-slider"
-                            />
-                          </div>
-
-                          <div className="cropper-control-row">
-                            <label>
-                              <span>Vertical Shift</span>
-                              <span>{Math.round(posY)}px</span>
-                            </label>
-                            <input
-                              type="range"
-                              min={-Math.max(0, (imageMeta.height - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
-                              max={Math.max(0, (imageMeta.height - Math.min(imageMeta.width, imageMeta.height) / zoom) / 2)}
-                              value={posY}
-                              onChange={(e) => setPosY(parseFloat(e.target.value))}
-                              className="cropper-slider"
-                            />
-                          </div>
-                        </>
-                      )}
+                      <div className="cropper-control-row">
+                        <label>
+                          <span>Rotate</span>
+                          <span>{cropRotate}°</span>
+                        </label>
+                        <input type="range" min="-180" max="180" step="1"
+                          value={cropRotate}
+                          onChange={(e) => setCropRotate(parseInt(e.target.value))}
+                          className="cropper-slider"
+                        />
+                      </div>
 
                       <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                         <button
                           type="button"
                           onClick={applyCrop}
-                          disabled={uploadingAvatar}
                           className="admin-btn primary"
-                          style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}
+                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.82rem' }}
                         >
-                          {uploadingAvatar ? 'Uploading...' : 'Apply & Save Crop'}
+                          ✓ Use Photo
                         </button>
                         <button
                           type="button"
-                          onClick={() => setImageSrc(null)}
+                          onClick={() => { setImageSrc(null); setCropZoom(1); setCropRotate(0); setCropOffset({ x: 0, y: 0 }); }}
                           className="admin-btn secondary"
-                          style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem' }}
+                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.82rem' }}
                         >
                           Cancel
                         </button>
