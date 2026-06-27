@@ -5,7 +5,8 @@ import {
   signOut as firebaseSignOut, 
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { auth, isConfigured } from '../firebase';
 
@@ -279,10 +280,10 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // 3. Real Firebase Authentication
+    // 3. Real Firebase Authentication (supports both Login & Auto-Registration)
     if (isConfigured && auth) {
       try {
-        console.error('[AuthContext DIAGNOSTIC] Calling Firebase signInWithEmailAndPassword for email:', emailClean, 'with password length:', password ? password.length : 0);
+        console.log('[AuthContext] Attempting Firebase signInWithEmailAndPassword for:', emailClean);
         const result = await signInWithEmailAndPassword(auth, emailClean, password);
         console.log('[AuthContext] Firebase signInWithEmailAndPassword success:', result.user.email);
         localStorage.setItem('slidepapers_admin_session', 'true');
@@ -290,20 +291,35 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return result.user;
       } catch (error) {
-        console.error("[AuthContext] Firebase signInWithEmailAndPassword Error:", error);
+        console.warn('[AuthContext] Firebase signIn failed with code:', error.code, 'Attempting auto-registration...');
+        
+        // If user is not found or credentials not created yet in Firebase Auth, attempt auto-registration
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
+          try {
+            const createResult = await createUserWithEmailAndPassword(auth, emailClean, password);
+            console.log('[AuthContext] Firebase createUserWithEmailAndPassword success:', createResult.user.email);
+            localStorage.setItem('slidepapers_admin_session', 'true');
+            setIsAdmin(true);
+            setLoading(false);
+            return createResult.user;
+          } catch (createErr) {
+            console.error('[AuthContext] Firebase Registration Error:', createErr);
+            localStorage.removeItem('slidepapers_admin_session');
+            setIsAdmin(false);
+            setLoading(false);
+            if (createErr.code === 'auth/email-already-in-use') {
+              throw new Error(`Incorrect password for ${emailClean}.`);
+            } else if (createErr.code === 'auth/weak-password') {
+              throw new Error('Password should be at least 6 characters.');
+            }
+            throw new Error(createErr.message || 'Authentication failed.');
+          }
+        }
+
         localStorage.removeItem('slidepapers_admin_session');
         setIsAdmin(false);
         setLoading(false);
-        
-        // Since the email exists in the whitelist, any Firebase authentication error represents an incorrect password
-        let cleanMessage = `Incorrect password for ${emailClean}.`;
-        
-        if (error.code === 'auth/user-not-found') {
-          // Fallback if not created in Firebase Console yet
-          cleanMessage = `This Admin ID exists in the whitelist but has not been created in your Firebase Console tab yet.`;
-        }
-        
-        throw new Error(cleanMessage);
+        throw new Error(`Incorrect password for ${emailClean}.`);
       }
     } else {
       console.log('[AuthContext] Firebase not configured or auth not initialized.');
