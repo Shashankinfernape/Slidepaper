@@ -221,36 +221,11 @@ export function AuthProvider({ children }) {
   const loginWithEmail = async (email, password) => {
     setLoading(true);
 
-    const ALLOWED_ADMIN_EMAILS = [
-      'admin',
-      'admin@slidepapers.com',
-      'infernapeshashank',
-      'infernapeshashank@gmail.com',
-      'jasondomnic',
-      'jasondomnic@gmail.com',
-      'jasondomnii',
-      'jasondomnii@gmail.com'
-    ];
-
     let emailClean = (email || '').trim().toLowerCase();
-    console.error('[AuthContext DIAGNOSTIC] emailClean value:', emailClean, 'length:', emailClean.length);
 
     // Normalize shorthands
     if (emailClean === 'admin') {
       emailClean = 'admin@slidepapers.com';
-    } else if (emailClean === 'infernapeshashank') {
-      emailClean = 'infernapeshashank@gmail.com';
-    } else if (emailClean === 'jasondomnic') {
-      emailClean = 'jasondomnic@gmail.com';
-    } else if (emailClean === 'jasondomnii') {
-      emailClean = 'jasondomnii@gmail.com';
-    }
-
-    // 1. Validate if the email exists in the whitelisted admin list
-    if (!ALLOWED_ADMIN_EMAILS.includes(emailClean)) {
-      console.log('[AuthContext] Email is not a whitelisted admin:', emailClean);
-      setLoading(false);
-      throw new Error('This Admin ID/Email is not registered.');
     }
 
     // 2. Local admin account bypass
