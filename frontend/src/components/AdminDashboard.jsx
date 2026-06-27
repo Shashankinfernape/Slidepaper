@@ -18,6 +18,67 @@ if (
   API_URL = API_URL.replace('http://', 'https://');
 }
 
+const AVATAR_FALLBACK_URL = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80';
+const AVATAR_CROP_SIZE = 320;
+
+function clampValue(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getCropMetrics(image, zoom) {
+  const coverScale = Math.max(
+    AVATAR_CROP_SIZE / image.width,
+    AVATAR_CROP_SIZE / image.height
+  );
+  const scale = coverScale * zoom;
+
+  return {
+    scale,
+    maxOffsetX: Math.max(0, (image.width * scale - AVATAR_CROP_SIZE) / 2),
+    maxOffsetY: Math.max(0, (image.height * scale - AVATAR_CROP_SIZE) / 2),
+  };
+}
+
+function clampCropOffset(offset, image, zoom) {
+  if (!image) return offset;
+
+  const { maxOffsetX, maxOffsetY } = getCropMetrics(image, zoom);
+
+  return {
+    x: clampValue(offset.x, -maxOffsetX, maxOffsetX),
+    y: clampValue(offset.y, -maxOffsetY, maxOffsetY),
+  };
+}
+
+function drawAvatarCrop(canvas, image, zoom, offset) {
+  if (!canvas || !image) return;
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  const { scale } = getCropMetrics(image, zoom);
+  context.clearRect(0, 0, AVATAR_CROP_SIZE, AVATAR_CROP_SIZE);
+  context.fillStyle = '#050505';
+  context.fillRect(0, 0, AVATAR_CROP_SIZE, AVATAR_CROP_SIZE);
+
+  context.save();
+  context.beginPath();
+  context.arc(
+    AVATAR_CROP_SIZE / 2,
+    AVATAR_CROP_SIZE / 2,
+    AVATAR_CROP_SIZE / 2,
+    0,
+    Math.PI * 2
+  );
+  context.clip();
+  context.translate(
+    AVATAR_CROP_SIZE / 2 + offset.x,
+    AVATAR_CROP_SIZE / 2 + offset.y
+  );
+  context.scale(scale, scale);
+  context.drawImage(image, -image.width / 2, -image.height / 2);
+  context.restore();
+}
+
 function FilePreviewItem({ file, index, removeFile }) {
   const [objectUrl, setObjectUrl] = useState('');
 
@@ -69,6 +130,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
   const [bundleRatio, setBundleRatio] = useState('16:9');
 
   // Form states for profile editing
@@ -82,12 +144,13 @@ export default function AdminDashboard({ onBack, logout }) {
 
   // WhatsApp-style Cropper states
   const canvasRef = useRef(null);
-  const cropperRef = useRef(null); // the interactive canvas container
+  const cropperRef = useRef(null);
+  const cropImageRef = useRef(null);
   const [imageSrc, setImageSrc] = useState(null);
   const [cropZoom, setCropZoom] = useState(1);
   const [cropRotate, setCropRotate] = useState(0);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
-  const dragState = useRef(null); // { startX, startY, startOX, startOY }
+  const dragState = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -106,63 +169,155 @@ export default function AdminDashboard({ onBack, logout }) {
     }
   }, [userProfile, user]);
 
-  // Draw the crop preview onto canvas whenever inputs change
-  useEffect(() => {
-    if (!imageSrc) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.src = imageSrc;
-    img.onload = () => {
-      const SIZE = 256;
-      ctx.clearRect(0, 0, SIZE, SIZE);
-      ctx.save();
-      // Clip to circle
-      ctx.beginPath();
-      ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
-      ctx.clip();
-      // Center, rotate, zoom, then draw
-      ctx.translate(SIZE / 2 + cropOffset.x, SIZE / 2 + cropOffset.y);
-      ctx.rotate((cropRotate * Math.PI) / 180);
-      ctx.scale(cropZoom, cropZoom);
-      ctx.drawImage(img, -img.width / 2, -img.height / 2);
-      ctx.restore();
-    };
-  }, [imageSrc, cropZoom, cropRotate, cropOffset]);
+  const resetCropEditor = () => {
+    dragState.current = null;
+    cropImageRef.current = null;
+    setCropZoom(1);
+    setCropRotate(0);
+    setCropOffset({ x: 0, y: 0 });
+  };
 
-  // Drag handlers for panning the crop
+  const closeCropper = () => {
+    resetCropEditor();
+    setImageSrc(null);
+  };
+
+  const setCropZoomValue = (value) => {
+    const nextZoom = clampValue(value, 1, 4);
+    const currentImage = cropImageRef.current;
+    setCropZoom(nextZoom);
+    setCropOffset((prev) => clampCropOffset(prev, currentImage, nextZoom));
+  };
+
+  const openAvatarPicker = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      resetCropEditor();
+      setImageSrc(event.target?.result || null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  useEffect(() => {
+    if (!imageSrc) return undefined;
+
+    const image = new Image();
+    image.onload = () => {
+      cropImageRef.current = image;
+      drawAvatarCrop(canvasRef.current, image, 1, { x: 0, y: 0 });
+    };
+    image.src = imageSrc;
+
+    return () => {
+      cropImageRef.current = null;
+    };
+  }, [imageSrc]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const image = cropImageRef.current;
+    if (!canvas || !image || !imageSrc) return;
+
+    const clampedOffset = clampCropOffset(cropOffset, image, cropZoom);
+    if (
+      clampedOffset.x !== cropOffset.x ||
+      clampedOffset.y !== cropOffset.y
+    ) {
+      setCropOffset(clampedOffset);
+      return;
+    }
+
+    drawAvatarCrop(canvas, image, cropZoom, clampedOffset);
+  }, [imageSrc, cropOffset, cropZoom]);
+
+  useEffect(() => {
+    if (!imageSrc) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        closeCropper();
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [imageSrc]);
+
   const onCropMouseDown = (e) => {
     e.preventDefault();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    dragState.current = { startX: clientX, startY: clientY, startOX: cropOffset.x, startOY: cropOffset.y };
+    const point = e.touches ? e.touches[0] : e;
+    dragState.current = {
+      startX: point.clientX,
+      startY: point.clientY,
+      startOX: cropOffset.x,
+      startOY: cropOffset.y,
+    };
   };
+
   const onCropMouseMove = (e) => {
     if (!dragState.current) return;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const dx = clientX - dragState.current.startX;
-    const dy = clientY - dragState.current.startY;
-    setCropOffset({ x: dragState.current.startOX + dx, y: dragState.current.startOY + dy });
-  };
-  const onCropMouseUp = () => { dragState.current = null; };
+    if (e.cancelable) {
+      e.preventDefault();
+    }
 
-  // Wheel zoom
+    const point = e.touches ? e.touches[0] : e;
+    const nextOffset = {
+      x: dragState.current.startOX + (point.clientX - dragState.current.startX),
+      y: dragState.current.startOY + (point.clientY - dragState.current.startY),
+    };
+
+    setCropOffset(clampCropOffset(nextOffset, cropImageRef.current, cropZoom));
+  };
+
+  const onCropMouseUp = () => {
+    dragState.current = null;
+  };
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onCropMouseMove);
+    window.addEventListener('mouseup', onCropMouseUp);
+    window.addEventListener('touchmove', onCropMouseMove, { passive: false });
+    window.addEventListener('touchend', onCropMouseUp);
+    window.addEventListener('touchcancel', onCropMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', onCropMouseMove);
+      window.removeEventListener('mouseup', onCropMouseUp);
+      window.removeEventListener('touchmove', onCropMouseMove);
+      window.removeEventListener('touchend', onCropMouseUp);
+      window.removeEventListener('touchcancel', onCropMouseUp);
+    };
+  }, [cropZoom]);
+
   const onCropWheel = (e) => {
     e.preventDefault();
-    setCropZoom(z => Math.min(4, Math.max(0.5, z - e.deltaY * 0.002)));
+    setCropZoomValue(cropZoom - e.deltaY * 0.0015);
   };
 
   const applyCrop = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Instantly show the cropped image as a data URL (optimistic)
     const dataUrl = canvas.toDataURL('image/png');
     setEditedPhotoURL(dataUrl);
-    setImageSrc(null);
+    closeCropper();
 
-    // Upload in background
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       setUploadingAvatar(true);
@@ -175,7 +330,7 @@ export default function AdminDashboard({ onBack, logout }) {
         });
         if (res.ok) {
           const data = await res.json();
-          setEditedPhotoURL(data.photoURL); // replace with permanent URL
+          setEditedPhotoURL(data.photoURL);
         }
       } catch (err) {
         console.error(err);
@@ -417,9 +572,9 @@ export default function AdminDashboard({ onBack, logout }) {
 
     if (user) {
       formData.append('authorId', user.uid);
-      formData.append('authorName', user.displayName || user.email);
-      if (user.photoURL) {
-        formData.append('authorAvatar', user.photoURL);
+      formData.append('authorName', userProfile?.displayName || user.displayName || user.email);
+      if (userProfile?.photoURL || user.photoURL) {
+        formData.append('authorAvatar', userProfile?.photoURL || user.photoURL);
       }
       if (user.email) {
         formData.append('authorEmail', user.email);
@@ -1131,77 +1286,42 @@ export default function AdminDashboard({ onBack, logout }) {
         )}
 
         {activeTab === 'profile' && (
-          <div className="admin-card" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2.5rem', alignItems: 'flex-start' }} className="profile-layout-grid">
+          <div className="admin-card admin-profile-shell" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2.5rem', alignItems: 'flex-start' }} className="profile-layout-grid admin-profile-layout">
               
               {/* Form Column */}
-              <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                
-                {/* WhatsApp style Avatar Changer directly above the display name */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }}>
-                  <div 
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.onchange = (e) => {
-                        const file = e.target.files[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          setImageSrc(event.target.result);
-                          setZoom(1);
-                          setPosX(0);
-                          setPosY(0);
-                        };
-                        reader.readAsDataURL(file);
-                      };
-                      input.click();
-                    }}
-                    className="whatsapp-avatar-container"
-                    style={{
-                      position: 'relative',
-                      width: '120px',
-                      height: '120px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '3px solid var(--border-color)',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
-                      background: 'var(--bg-secondary)'
-                    }}
+              <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="admin-profile-form">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  style={{ display: 'none' }}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }} className="admin-profile-avatar-stack">
+                  <button
+                    type="button"
+                    onClick={openAvatarPicker}
+                    className="whatsapp-avatar-container admin-profile-avatar-button"
                   >
                     <img
-                      src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                      src={editedPhotoURL || AVATAR_FALLBACK_URL}
                       alt="Avatar"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      className="admin-profile-avatar-image"
                     />
-                    <div className="whatsapp-avatar-overlay" style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: 'rgba(0, 0, 0, 0.65)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      opacity: 0,
-                      transition: 'opacity 0.2s ease',
-                      textAlign: 'center',
-                      padding: '8px',
-                      boxSizing: 'border-box'
-                    }}>
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginBottom: '4px' }}>
+                    <div className="whatsapp-avatar-overlay admin-profile-avatar-overlay">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                         <circle cx="12" cy="13" r="4" />
                       </svg>
-                      <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Change Photo</span>
+                      <span>Change photo</span>
                     </div>
+                  </button>
+                  <div className="admin-profile-avatar-copy">
+                    <strong>Profile photo</strong>
+                    <span>Crop it like WhatsApp and make sure it still sits right on both laptop and phone widths.</span>
                   </div>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '8px' }}>Click avatar to crop & upload</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1228,7 +1348,7 @@ export default function AdminDashboard({ onBack, logout }) {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="admin-profile-social-grid">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>YouTube Link</label>
                     <input
@@ -1289,16 +1409,16 @@ export default function AdminDashboard({ onBack, logout }) {
 
                 <button
                   type="submit"
-                  disabled={savingProfile}
+                  disabled={savingProfile || uploadingAvatar}
                   className="admin-btn primary"
                   style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.92rem', marginTop: '1rem' }}
                 >
-                  {savingProfile ? 'Saving Changes...' : 'Save Profile Settings'}
+                  {uploadingAvatar ? 'Uploading photo...' : savingProfile ? 'Saving Changes...' : 'Save Profile Settings'}
                 </button>
               </form>
 
               {/* Media & Preview Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="admin-profile-preview-column">
 
                 {/* WhatsApp-style cropper */}
                 {imageSrc && (
@@ -1311,15 +1431,10 @@ export default function AdminDashboard({ onBack, logout }) {
                       className="cropper-canvas-wrapper"
                       style={{ cursor: 'grab', borderRadius: '50%', overflow: 'hidden', userSelect: 'none', touchAction: 'none' }}
                       onMouseDown={onCropMouseDown}
-                      onMouseMove={onCropMouseMove}
-                      onMouseUp={onCropMouseUp}
-                      onMouseLeave={onCropMouseUp}
                       onTouchStart={onCropMouseDown}
-                      onTouchMove={onCropMouseMove}
-                      onTouchEnd={onCropMouseUp}
                       onWheel={onCropWheel}
                     >
-                      <canvas ref={canvasRef} width={256} height={256} style={{ width: '100%', height: '100%', display: 'block', borderRadius: '50%' }} />
+                      <canvas ref={canvasRef} width={AVATAR_CROP_SIZE} height={AVATAR_CROP_SIZE} style={{ width: '100%', height: '100%', display: 'block', borderRadius: '50%' }} />
                     </div>
 
                     {/* Only Zoom + Rotate sliders */}
@@ -1329,9 +1444,9 @@ export default function AdminDashboard({ onBack, logout }) {
                           <span>Zoom</span>
                           <span>{cropZoom.toFixed(1)}x</span>
                         </label>
-                        <input type="range" min="0.5" max="4" step="0.05"
+                        <input type="range" min="1" max="4" step="0.05"
                           value={cropZoom}
-                          onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                          onChange={(e) => setCropZoomValue(parseFloat(e.target.value))}
                           className="cropper-slider"
                         />
                       </div>

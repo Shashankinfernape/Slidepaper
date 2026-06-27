@@ -10,6 +10,7 @@ import {
 import { WALLPAPER_BUNDLES } from '../data';
 import BundleCard from './BundleCard';
 import GoogleAd from './GoogleAd';
+import { useAuth } from '../context/AuthContext';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -73,6 +74,7 @@ export default function BundleDetailPage({
   loginWithGoogle,
   bundles = [],
 }) {
+  const { userProfile } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -160,6 +162,33 @@ export default function BundleDetailPage({
   const [authActionLabel, setAuthActionLabel] = useState('continue');
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
   const [authorProfile, setAuthorProfile] = useState(null);
+  const resolvedAuthorProfile = useMemo(() => {
+    const isOwnBundle = bundle.author?.uid && userProfile?.uid === bundle.author.uid;
+    const liveProfile = isOwnBundle ? userProfile : null;
+    const remoteProfile = authorProfile || {};
+
+    return {
+      ...remoteProfile,
+      ...(liveProfile || {}),
+      displayName:
+        liveProfile?.displayName ||
+        remoteProfile.displayName ||
+        bundle.author.name,
+      photoURL:
+        liveProfile?.photoURL ||
+        remoteProfile.photoURL ||
+        bundle.author.avatar,
+      about: liveProfile?.about || remoteProfile.about || '',
+      youtubeUrl: liveProfile?.youtubeUrl || remoteProfile.youtubeUrl || '',
+      instagramUrl: liveProfile?.instagramUrl || remoteProfile.instagramUrl || '',
+      twitterUrl: liveProfile?.twitterUrl || remoteProfile.twitterUrl || '',
+      accentGradient:
+        liveProfile?.accentGradient ||
+        remoteProfile.accentGradient ||
+        'midnight',
+      joined: liveProfile?.joined || remoteProfile.joined || null,
+    };
+  }, [authorProfile, bundle.author, userProfile]);
 
   // Fetch real subscriber count and subscription status
   useEffect(() => {
@@ -466,13 +495,13 @@ export default function BundleDetailPage({
               <div className="bundle-youtube-author-block">
                 <div className="bundle-youtube-author-main">
                   <img
-                    src={bundle.author.avatar}
-                    alt={bundle.author.name}
+                    src={resolvedAuthorProfile.photoURL}
+                    alt={resolvedAuthorProfile.displayName}
                     className="bundle-youtube-author-avatar"
                   />
                   <div className="bundle-youtube-author-copy">
                     <span className="bundle-youtube-author-name">
-                      {bundle.author.name}
+                      {resolvedAuthorProfile.displayName}
                       <span className="verified-badge-circle" title="Verified Creator">
                         <svg viewBox="0 0 24 24" className="verified-badge-svg">
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
@@ -665,7 +694,7 @@ export default function BundleDetailPage({
           </div>
 
           {/* About the Creator Card */}
-          <div className={`creator-about-section gradient-accent-${authorProfile?.accentGradient || 'midnight'}`} style={{
+          <div className={`creator-about-section gradient-accent-${resolvedAuthorProfile.accentGradient || 'midnight'}`} style={{
             marginTop: '1.5rem',
             padding: '1.25rem',
             borderRadius: '12px',
@@ -682,8 +711,8 @@ export default function BundleDetailPage({
             
             <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }} className="creator-about-body">
               <img
-                src={authorProfile?.photoURL || bundle.author.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
-                alt={authorProfile?.displayName || bundle.author.name}
+                src={resolvedAuthorProfile.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                alt={resolvedAuthorProfile.displayName}
                 className="creator-avatar-img"
                 style={{
                   width: '60px',
@@ -698,7 +727,7 @@ export default function BundleDetailPage({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <span style={{ fontSize: '1.08rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {authorProfile?.displayName || bundle.author.name}
+                      {resolvedAuthorProfile.displayName}
                       <span className="verified-badge-circle" title="Verified Creator" style={{ width: '13px', height: '13px', margin: 0, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
                         <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
@@ -706,21 +735,21 @@ export default function BundleDetailPage({
                       </span>
                     </span>
                     <span style={{ fontSize: '0.74rem', color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginTop: '1px' }}>
-                      {authorProfile?.joined ? `Joined ${new Date(authorProfile.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : 'Joined recently'}
+                      {resolvedAuthorProfile.joined ? `Joined ${new Date(resolvedAuthorProfile.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : 'Joined recently'}
                     </span>
                   </div>
                   
                   {/* Social Links */}
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    {authorProfile?.youtubeUrl && (
-                      <a href={authorProfile.youtubeUrl} target="_blank" rel="noopener noreferrer" title="YouTube" className="creator-social-icon youtube" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                    {resolvedAuthorProfile.youtubeUrl && (
+                      <a href={resolvedAuthorProfile.youtubeUrl} target="_blank" rel="noopener noreferrer" title="YouTube" className="creator-social-icon youtube" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
                           <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.524 3.545 12 3.545 12 3.545s-7.525 0-9.387.51C1.05 4.382.518 5.42.518 6.163C0 8.025 0 12 0 12s0 3.975.518 5.837c.252.743.785 1.282 2.095 1.51C4.475 19.855 12 19.855 12 19.855s7.524 0 9.388-.508c1.312-.228 1.844-1.267 2.095-1.51c.517-1.862.517-5.837.517-5.837s0-3.975-.517-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                         </svg>
                       </a>
                     )}
-                    {authorProfile?.instagramUrl && (
-                      <a href={authorProfile.instagramUrl} target="_blank" rel="noopener noreferrer" title="Instagram" className="creator-social-icon instagram" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                    {resolvedAuthorProfile.instagramUrl && (
+                      <a href={resolvedAuthorProfile.instagramUrl} target="_blank" rel="noopener noreferrer" title="Instagram" className="creator-social-icon instagram" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
                           <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                           <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -728,8 +757,8 @@ export default function BundleDetailPage({
                         </svg>
                       </a>
                     )}
-                    {authorProfile?.twitterUrl && (
-                      <a href={authorProfile.twitterUrl} target="_blank" rel="noopener noreferrer" title="Twitter / X" className="creator-social-icon twitter" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                    {resolvedAuthorProfile.twitterUrl && (
+                      <a href={resolvedAuthorProfile.twitterUrl} target="_blank" rel="noopener noreferrer" title="Twitter / X" className="creator-social-icon twitter" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
                         <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
                           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                         </svg>
@@ -745,7 +774,7 @@ export default function BundleDetailPage({
                   color: 'rgba(255, 255, 255, 0.85)',
                   whiteSpace: 'pre-line'
                 }}>
-                  {authorProfile?.about || 'Professional digital artist and wallpaper creator. Enjoy the hand-crafted designs in this bundle!'}
+                  {resolvedAuthorProfile.about || 'Professional digital artist and wallpaper creator. Enjoy the hand-crafted designs in this bundle!'}
                 </p>
               </div>
             </div>

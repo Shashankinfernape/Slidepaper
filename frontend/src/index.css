@@ -5245,27 +5245,110 @@ h1, h2, h3, h4, h5, h6 {
 .whatsapp-avatar-container:hover .whatsapp-avatar-overlay {
   opacity: 1 !important;
 }
+.whatsapp-avatar-container:focus-visible .whatsapp-avatar-overlay {
+  opacity: 1 !important;
+}
 
-/* Avatar cropper custom styles */
-.cropper-container {
+/* Admin profile responsiveness and avatar controls */
+.admin-profile-layout {
+  width: 100%;
+}
+.admin-profile-form {
+  min-width: 0;
+}
+.admin-profile-avatar-stack {
+  gap: 0.85rem;
+}
+.admin-profile-avatar-button {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+.admin-profile-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  text-align: center;
+  padding: 0.7rem;
+  box-sizing: border-box;
+}
+.admin-profile-avatar-overlay span:last-child {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.admin-profile-avatar-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+  max-width: 320px;
+}
+.admin-profile-avatar-copy strong {
+  font-size: 0.9rem;
+}
+.admin-profile-avatar-copy span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+.admin-profile-preview-column {
+  position: sticky;
+  top: 5.5rem;
+}
+.admin-profile-social-grid {
+  width: 100%;
+}
+
+/* Avatar cropper custom styles */
+.cropper-container {
+  position: fixed;
+  inset: 0;
+  z-index: 520;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 1rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 1.5rem;
-  max-width: 100%;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(20px);
+}
+.cropper-container > span {
+  max-width: 420px;
+  text-align: center;
+  color: #fff !important;
+  font-size: 0.9rem !important;
 }
 .cropper-canvas-wrapper {
   position: relative;
-  width: 256px;
-  height: 256px;
-  border-radius: 8px;
+  width: min(320px, calc(100vw - 3rem));
+  height: min(320px, calc(100vw - 3rem));
+  border-radius: 50% !important;
   overflow: hidden;
-  border: 2px solid var(--border-color);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.42), 0 18px 40px rgba(0, 0, 0, 0.5);
   background: #000;
 }
 .cropper-grid-overlay {
@@ -5296,10 +5379,15 @@ h1, h2, h3, h4, h5, h6 {
   grid-row: span 3;
 }
 .cropper-controls {
-  width: 100%;
+  width: min(420px, calc(100vw - 2rem));
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+  background: rgba(10, 10, 10, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 .cropper-control-row {
   display: flex;
@@ -5309,16 +5397,19 @@ h1, h2, h3, h4, h5, h6 {
 .cropper-control-row label {
   font-size: 0.76rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.72);
   display: flex;
   justify-content: space-between;
+}
+.cropper-controls > .cropper-control-row + .cropper-control-row {
+  display: none;
 }
 .cropper-slider {
   -webkit-appearance: none;
   width: 100%;
   height: 5px;
   border-radius: 5px;
-  background: var(--border-color);
+  background: rgba(255, 255, 255, 0.16);
   outline: none;
   transition: background 0.2s;
 }
@@ -5331,6 +5422,29 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--color-google-blue);
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.cropper-controls > div:last-child {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.15rem !important;
+}
+.cropper-controls > div:last-child .admin-btn {
+  flex: 1;
+  padding: 0.8rem 1rem !important;
+  border-radius: 999px;
+}
+.cropper-controls > div:last-child .admin-btn.primary {
+  background: #fff;
+  color: #000;
+  border: none;
+}
+.cropper-controls > div:last-child .admin-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.creator-about-body {
+  min-width: 0;
 }
 
 /* Preset accent selector layout */
@@ -5363,6 +5477,51 @@ h1, h2, h3, h4, h5, h6 {
 .preset-btn:hover:not(.active) {
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 980px) {
+  .admin-profile-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .admin-profile-preview-column {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-profile-shell {
+    padding: 1rem !important;
+    gap: 1.25rem !important;
+  }
+
+  .admin-profile-social-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-profile-avatar-button {
+    width: 112px;
+    height: 112px;
+  }
+
+  .creator-about-body {
+    flex-direction: column;
+    gap: 0.9rem !important;
+  }
+
+  .cropper-container {
+    padding: 0.75rem;
+  }
+
+  .cropper-controls {
+    width: calc(100vw - 1.5rem);
+    border-radius: 20px;
+  }
+
+  .cropper-controls > div:last-child {
+    flex-direction: column-reverse;
+  }
 }
 
 /* Responsive collapsible sidebar layout */
@@ -5438,4 +5597,3 @@ h1, h2, h3, h4, h5, h6 {
     border: none !important;
   }
 }
-
