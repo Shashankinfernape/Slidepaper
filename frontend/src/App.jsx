@@ -412,7 +412,40 @@ function AppContent() {
       .catch((err) => {
         console.warn('[API] Using local fallback static bundles:', err.message);
       });
-  }, [currentView]);
+  }, []);
+
+  // URL route synchronization
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.startsWith('/feed')) {
+        setCurrentView('feed');
+      } else if (path.startsWith('/admin')) {
+        setCurrentView('admin');
+      } else if (path.startsWith('/bundle/')) {
+        const bundleId = path.split('/bundle/')[1];
+        if (bundleId && bundles.length > 0) {
+          const found = bundles.find(b => String(b.id).toLowerCase() === bundleId.toLowerCase());
+          if (found) {
+            setActiveBundle(found);
+            setCurrentView('bundle');
+          }
+        }
+      } else if (path.startsWith('/channel/')) {
+        const channelId = path.split('/channel/')[1];
+        if (channelId) {
+          setActiveChannel({ uid: channelId, name: channelId });
+          setCurrentView('channel');
+        }
+      } else if (path === '/' || path === '') {
+        setCurrentView('landing');
+      }
+    };
+
+    handlePopState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [bundles]);
 
   // Dropdown UI states
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -453,21 +486,28 @@ function AppContent() {
   // Switch to feed view
   const handleGetStarted = () => {
     setCurrentView('feed');
+    window.history.pushState(null, '', '/feed');
   };
 
   const handleOpenBundle = (bundle) => {
     setActiveBundle(bundle);
     setCurrentView('bundle');
+    if (bundle && bundle.id) {
+      window.history.pushState(null, '', `/bundle/${bundle.id}`);
+    }
   };
 
   const handleCloseBundle = () => {
     setCurrentView('feed');
     setActiveBundle(null);
+    window.history.pushState(null, '', '/feed');
   };
 
   const handleOpenChannel = (channel) => {
     setActiveChannel(channel);
     setCurrentView('channel');
+    const channelSlug = channel?.uid || channel?.displayName || channel?.name || 'studio';
+    window.history.pushState(null, '', `/channel/${encodeURIComponent(channelSlug)}`);
   };
 
   // Extract unique genres/categories dynamically from all wallpaper bundle tags
@@ -614,7 +654,7 @@ function AppContent() {
                     )}
                   </div>
                   {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
-                    <div className="dropdown-item" onClick={() => { setCurrentView('admin'); setShowProfileMenu(false); }} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
+                    <div className="dropdown-item" onClick={() => { setCurrentView('admin'); window.history.pushState(null, '', '/admin'); setShowProfileMenu(false); }} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--color-google-yellow)' }}>Admin Dashboard</span>
                       <Shield size={14} style={{ color: 'var(--color-google-yellow)' }} />
                     </div>
