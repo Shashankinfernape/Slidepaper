@@ -419,7 +419,7 @@ const INITIAL_BUNDLES = [
     ],
     tags: ['Nature', 'Space', 'Minimalist'],
     includes: ['Triple-monitor synchronized sequence', 'Ultrawide and desktop crops', 'Clean and subtle vignette variants'],
-    stats: { views: 24800, likes: 1240, downloads: 892 },
+    stats: { views: 0, likes: 0, downloads: 0 },
     author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   },
   {
@@ -443,7 +443,7 @@ const INITIAL_BUNDLES = [
     ],
     tags: ['Gradient', 'Abstract', 'Minimalist'],
     includes: ['Desktop and mobile-friendly exports', 'Ultrawide panoramic crop set', 'Color-matched alternate brightness passes'],
-    stats: { views: 18200, likes: 980, downloads: 624 },
+    stats: { views: 0, likes: 0, downloads: 0 },
     author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   },
   {
@@ -466,7 +466,7 @@ const INITIAL_BUNDLES = [
     ],
     tags: ['Space', 'Minimalist', 'Gradient'],
     includes: ['Synchronized multi-screen sequence', 'High-contrast lockscreen layouts', 'Synthwave color-grading variants'],
-    stats: { views: 31200, likes: 1980, downloads: 1420 },
+    stats: { views: 0, likes: 0, downloads: 0 },
     author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   },
   {
@@ -489,7 +489,7 @@ const INITIAL_BUNDLES = [
     ],
     tags: ['Space', 'Nature', 'Gradient'],
     includes: ['Cinematic solar flares flow', 'Ultra high definition space maps', 'Synchronized multi-monitor sequence'],
-    stats: { views: 29800, likes: 1840, downloads: 1210 },
+    stats: { views: 0, likes: 0, downloads: 0 },
     author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   }
 ];

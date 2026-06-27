@@ -53,9 +53,9 @@ export const WALLPAPER_BUNDLES = [
       'Preview-safe compressed exports'
     ],
     stats: {
-      views: 24800,
-      likes: 1240,
-      downloads: 892
+      views: 0,
+      likes: 0,
+      downloads: 0
     },
     author: {
       name: 'Infernape',
@@ -110,9 +110,9 @@ export const WALLPAPER_BUNDLES = [
       'Compressed social preview assets'
     ],
     stats: {
-      views: 18200,
-      likes: 980,
-      downloads: 624
+      views: 0,
+      likes: 0,
+      downloads: 0
     },
     author: {
       name: 'Ethereal Lab',
@@ -158,9 +158,9 @@ export const WALLPAPER_BUNDLES = [
       'Synthwave color-grading variants'
     ],
     stats: {
-      views: 31200,
-      likes: 1980,
-      downloads: 1420
+      views: 0,
+      likes: 0,
+      downloads: 0
     },
     author: {
       name: 'Infernape',
@@ -206,9 +206,9 @@ export const WALLPAPER_BUNDLES = [
       'Synchronized multi-monitor sequence'
     ],
     stats: {
-      views: 29800,
-      likes: 1840,
-      downloads: 1210
+      views: 0,
+      likes: 0,
+      downloads: 0
     },
     author: {
       name: 'Infernape',
