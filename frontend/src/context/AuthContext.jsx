@@ -30,9 +30,9 @@ export function AuthProvider({ children }) {
     if (isAdminSession) {
       return {
         uid: 'admin-mock-999',
-        displayName: 'Admin (Local Bypass)',
+        displayName: 'Infernape',
         email: 'admin@slidepapers.com',
-        photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'
+        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
       };
     }
     return null;

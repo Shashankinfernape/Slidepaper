@@ -113,20 +113,24 @@ async function seedDatabase() {
       console.log(`[MongoDB] Migrated ${migrationResult.modifiedCount} legacy bundles to have default admin author.uid.`);
     }
 
-    // Seed default Admin profile in MongoDB
+    // Seed/Update default Admin profile in MongoDB
     let defaultAdmin = await User.findOne({ uid: 'admin-mock-999' });
     if (!defaultAdmin) {
       await User.create({
         uid: 'admin-mock-999',
-        displayName: 'Admin (Local Bypass)',
+        displayName: 'Infernape',
         email: 'admin@slidepapers.com',
-        photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80',
+        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
         subscribers: 68400,
         subscriberUids: [],
         about: 'Digital artist & wallpaper curator.',
         accentGradient: 'midnight'
       });
-      console.log('[MongoDB] Seeded default Admin author profile with 68,400 subscribers.');
+      console.log('[MongoDB] Seeded default Admin author profile (Infernape) with 68,400 subscribers.');
+    } else if (defaultAdmin.displayName === 'Admin (Local Bypass)') {
+      defaultAdmin.displayName = 'Infernape';
+      await defaultAdmin.save();
+      console.log('[MongoDB] Updated default Admin author profile display name to Infernape.');
     }
   } catch (err) {
     console.error('[MongoDB] Error seeding database:', err);

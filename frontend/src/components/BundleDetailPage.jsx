@@ -180,24 +180,26 @@ export default function BundleDetailPage({
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
   const [authorProfile, setAuthorProfile] = useState(null);
   const resolvedAuthorProfile = useMemo(() => {
-    const isOwnBundle = (bundle.author?.uid && (userProfile?.uid === bundle.author.uid || user?.uid === bundle.author.uid)) ||
-                        (!bundle.author?.uid && (userProfile?.email === bundle.author?.email || userProfile?.uid === 'admin-mock-999'));
+    const targetUid = bundle.author?.uid || 'admin-mock-999';
+    const isOwnBundle = (userProfile && (userProfile.uid === targetUid || targetUid === 'admin-mock-999' || !bundle.author?.uid)) ||
+                        (user && (user.uid === targetUid || targetUid === 'admin-mock-999'));
     const liveProfile = isOwnBundle ? userProfile : null;
     const remoteProfile = authorProfile || {};
 
     return {
+      ...bundle.author,
       ...remoteProfile,
       ...(liveProfile || {}),
-      uid: liveProfile?.uid || remoteProfile.uid || bundle.author?.uid,
+      uid: liveProfile?.uid || remoteProfile.uid || targetUid,
       displayName:
         liveProfile?.displayName ||
         remoteProfile.displayName ||
-        bundle.author?.name || 'Creator',
+        bundle.author?.name || 'Infernape',
       photoURL:
         liveProfile?.photoURL ||
         remoteProfile.photoURL ||
         bundle.author?.avatar,
-      about: liveProfile?.about || remoteProfile.about || '',
+      about: liveProfile?.about !== undefined ? liveProfile.about : (remoteProfile.about !== undefined ? remoteProfile.about : ''),
       youtubeUrl: liveProfile?.youtubeUrl || remoteProfile.youtubeUrl || '',
       instagramUrl: liveProfile?.instagramUrl || remoteProfile.instagramUrl || '',
       twitterUrl: liveProfile?.twitterUrl || remoteProfile.twitterUrl || '',
@@ -506,6 +508,23 @@ export default function BundleDetailPage({
           <div className="bundle-youtube-info">
             <h1 className="bundle-youtube-title">{bundle.name}</h1>
 
+            {/* YouTube style view, download and date meta line under title */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.88rem',
+              color: 'var(--text-secondary)',
+              margin: '0.35rem 0 1.25rem 0',
+              fontWeight: 500
+            }}>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatNumber(bundle.stats.views)} views</span>
+              <span>•</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatNumber(bundle.stats.downloads)} downloads</span>
+              <span>•</span>
+              <span>2 weeks ago</span>
+            </div>
+
             <div className="bundle-youtube-meta-row">
               <div className="bundle-youtube-author-block">
                 <div 
@@ -703,13 +722,8 @@ export default function BundleDetailPage({
             </button>
           </div>
 
-          <div className="youtube-description-box">
-            <div className="youtube-description-meta">
-              <span className="youtube-desc-views">{formatNumber(bundle.stats.views)} views</span>
-              <span className="youtube-desc-downloads">{formatNumber(bundle.stats.downloads)} downloads</span>
-              <span className="youtube-desc-date">2 weeks ago</span>
-            </div>
-            <p className="youtube-description-text">
+          <div className="youtube-description-box" style={{ padding: '1.25rem 1.5rem', marginTop: '1.5rem' }}>
+            <p className="youtube-description-text" style={{ margin: 0, fontSize: '0.92rem', lineHeight: '1.5', color: 'var(--text-primary)' }}>
               {bundle.description || 'No description provided for this bundle. Enjoy these high quality screen outputs.'}
             </p>
           </div>
