@@ -262,17 +262,24 @@ export default function BundleDetailPage({
       }
     };
 
-    // 4. Increment view count in MongoDB (once per session per bundle)
+    // 4. Increment view count in MongoDB (silent persistent browser caching: 1 User = 1 View per wallpaper)
     const incrementViewCount = async () => {
-      if (window._viewedBundles && window._viewedBundles.has(bundle.id)) {
-        return;
-      }
-      if (!window._viewedBundles) {
-        window._viewedBundles = new Set();
-      }
-      window._viewedBundles.add(bundle.id);
-
       try {
+        let viewedSet = [];
+        try {
+          const stored = localStorage.getItem('slidepapers_unique_views');
+          if (stored) viewedSet = JSON.parse(stored);
+        } catch (_) {}
+
+        if (Array.isArray(viewedSet) && viewedSet.includes(bundle.id)) {
+          return; // Already counted for this user/browser!
+        }
+
+        // Mark as viewed silently in browser cache
+        if (!Array.isArray(viewedSet)) viewedSet = [];
+        viewedSet.push(bundle.id);
+        localStorage.setItem('slidepapers_unique_views', JSON.stringify(viewedSet));
+
         const res = await fetch(`${API_URL}/api/bundles/${bundle.id}/view`, { method: 'POST' });
         if (res.ok) {
           const data = await res.json();
