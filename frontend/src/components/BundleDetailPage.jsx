@@ -722,12 +722,6 @@ export default function BundleDetailPage({
             </button>
           </div>
 
-          <div className="youtube-description-box" style={{ padding: '1.25rem 1.5rem', marginTop: '1.5rem' }}>
-            <p className="youtube-description-text" style={{ margin: 0, fontSize: '0.92rem', lineHeight: '1.5', color: 'var(--text-primary)' }}>
-              {bundle.description || 'No description provided for this bundle. Enjoy these high quality screen outputs.'}
-            </p>
-          </div>
-
           <GoogleAd type="leaderboard" />
         </div>
 
