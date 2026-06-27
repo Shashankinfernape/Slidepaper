@@ -693,16 +693,27 @@ app.post('/api/custom-ratio', async (req, res) => {
       console.log(`[Local Serve] ZIP available at: ${downloadUrl}`);
     }
 
-    // Cleanup job dir
+    // Increment download count atomically in MongoDB
+    let currentDownloads = 0;
     try {
-      if (fs.existsSync(jobDirPath)) fs.rmSync(jobDirPath, { recursive: true, force: true });
-      if (zipPath && fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-    } catch (_) {}
+      const updatedBundle = await Bundle.findOneAndUpdate(
+        { id: bundleId },
+        { $inc: { 'stats.downloads': 1 } },
+        { new: true }
+      );
+      if (updatedBundle && updatedBundle.stats) {
+        currentDownloads = updatedBundle.stats.downloads;
+        console.log(`[MongoDB] Download recorded for "${bundleId}". Total downloads: ${currentDownloads}`);
+      }
+    } catch (dErr) {
+      console.warn('[MongoDB] Failed to increment download count:', dErr.message);
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Bundle customized and ready for download',
-      downloadUrl: downloadUrl
+      downloadUrl: downloadUrl,
+      downloads: currentDownloads
     });
 
   } catch (error) {
@@ -1187,6 +1198,34 @@ app.post('/api/bundles/:bundleId/view', async (req, res) => {
   } catch (error) {
     console.error('Error incrementing views:', error);
     return res.status(500).json({ error: 'Failed to increment views' });
+  }
+});
+
+// Endpoint: Get live metrics status for a wallpaper bundle (views, likes, downloads, reaction)
+app.get('/api/bundles/:bundleId/status', async (req, res) => {
+  const { bundleId } = req.params;
+  const { uid } = req.query;
+
+  try {
+    const bundle = await Bundle.findOne({ id: bundleId });
+    if (!bundle) {
+      return res.status(404).json({ error: 'Bundle not found' });
+    }
+
+    let reaction = null;
+    if (uid && bundle.likedBy && bundle.likedBy.includes(uid)) {
+      reaction = 'like';
+    }
+
+    return res.status(200).json({
+      success: true,
+      stats: bundle.stats || { views: 0, likes: 0, downloads: 0 },
+      reaction: reaction,
+      likedBy: bundle.likedBy || []
+    });
+  } catch (error) {
+    console.error('Error fetching bundle status:', error);
+    return res.status(500).json({ error: 'Failed to fetch bundle status' });
   }
 });
 

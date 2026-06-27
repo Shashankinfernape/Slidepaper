@@ -174,7 +174,10 @@ export default function BundleDetailPage({
   const [downloadState, setDownloadState] = useState('idle');
   const [reaction, setReaction] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscribersCount, setSubscribersCount] = useState(bundle.author.subscribers || 0);
+  const [subscribersCount, setSubscribersCount] = useState(bundle.author?.subscribers || 0);
+  const [viewsCount, setViewsCount] = useState(bundle.stats?.views || 0);
+  const [downloadsCount, setDownloadsCount] = useState(bundle.stats?.downloads || 0);
+  const [likeCount, setLikeCount] = useState(bundle.stats?.likes || 0);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authActionLabel, setAuthActionLabel] = useState('continue');
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
@@ -207,18 +210,42 @@ export default function BundleDetailPage({
     };
   }, [authorProfile, bundle.author, userProfile, user]);
 
-  // Fetch real subscriber count and subscription status
+  // Sync real-time MongoDB metrics (views, likes, downloads, subscribers)
   useEffect(() => {
-    if (user && bundle.likedBy && Array.isArray(bundle.likedBy)) {
-      if (bundle.likedBy.includes(user.uid)) {
-        setReaction('like');
-      } else {
-        setReaction(null);
+    // 1. Reset local metric counts when bundle changes
+    setViewsCount(bundle.stats?.views || 0);
+    setDownloadsCount(bundle.stats?.downloads || 0);
+    setLikeCount(bundle.stats?.likes || 0);
+
+    // 2. Fetch live bundle metrics from MongoDB
+    const fetchLiveBundleStatus = async () => {
+      try {
+        const uidParam = user ? `?uid=${user.uid}` : '';
+        const res = await fetch(`${API_URL}/api/bundles/${bundle.id}/status${uidParam}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stats) {
+            setViewsCount(data.stats.views || 0);
+            setDownloadsCount(data.stats.downloads || 0);
+            setLikeCount(data.stats.likes || 0);
+            if (bundle.stats) {
+              bundle.stats.views = data.stats.views || 0;
+              bundle.stats.downloads = data.stats.downloads || 0;
+              bundle.stats.likes = data.stats.likes || 0;
+            }
+          }
+          if (data.reaction) {
+            setReaction(data.reaction);
+          } else {
+            setReaction(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch live bundle status:', err);
       }
-    } else {
-      setReaction(null);
-    }
+    };
     
+    // 3. Fetch author subscriber count & profile from MongoDB
     const fetchSubscriptionStatus = async () => {
       if (!bundle.author || !bundle.author.uid) return;
       try {
@@ -235,17 +262,26 @@ export default function BundleDetailPage({
       }
     };
 
+    // 4. Increment view count in MongoDB
     const incrementViewCount = async () => {
       try {
-        await fetch(`${API_URL}/api/bundles/${bundle.id}/view`, { method: 'POST' });
+        const res = await fetch(`${API_URL}/api/bundles/${bundle.id}/view`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.views !== undefined) {
+            setViewsCount(data.views);
+            if (bundle.stats) bundle.stats.views = data.views;
+          }
+        }
       } catch (err) {
         console.error('Failed to increment views:', err);
       }
     };
 
+    fetchLiveBundleStatus();
     fetchSubscriptionStatus();
     incrementViewCount();
-  }, [bundle, user]);
+  }, [bundle.id, user]);
 
   const handleLikeToggle = async () => {
     try {
@@ -257,7 +293,8 @@ export default function BundleDetailPage({
       if (res.ok) {
         const data = await res.json();
         setReaction(data.liked ? 'like' : null);
-        bundle.stats.likes = data.likes;
+        setLikeCount(data.likes);
+        if (bundle.stats) bundle.stats.likes = data.likes;
         bundle.likedBy = data.likedBy;
       }
     } catch (err) {
@@ -383,8 +420,7 @@ export default function BundleDetailPage({
     }
   }, [selectedDownloadId, customRatioWidth, customRatioHeight, bundle.images, bundle.ratio, presets]);
 
-  const likeCount =
-    bundle.stats.likes + (reaction === 'like' ? 1 : 0) - (reaction === 'dislike' ? 1 : 0);
+
 
   const runAuthedAction = async (label, action) => {
     if (!user) {
@@ -430,6 +466,11 @@ export default function BundleDetailPage({
       }
 
       const data = await response.json();
+
+      if (data.downloads !== undefined) {
+        setDownloadsCount(data.downloads);
+        if (bundle.stats) bundle.stats.downloads = data.downloads;
+      }
 
       // Trigger direct browser download (bypasses browser pop-up blockers completely on desktop & mobile)
       window.location.href = data.downloadUrl;
@@ -508,9 +549,9 @@ export default function BundleDetailPage({
               margin: '0.1rem 0 0.25rem 0',
               fontWeight: 500
             }}>
-              <span>{formatNumber(bundle.stats.views)} views</span>
+              <span>{formatNumber(viewsCount)} views</span>
               <span>2 weeks ago</span>
-              <span>{formatNumber(bundle.stats.downloads)} downloads</span>
+              <span>{formatNumber(downloadsCount)} downloads</span>
             </div>
 
             <div className="bundle-youtube-meta-row">
