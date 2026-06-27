@@ -23,11 +23,15 @@ if (
 
 const getProxiedImageUrl = (url) => {
   if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   if (url.includes('drive.google.com')) {
     const match = url.match(/[?&]id=([^&]+)/);
     if (match) {
       return `${API_URL}/api/proxy-image?id=${match[1]}`;
     }
+  }
+  if (url.startsWith('/uploads/')) {
+    return `${API_URL}${url}`;
   }
   return url.replace('http://localhost:5001', API_URL);
 };
@@ -277,7 +281,7 @@ function HeroSection({ onGetStarted, bundles }) {
 }
 
 function AppContent() {
-  const { user, isAdmin, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
+  const { user, userProfile, isAdmin, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
   
   // Secret admin modal states
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
@@ -584,7 +588,7 @@ function AppContent() {
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
               >
                 <img
-                  src={user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
+                  src={getProxiedImageUrl(userProfile?.photoURL || user?.photoURL) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80'}
                   alt={user.displayName}
                   className="profile-avatar"
                   referrerPolicy="no-referrer"

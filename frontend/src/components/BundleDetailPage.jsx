@@ -25,6 +25,21 @@ if (
   API_URL = API_URL.replace('http://', 'https://');
 }
 
+const getProxiedImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/[?&]id=([^&]+)/);
+    if (match) {
+      return `${API_URL}/api/proxy-image?id=${match[1]}`;
+    }
+  }
+  if (url.startsWith('/uploads/')) {
+    return `${API_URL}${url}`;
+  }
+  return url.replace('http://localhost:5001', API_URL);
+};
+
 const SAMPLE_RATIOS = [
   { w: '16', h: '9' },
   { w: '2.1', h: '1' },
@@ -495,9 +510,10 @@ export default function BundleDetailPage({
               <div className="bundle-youtube-author-block">
                 <div className="bundle-youtube-author-main">
                   <img
-                    src={resolvedAuthorProfile.photoURL}
+                    src={getProxiedImageUrl(resolvedAuthorProfile.photoURL) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
                     alt={resolvedAuthorProfile.displayName}
                     className="bundle-youtube-author-avatar"
+                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'; }}
                   />
                   <div className="bundle-youtube-author-copy">
                     <span className="bundle-youtube-author-name">
@@ -711,9 +727,10 @@ export default function BundleDetailPage({
             
             <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }} className="creator-about-body">
               <img
-                src={resolvedAuthorProfile.photoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                src={getProxiedImageUrl(resolvedAuthorProfile.photoURL) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
                 alt={resolvedAuthorProfile.displayName}
                 className="creator-avatar-img"
+                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'; }}
                 style={{
                   width: '60px',
                   height: '60px',

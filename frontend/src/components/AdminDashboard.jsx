@@ -21,6 +21,21 @@ if (
 const AVATAR_FALLBACK_URL = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80';
 const AVATAR_CROP_SIZE = 320;
 
+export const getProxiedImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/[?&]id=([^&]+)/);
+    if (match) {
+      return `${API_URL}/api/proxy-image?id=${match[1]}`;
+    }
+  }
+  if (url.startsWith('/uploads/')) {
+    return `${API_URL}${url}`;
+  }
+  return url.replace('http://localhost:5001', API_URL);
+};
+
 function clampValue(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -151,6 +166,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [cropRotate, setCropRotate] = useState(0);
   const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
   const dragState = useRef(null);
+  const touchState = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -262,6 +278,7 @@ export default function AdminDashboard({ onBack, logout }) {
 
   const onCropMouseDown = (e) => {
     e.preventDefault();
+    if (e.touches && e.touches.length > 1) return;
     const point = e.touches ? e.touches[0] : e;
     dragState.current = {
       startX: point.clientX,
@@ -271,7 +288,31 @@ export default function AdminDashboard({ onBack, logout }) {
     };
   };
 
+  const onCropTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      onCropMouseDown(e);
+    } else if (e.touches.length === 2) {
+      dragState.current = null;
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchState.current = { startDist: dist, startZoom: cropZoom };
+    }
+  };
+
   const onCropMouseMove = (e) => {
+    if (e.touches && e.touches.length === 2 && touchState.current) {
+      if (e.cancelable) e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = dist / touchState.current.startDist;
+      setCropZoomValue(touchState.current.startZoom * factor);
+      return;
+    }
+
     if (!dragState.current) return;
     if (e.cancelable) {
       e.preventDefault();
@@ -286,8 +327,10 @@ export default function AdminDashboard({ onBack, logout }) {
     setCropOffset(clampCropOffset(nextOffset, cropImageRef.current, cropZoom));
   };
 
-  const onCropMouseUp = () => {
+  const onCropMouseUp = (e) => {
+    if (e && e.touches && e.touches.length > 0) return;
     dragState.current = null;
+    touchState.current = null;
   };
 
   useEffect(() => {
@@ -1306,9 +1349,10 @@ export default function AdminDashboard({ onBack, logout }) {
                     className="whatsapp-avatar-container admin-profile-avatar-button"
                   >
                     <img
-                      src={editedPhotoURL || AVATAR_FALLBACK_URL}
+                      src={getProxiedImageUrl(editedPhotoURL) || AVATAR_FALLBACK_URL}
                       alt="Avatar"
                       className="admin-profile-avatar-image"
+                      onError={(e) => { e.target.src = AVATAR_FALLBACK_URL; }}
                     />
                     <div className="whatsapp-avatar-overlay admin-profile-avatar-overlay">
                       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -1420,66 +1464,39 @@ export default function AdminDashboard({ onBack, logout }) {
               {/* Media & Preview Column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="admin-profile-preview-column">
 
-                {/* WhatsApp-style cropper */}
+                {/* WhatsApp-style full screen cropper modal without sliders */}
                 {imageSrc && (
                   <div className="cropper-container">
-                    <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>Drag to adjust · Scroll to zoom</span>
+                    <div className="whatsapp-cropper-header">
+                      <h3>Move and scale</h3>
+                      <p>Drag to position • Scroll or pinch to zoom</p>
+                    </div>
 
-                    {/* Circular crop canvas — drag to pan, scroll to zoom */}
                     <div
                       ref={cropperRef}
                       className="cropper-canvas-wrapper"
-                      style={{ cursor: 'grab', borderRadius: '50%', overflow: 'hidden', userSelect: 'none', touchAction: 'none' }}
                       onMouseDown={onCropMouseDown}
-                      onTouchStart={onCropMouseDown}
+                      onTouchStart={onCropTouchStart}
                       onWheel={onCropWheel}
                     >
-                      <canvas ref={canvasRef} width={AVATAR_CROP_SIZE} height={AVATAR_CROP_SIZE} style={{ width: '100%', height: '100%', display: 'block', borderRadius: '50%' }} />
+                      <canvas ref={canvasRef} width={AVATAR_CROP_SIZE} height={AVATAR_CROP_SIZE} />
                     </div>
 
-                    {/* Only Zoom + Rotate sliders */}
-                    <div className="cropper-controls">
-                      <div className="cropper-control-row">
-                        <label>
-                          <span>Zoom</span>
-                          <span>{cropZoom.toFixed(1)}x</span>
-                        </label>
-                        <input type="range" min="1" max="4" step="0.05"
-                          value={cropZoom}
-                          onChange={(e) => setCropZoomValue(parseFloat(e.target.value))}
-                          className="cropper-slider"
-                        />
-                      </div>
-                      <div className="cropper-control-row">
-                        <label>
-                          <span>Rotate</span>
-                          <span>{cropRotate}°</span>
-                        </label>
-                        <input type="range" min="-180" max="180" step="1"
-                          value={cropRotate}
-                          onChange={(e) => setCropRotate(parseInt(e.target.value))}
-                          className="cropper-slider"
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                        <button
-                          type="button"
-                          onClick={applyCrop}
-                          className="admin-btn primary"
-                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.82rem' }}
-                        >
-                          ✓ Use Photo
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setImageSrc(null); setCropZoom(1); setCropRotate(0); setCropOffset({ x: 0, y: 0 }); }}
-                          className="admin-btn secondary"
-                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.82rem' }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                    <div className="whatsapp-cropper-actions">
+                      <button
+                        type="button"
+                        onClick={closeCropper}
+                        className="whatsapp-crop-btn cancel"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={applyCrop}
+                        className="whatsapp-crop-btn done"
+                      >
+                        Done
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1500,9 +1517,10 @@ export default function AdminDashboard({ onBack, logout }) {
                   }}>
                     <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }} className="creator-about-body">
                       <img
-                        src={editedPhotoURL || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
+                        src={getProxiedImageUrl(editedPhotoURL) || AVATAR_FALLBACK_URL}
                         alt="Avatar Preview"
                         className="creator-avatar-img"
+                        onError={(e) => { e.target.src = AVATAR_FALLBACK_URL; }}
                         style={{
                           width: '56px',
                           height: '56px',

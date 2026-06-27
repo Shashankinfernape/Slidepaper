@@ -381,6 +381,7 @@ const uploadsDir = path.join(tempDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+app.use('/uploads', express.static(uploadsDir));
 
 const upload = multer({ dest: uploadsDir });
 
@@ -1341,44 +1342,54 @@ app.post('/api/users/update-profile', async (req, res) => {
   }
 });
 
-// Endpoint: Upload avatar image to Google Drive
+// Endpoint: Upload avatar image to Google Drive or local storage
 app.post('/api/users/upload-avatar', upload.single('avatar'), async (req, res) => {
-  if (!drive) {
-    return res.status(401).json({ error: 'Google Drive client not authenticated.' });
-  }
   const file = req.file;
   if (!file) {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
 
   try {
-    const parentFolderId = await getOrCreateFolder();
-    const fileMetadata = {
-      name: `avatar-${Date.now()}-${file.originalname}`,
-      parents: [parentFolderId]
-    };
-    const media = {
-      mimeType: file.mimetype,
-      body: fs.createReadStream(file.path)
-    };
-    const driveFile = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id'
-    });
-    const fileId = driveFile.data.id;
+    if (drive) {
+      try {
+        const parentFolderId = await getOrCreateFolder();
+        const fileMetadata = {
+          name: `avatar-${Date.now()}-${file.originalname || 'avatar.png'}`,
+          parents: [parentFolderId]
+        };
+        const media = {
+          mimeType: file.mimetype || 'image/png',
+          body: fs.createReadStream(file.path)
+        };
+        const driveFile = await drive.files.create({
+          requestBody: fileMetadata,
+          media: media,
+          fields: 'id'
+        });
+        const fileId = driveFile.data.id;
 
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: { role: 'reader', type: 'anyone' }
-    });
+        await drive.permissions.create({
+          fileId: fileId,
+          requestBody: { role: 'reader', type: 'anyone' }
+        });
 
-    // Clean up local temp file
-    try {
-      await fs.promises.unlink(file.path);
-    } catch (_) {}
+        try {
+          await fs.promises.unlink(file.path);
+        } catch (_) {}
 
-    const photoURL = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        const photoURL = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        return res.status(200).json({ success: true, photoURL });
+      } catch (driveErr) {
+        console.warn('[Avatar Upload] Drive upload failed, saving to local static storage:', driveErr.message);
+      }
+    }
+
+    // Local static fallback
+    const ext = path.extname(file.originalname || 'avatar.png') || '.png';
+    const newFilename = `avatar-${Date.now()}${ext}`;
+    const targetPath = path.join(uploadsDir, newFilename);
+    await fs.promises.rename(file.path, targetPath);
+    const photoURL = `/uploads/${newFilename}`;
     return res.status(200).json({ success: true, photoURL });
   } catch (error) {
     console.error('Error uploading avatar:', error);
