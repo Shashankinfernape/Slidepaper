@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 
 export default function GoogleAd({ type = 'leaderboard', client, slot }) {
-  // Read AdSense Client ID & Slot IDs from env variables or props
-  const adClient = client || import.meta.env.VITE_ADSENSE_CLIENT_ID;
+  // Read AdSense Client ID & Slot IDs from env variables, props, or publisher ID
+  const adClient = client || import.meta.env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-6764886759571309';
   const adSlot = slot || (
     type === 'leaderboard' 
       ? import.meta.env.VITE_ADSENSE_SLOT_LEADERBOARD 
