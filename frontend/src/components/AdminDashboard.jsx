@@ -146,6 +146,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
   const [bundleRatio, setBundleRatio] = useState('16:9');
 
   // Form states for profile editing
@@ -169,6 +170,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const dragState = useRef(null);
   const touchState = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
@@ -225,6 +227,35 @@ export default function AdminDashboard({ onBack, logout }) {
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  const handleBannerFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingBanner(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await fetch(`${API_URL}/api/users/upload-avatar`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.photoURL) {
+          setEditedBannerURL(data.photoURL);
+        }
+      }
+    } catch (err) {
+      console.error('Error uploading channel banner:', err);
+    } finally {
+      setUploadingBanner(false);
+      e.target.value = '';
+    }
   };
 
   useEffect(() => {
@@ -1344,6 +1375,13 @@ export default function AdminDashboard({ onBack, logout }) {
                   onChange={handleAvatarFileChange}
                   style={{ display: 'none' }}
                 />
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerFileChange}
+                  style={{ display: 'none' }}
+                />
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1rem' }} className="admin-profile-avatar-stack">
                   <button
@@ -1430,20 +1468,63 @@ export default function AdminDashboard({ onBack, logout }) {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Channel Banner Image URL</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Channel Banner Background Image (Horizontal)</label>
+                  
+                  <div 
+                    onClick={() => bannerInputRef.current?.click()}
+                    style={{
+                      width: '100%',
+                      height: '110px',
+                      borderRadius: '12px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      border: '1px dashed var(--border-color)',
+                      background: editedBannerURL ? `url(${getProxiedImageUrl(editedBannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justify: 'center',
+                      transition: 'all 0.2s'
+                    }}
+                    title="Click to upload horizontal background image"
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'rgba(0, 0, 0, 0.45)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      color: '#ffffff',
+                      backdropFilter: 'blur(2px)',
+                      transition: 'all 0.2s'
+                    }}>
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                        {uploadingBanner ? 'Uploading Banner...' : (editedBannerURL ? 'Change Horizontal Banner' : 'Upload Horizontal Banner')}
+                      </span>
+                    </div>
+                  </div>
+
                   <input
                     type="text"
-                    placeholder="https://images.unsplash.com/... or Google Drive Image Link"
+                    placeholder="Or paste image URL (https://...)"
                     value={editedBannerURL}
                     onChange={(e) => setEditedBannerURL(e.target.value)}
                     className="admin-modal-input"
+                    style={{ fontSize: '0.82rem' }}
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={savingProfile || uploadingAvatar}
+                  disabled={savingProfile || uploadingAvatar || uploadingBanner}
                   className="admin-btn primary"
                   style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.92rem', marginTop: '1rem' }}
                 >
