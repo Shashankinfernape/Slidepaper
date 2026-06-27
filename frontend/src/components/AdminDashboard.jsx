@@ -156,6 +156,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [editedInstagram, setEditedInstagram] = useState('');
   const [editedTwitter, setEditedTwitter] = useState('');
   const [editedAccent, setEditedAccent] = useState('midnight');
+  const [editedBannerURL, setEditedBannerURL] = useState('');
 
   // WhatsApp-style Cropper states
   const canvasRef = useRef(null);
@@ -179,6 +180,7 @@ export default function AdminDashboard({ onBack, logout }) {
       setEditedInstagram(userProfile.instagramUrl || '');
       setEditedTwitter(userProfile.twitterUrl || '');
       setEditedAccent(userProfile.accentGradient || 'midnight');
+      setEditedBannerURL(userProfile.bannerURL || '');
     } else if (user) {
       setEditedDisplayName(user.displayName || '');
       setEditedPhotoURL(user.photoURL || '');
@@ -400,7 +402,8 @@ export default function AdminDashboard({ onBack, logout }) {
           youtubeUrl: editedYoutube,
           instagramUrl: editedInstagram,
           twitterUrl: editedTwitter,
-          accentGradient: editedAccent
+          accentGradient: editedAccent,
+          bannerURL: editedBannerURL
         })
       });
       
@@ -1423,6 +1426,17 @@ export default function AdminDashboard({ onBack, logout }) {
                     placeholder="https://x.com/username"
                     value={editedTwitter}
                     onChange={(e) => setEditedTwitter(e.target.value)}
+                    className="admin-modal-input"
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Channel Banner Image URL</label>
+                  <input
+                    type="text"
+                    placeholder="https://images.unsplash.com/... or Google Drive Image Link"
+                    value={editedBannerURL}
+                    onChange={(e) => setEditedBannerURL(e.target.value)}
                     className="admin-modal-input"
                   />
                 </div>

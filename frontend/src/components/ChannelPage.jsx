@@ -1,37 +1,106 @@
-import { useState, useMemo } from 'react';
-import { Check, ArrowLeft, Shield } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Check, ArrowLeft } from 'lucide-react';
 import WallpaperGrid from './WallpaperGrid';
 import { getProxiedImageUrl } from './AdminDashboard';
+import { useAuth } from '../context/AuthContext';
+
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+if (
+  typeof window !== 'undefined' &&
+  window.location.protocol === 'https:' &&
+  API_URL.startsWith('http://') &&
+  !API_URL.includes('localhost') &&
+  !API_URL.includes('127.0.0.1')
+) {
+  API_URL = API_URL.replace('http://', 'https://');
+}
 
 export default function ChannelPage({ channel, bundles = [], onSelectBundle, onBack, user }) {
-  const [activeTab, setActiveTab] = useState('wallpapers');
+  const { userProfile } = useAuth();
+  const [remoteAuthor, setRemoteAuthor] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 68400);
 
-  const channelName = channel?.displayName || channel?.name || 'Creator Studio';
-  const avatarUrl = getProxiedImageUrl(channel?.photoURL || channel?.avatar) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80';
+  // Fetch remote author profile if needed
+  useEffect(() => {
+    const targetUid = channel?.uid || channel?.author?.uid;
+    if (!targetUid) return;
+
+    fetch(`${API_URL}/api/authors/${targetUid}/status?userUid=${user?.uid || ''}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data && data.profile) {
+          setRemoteAuthor(data.profile);
+          if (data.profile.subscribers !== undefined) {
+            setSubscribersCount(data.profile.subscribers);
+          }
+          if (data.isSubscribed !== undefined) {
+            setIsSubscribed(data.isSubscribed);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [channel, user]);
+
+  // Resolve live profile parity (matches userProfile when viewing own channel)
+  const resolvedProfile = useMemo(() => {
+    const targetUid = channel?.uid || channel?.author?.uid;
+    const isOwnChannel = (targetUid && (userProfile?.uid === targetUid || user?.uid === targetUid)) ||
+                         (!targetUid && (userProfile?.email === channel?.email || userProfile?.uid === 'admin-mock-999'));
+    const live = isOwnChannel ? userProfile : null;
+    const remote = remoteAuthor || {};
+
+    return {
+      ...channel,
+      ...remote,
+      ...(live || {}),
+      displayName: live?.displayName || remote.displayName || channel?.displayName || channel?.name || 'Creator Studio',
+      photoURL: live?.photoURL || remote.photoURL || channel?.photoURL || channel?.avatar,
+      about: live?.about !== undefined ? live.about : (remote.about !== undefined ? remote.about : (channel?.about || '')),
+      bannerURL: live?.bannerURL || remote.bannerURL || channel?.bannerURL || '',
+      youtubeUrl: live?.youtubeUrl || remote.youtubeUrl || channel?.youtubeUrl || '',
+      instagramUrl: live?.instagramUrl || remote.instagramUrl || channel?.instagramUrl || '',
+      twitterUrl: live?.twitterUrl || remote.twitterUrl || channel?.twitterUrl || '',
+      joined: live?.joined || remote.joined || channel?.joined || null,
+    };
+  }, [channel, remoteAuthor, userProfile, user]);
+
+  const channelName = resolvedProfile.displayName;
+  const avatarUrl = getProxiedImageUrl(resolvedProfile.photoURL) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80';
+  const bannerUrl = getProxiedImageUrl(resolvedProfile.bannerURL);
   const handleName = `@${channelName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 
   // Filter wallpapers uploaded by this creator
   const creatorBundles = useMemo(() => {
     if (!bundles || bundles.length === 0) return [];
     return bundles.filter(b => {
-      if (channel?.uid && b.author?.uid) {
-        return b.author.uid === channel.uid;
+      if (resolvedProfile?.uid && b.author?.uid) {
+        return b.author.uid === resolvedProfile.uid;
       }
       return b.author?.name === channelName;
     });
-  }, [bundles, channel, channelName]);
+  }, [bundles, resolvedProfile, channelName]);
 
   const displayBundles = creatorBundles.length > 0 ? creatorBundles : bundles;
 
-  const handleSubscribeToggle = () => {
+  const handleSubscribeToggle = async () => {
+    const targetUid = resolvedProfile?.uid || 'admin-mock-999';
     if (isSubscribed) {
       setIsSubscribed(false);
       setSubscribersCount(prev => Math.max(0, prev - 1));
     } else {
       setIsSubscribed(true);
       setSubscribersCount(prev => prev + 1);
+    }
+
+    if (user) {
+      try {
+        await fetch(`${API_URL}/api/authors/${targetUid}/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid })
+        });
+      } catch (_) {}
     }
   };
 
@@ -41,71 +110,84 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
     return num.toString();
   };
 
+  const formattedJoined = resolvedProfile.joined
+    ? new Date(resolvedProfile.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    : 'June 2026';
+
   return (
-    <div className="youtube-channel-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+    <div className="youtube-channel-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
       
-      {/* Top Navigation Bar / Back button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
+      {/* YouTube Style Channel Banner with integrated Glassmorphic Back Button */}
+      <div style={{
+        width: '100%',
+        height: '200px',
+        borderRadius: '18px',
+        background: bannerUrl ? `url(${bannerUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        border: '1px solid var(--border-color)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.25)'
+      }}>
+        {!bannerUrl && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at 75% 30%, rgba(59, 130, 246, 0.2), transparent 65%)',
+            pointerEvents: 'none'
+          }} />
+        )}
+
+        {/* Floating Glass Reworked Back Button */}
         <button
           onClick={onBack}
           style={{
+            position: 'absolute',
+            top: '16px',
+            left: '16px',
+            zIndex: 10,
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            padding: '0.6rem 1.2rem',
+            background: 'rgba(0, 0, 0, 0.55)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#ffffff',
+            padding: '0.55rem 1.2rem',
             borderRadius: '999px',
             cursor: 'pointer',
             fontWeight: 600,
-            fontSize: '0.88rem',
-            transition: 'all 0.2s'
+            fontSize: '0.85rem',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.75)'; e.currentTarget.style.transform = 'scale(1.03)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.55)'; e.currentTarget.style.transform = 'scale(1)'; }}
         >
           <ArrowLeft size={16} />
           <span>Back to Feed</span>
         </button>
       </div>
 
-      {/* YouTube Style Channel Banner */}
-      <div style={{
-        width: '100%',
-        height: '180px',
-        borderRadius: '16px',
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid var(--border-color)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-      }}>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 70% 30%, rgba(59, 130, 246, 0.15), transparent 60%)',
-          pointerEvents: 'none'
-        }} />
-      </div>
-
-      {/* YouTube Channel Header Block */}
+      {/* Channel Header Block */}
       <div style={{
         display: 'flex',
         alignItems: 'flex-start',
         gap: '1.75rem',
         padding: '0 0.5rem',
-        marginTop: '-2rem',
+        marginTop: '-2.5rem',
         flexWrap: 'wrap'
       }} className="channel-header-block">
         
         {/* Channel Avatar */}
         <div style={{
           position: 'relative',
-          width: '120px',
-          height: '120px',
+          width: '128px',
+          height: '128px',
           borderRadius: '50%',
           overflow: 'hidden',
           border: '4px solid var(--bg-primary)',
-          boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
           background: 'var(--bg-secondary)',
           flexShrink: 0
         }}>
@@ -117,10 +199,10 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           />
         </div>
 
-        {/* Channel Copy & Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1, minWidth: '240px', marginTop: '2rem' }}>
+        {/* Channel Copy & Integrated Compact Profile Info */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{channelName}</h1>
+            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{channelName}</h1>
             <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff' }}>
               <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
@@ -128,29 +210,57 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.88rem', flexWrap: 'wrap' }}>
+          {/* Compact Meta Line along profile */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{handleName}</span>
             <span>•</span>
             <span>{formatSubscribers(subscribersCount)} subscribers</span>
             <span>•</span>
             <span>{displayBundles.length} wallpapers</span>
+            <span>•</span>
+            <span>Joined {formattedJoined}</span>
           </div>
 
-          <p style={{
-            margin: '0.4rem 0 0 0',
-            fontSize: '0.88rem',
-            color: 'var(--text-secondary)',
-            maxHeight: '2.8em',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            lineHeight: '1.4'
-          }}>
-            {channel?.about || 'Welcome to the official wallpaper studio channel! Explore high-resolution curated multi-screen wallpaper sets.'}
-          </p>
+          {/* Compact Bio along profile */}
+          {resolvedProfile.about && (
+            <p style={{
+              margin: '0.2rem 0 0 0',
+              fontSize: '0.88rem',
+              color: 'var(--text-secondary)',
+              lineHeight: '1.45',
+              maxWidth: '750px'
+            }}>
+              {resolvedProfile.about}
+            </p>
+          )}
+
+          {/* Compact Social Chips along profile */}
+          {(resolvedProfile.youtubeUrl || resolvedProfile.instagramUrl || resolvedProfile.twitterUrl) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+              {resolvedProfile.youtubeUrl && (
+                <a href={resolvedProfile.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '4px 10px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'none' }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.524 3.545 12 3.545 12 3.545s-7.525 0-9.387.51C1.05 4.382.518 5.42.518 6.163C0 8.025 0 12 0 12s0 3.975.518 5.837c.252.743.785 1.282 2.095 1.51C4.475 19.855 12 19.855 12 19.855s7.524 0 9.388-.508c1.312-.228 1.844-1.267 2.095-1.51c.517-1.862.517-5.837.517-5.837s0-3.975-.517-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                  YouTube
+                </a>
+              )}
+              {resolvedProfile.instagramUrl && (
+                <a href={resolvedProfile.instagramUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(225, 48, 108, 0.12)', color: '#e1306c', border: '1px solid rgba(225, 48, 108, 0.25)', padding: '4px 10px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'none' }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                  Instagram
+                </a>
+              )}
+              {resolvedProfile.twitterUrl && (
+                <a href={resolvedProfile.twitterUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(29, 161, 242, 0.12)', color: '#1da1f2', border: '1px solid rgba(29, 161, 242, 0.25)', padding: '4px 10px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'none' }}>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  Twitter / X
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
         {/* YouTube Subscribe Action */}
-        <div style={{ marginTop: '2.2rem', flexShrink: 0 }}>
+        <div style={{ marginTop: '2.5rem', flexShrink: 0 }}>
           <button
             onClick={handleSubscribeToggle}
             style={{
@@ -163,7 +273,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
               transition: 'all 0.2s',
               background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
               color: isSubscribed ? 'var(--text-primary)' : '#000000',
-              boxShadow: isSubscribed ? 'none' : '0 4px 14px rgba(255,255,255,0.25)',
+              boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -181,105 +291,16 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         </div>
       </div>
 
-      {/* YouTube Channel Navigation Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '2rem',
-        borderBottom: '1px solid var(--border-color)',
-        paddingTop: '0.5rem',
-        marginTop: '0.5rem'
-      }}>
-        {[
-          { id: 'wallpapers', label: 'Wallpapers' },
-          { id: 'about', label: 'About' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '3px solid var(--text-primary)' : '3px solid transparent',
-              padding: '0.75rem 0.5rem',
-              color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === tab.id ? 700 : 500,
-              fontSize: '0.95rem',
-              cursor: 'pointer',
-              transition: 'all 0.15s'
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Clean Separator Line */}
+      <div style={{ borderBottom: '1px solid var(--border-color)', margin: '0.5rem 0 0 0' }} />
+
+      {/* Wallpapers Showcase Grid */}
+      <div>
+        <WallpaperGrid
+          bundles={displayBundles}
+          onSelectBundle={onSelectBundle}
+        />
       </div>
-
-      {/* Tab Contents */}
-      {activeTab === 'wallpapers' ? (
-        <div>
-          <WallpaperGrid
-            bundles={displayBundles}
-            onSelectBundle={onSelectBundle}
-          />
-        </div>
-      ) : (
-        <div style={{
-          padding: '2rem',
-          background: 'var(--bg-primary)',
-          borderRadius: '16px',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-          maxWidth: '700px'
-        }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Description</h3>
-          <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: '1.6', fontSize: '0.92rem' }}>
-            {channel?.about || 'Welcome to the official wallpaper studio channel! Dedicated to crafting stunning multi-monitor, ultra-wide and mobile aesthetic wallpapers.'}
-          </p>
-
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Channel Details</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-              <div>Joined: <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{channel?.joined ? new Date(channel.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : 'June 2026'}</span></div>
-              <div>Location: <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Global Studio</span></div>
-            </div>
-          </div>
-
-          {(channel?.youtubeUrl || channel?.instagramUrl || channel?.twitterUrl) && (
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Links</h4>
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                {channel?.youtubeUrl && (
-                  <a href={channel.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 600 }}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                      <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.524 3.545 12 3.545 12 3.545s-7.525 0-9.387.51C1.05 4.382.518 5.42.518 6.163C0 8.025 0 12 0 12s0 3.975.518 5.837c.252.743.785 1.282 2.095 1.51C4.475 19.855 12 19.855 12 19.855s7.524 0 9.388-.508c1.312-.228 1.844-1.267 2.095-1.51c.517-1.862.517-5.837.517-5.837s0-3.975-.517-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
-                    YouTube
-                  </a>
-                )}
-                {channel?.instagramUrl && (
-                  <a href={channel.instagramUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e1306c', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 600 }}>
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                    </svg>
-                    Instagram
-                  </a>
-                )}
-                {channel?.twitterUrl && (
-                  <a href={channel.twitterUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#1da1f2', textDecoration: 'none', fontSize: '0.88rem', fontWeight: 600 }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                    </svg>
-                    Twitter / X
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

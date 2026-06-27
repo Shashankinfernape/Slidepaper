@@ -33,7 +33,8 @@ const userSchema = new mongoose.Schema({
   youtubeUrl: { type: String, default: '' },
   instagramUrl: { type: String, default: '' },
   twitterUrl: { type: String, default: '' },
-  accentGradient: { type: String, default: 'midnight' }
+  accentGradient: { type: String, default: 'midnight' },
+  bannerURL: { type: String, default: '' }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -1301,7 +1302,7 @@ app.get('/api/authors/:authorUid/status', async (req, res) => {
 
 // Endpoint: Update user profile
 app.post('/api/users/update-profile', async (req, res) => {
-  const { uid, displayName, photoURL, about, youtubeUrl, instagramUrl, twitterUrl, accentGradient } = req.body;
+  const { uid, displayName, photoURL, about, youtubeUrl, instagramUrl, twitterUrl, accentGradient, bannerURL } = req.body;
   if (!uid) {
     return res.status(400).json({ error: 'Missing uid' });
   }
@@ -1316,7 +1317,8 @@ app.post('/api/users/update-profile', async (req, res) => {
         youtubeUrl, 
         instagramUrl, 
         twitterUrl,
-        accentGradient
+        accentGradient,
+        bannerURL
       },
       { new: true, upsert: true }
     );
