@@ -108,9 +108,9 @@ export function AuthProvider({ children }) {
         console.log('[AuthContext] Preserving mock admin session and setting user state');
         setUser({
           uid: 'admin-mock-999',
-          displayName: 'Admin (Local Bypass)',
+          displayName: 'Infernape',
           email: 'admin@slidepapers.com',
-          photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'
+          photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
         });
         setIsAdmin(true);
         setInitialLoading(false);
@@ -238,9 +238,9 @@ export function AuthProvider({ children }) {
           setTimeout(() => {
             const adminUser = {
               uid: 'admin-mock-999',
-              displayName: 'Admin (Local Bypass)',
+              displayName: 'Infernape',
               email: 'admin@slidepapers.com',
-              photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'
+              photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
             };
             console.log('[AuthContext] Local mock admin logged in successfully. Setting user.');
             setUser(adminUser);

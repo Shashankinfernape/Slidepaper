@@ -104,7 +104,7 @@ async function seedDatabase() {
         $set: { 
           'author.uid': 'admin-mock-999', 
           'author.email': 'admin@slidepapers.com',
-          'author.name': 'Admin (Local Bypass)',
+          'author.name': 'Infernape',
           'author.avatar': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'
         } 
       }
@@ -414,7 +414,7 @@ const INITIAL_BUNDLES = [
     tags: ['Nature', 'Space', 'Minimalist'],
     includes: ['Triple-monitor synchronized sequence', 'Ultrawide and desktop crops', 'Clean and subtle vignette variants'],
     stats: { views: 24800, likes: 1240, downloads: 892 },
-    author: { name: 'Google Design Lab', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
+    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   },
   {
     id: 'spectral-drift',
@@ -438,7 +438,7 @@ const INITIAL_BUNDLES = [
     tags: ['Gradient', 'Abstract', 'Minimalist'],
     includes: ['Desktop and mobile-friendly exports', 'Ultrawide panoramic crop set', 'Color-matched alternate brightness passes'],
     stats: { views: 18200, likes: 980, downloads: 624 },
-    author: { name: 'Ethereal Lab', subscribers: 41200, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80' }
+    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   },
   {
     id: 'cyber-drift',
@@ -461,7 +461,7 @@ const INITIAL_BUNDLES = [
     tags: ['Space', 'Minimalist', 'Gradient'],
     includes: ['Synchronized multi-screen sequence', 'High-contrast lockscreen layouts', 'Synthwave color-grading variants'],
     stats: { views: 31200, likes: 1980, downloads: 1420 },
-    author: { name: 'Google Design Lab', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
+    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   },
   {
     id: 'solar-flare',
@@ -484,7 +484,7 @@ const INITIAL_BUNDLES = [
     tags: ['Space', 'Nature', 'Gradient'],
     includes: ['Cinematic solar flares flow', 'Ultra high definition space maps', 'Synchronized multi-monitor sequence'],
     stats: { views: 29800, likes: 1840, downloads: 1210 },
-    author: { name: 'Google Design Lab', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
+    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
   }
 ];
 

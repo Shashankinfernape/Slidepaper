@@ -58,7 +58,7 @@ export const WALLPAPER_BUNDLES = [
       downloads: 892
     },
     author: {
-      name: 'Google Design Lab',
+      name: 'Infernape',
       subscribers: 68400,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
     }
@@ -163,7 +163,7 @@ export const WALLPAPER_BUNDLES = [
       downloads: 1420
     },
     author: {
-      name: 'Google Design Lab',
+      name: 'Infernape',
       subscribers: 68400,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
     }
@@ -211,7 +211,7 @@ export const WALLPAPER_BUNDLES = [
       downloads: 1210
     },
     author: {
-      name: 'Google Design Lab',
+      name: 'Infernape',
       subscribers: 68400,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
     }
