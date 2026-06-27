@@ -431,18 +431,8 @@ export default function BundleDetailPage({
 
       const data = await response.json();
 
-      // Trigger actual browser download pointing to Google Drive (mobile-friendly fallback)
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        window.location.href = data.downloadUrl;
-      } else {
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.setAttribute('download', '');
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      // Trigger direct browser download (bypasses browser pop-up blockers completely on desktop & mobile)
+      window.location.href = data.downloadUrl;
 
       setDownloadState('completed');
     } catch (error) {
