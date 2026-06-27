@@ -3374,7 +3374,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-card--watch-hero .stack-container {
   aspect-ratio: 16 / 9.5;
-  padding: 1.5rem 0.5rem 0.5rem 2.25rem;
+  padding: 0.15rem 0.5rem 0.5rem 2.25rem;
   justify-content: center;
 }
 
