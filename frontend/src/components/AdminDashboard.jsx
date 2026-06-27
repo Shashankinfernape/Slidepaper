@@ -130,6 +130,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
+  const [bundleFilter, setBundleFilter] = useState('all');
   const [driveStatus, setDriveStatus] = useState(null);
   const [loadingDrive, setLoadingDrive] = useState(false);
   const [rebuildingCache, setRebuildingCache] = useState(false);
@@ -987,12 +988,51 @@ export default function AdminDashboard({ onBack, logout }) {
 
         {activeTab === 'bundles' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Manage Wallpapers</h3>
+              <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <button
+                  onClick={() => setBundleFilter('all')}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bundleFilter === 'all' ? 'var(--bg-primary)' : 'transparent',
+                    color: bundleFilter === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  All Creators ({bundles.length})
+                </button>
+                <button
+                  onClick={() => setBundleFilter('mine')}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: bundleFilter === 'mine' ? 'var(--bg-primary)' : 'transparent',
+                    color: bundleFilter === 'mine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  My Uploads ({bundles.filter(b => (user?.uid && b.author?.uid === user.uid) || (user?.email && b.author?.email === user.email)).length})
+                </button>
+              </div>
+            </div>
+
             {loadingBundles ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
                 <div className="download-spinner-tiny" style={{ width: '20px', height: '20px' }}></div>
               </div>
             ) : (
-              bundles.map((bundle) => (
+              (bundleFilter === 'mine' 
+                ? bundles.filter(b => (user?.uid && b.author?.uid === user.uid) || (user?.email && b.author?.email === user.email))
+                : bundles
+              ).map((bundle) => (
                 <div 
                   key={bundle.id} 
                   className="admin-card" 
@@ -1017,7 +1057,7 @@ export default function AdminDashboard({ onBack, logout }) {
                     <div>
                       <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{bundle.name}</h4>
                       <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: '0.15rem' }}>
-                        {bundle.type} • {bundle.images ? bundle.images.length : 0} Wallpapers • {bundle.orientation}
+                        {bundle.type} • {bundle.images ? bundle.images.length : 0} Wallpapers • Creator: <strong style={{ color: 'var(--text-primary)' }}>{bundle.author?.name || 'Unknown'}</strong>
                       </span>
                     </div>
                   </div>

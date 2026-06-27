@@ -70,18 +70,21 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   const bannerUrl = getProxiedImageUrl(resolvedProfile.bannerURL);
   const handleName = `@${channelName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 
-  // Filter wallpapers uploaded by this creator
+  // Filter wallpapers uploaded specifically by this creator
   const creatorBundles = useMemo(() => {
     if (!bundles || bundles.length === 0) return [];
     return bundles.filter(b => {
       if (resolvedProfile?.uid && b.author?.uid) {
         return b.author.uid === resolvedProfile.uid;
       }
+      if (resolvedProfile?.email && b.author?.email) {
+        return b.author.email.toLowerCase() === resolvedProfile.email.toLowerCase();
+      }
       return b.author?.name === channelName;
     });
   }, [bundles, resolvedProfile, channelName]);
 
-  const displayBundles = creatorBundles.length > 0 ? creatorBundles : bundles;
+  const displayBundles = creatorBundles;
 
   const handleSubscribeToggle = async () => {
     const targetUid = resolvedProfile?.uid || 'admin-mock-999';
