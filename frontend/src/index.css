@@ -5014,7 +5014,7 @@ h1, h2, h3, h4, h5, h6 {
     display: grid !important;
     grid-template-columns: auto 1fr auto auto auto !important;
     grid-auto-rows: auto !important;
-    gap: 0.3rem 0.5rem !important;
+    gap: 0.75rem 0.5rem !important;
     width: 100% !important;
     align-items: center !important;
     flex-direction: unset !important;
@@ -5066,12 +5066,12 @@ h1, h2, h3, h4, h5, h6 {
     transform: none !important;
   }
 
-  /* Line 3: Genres Tabs Bar (occupies full width) */
+  /* Line 3: Genres Tabs Bar (occupies full width with clean spacious top gap) */
   .genre-tabs-bar {
     grid-row: 3 !important;
     grid-column: 1 / 6 !important;
     width: 100% !important;
-    margin: 0 !important;
+    margin: 0.85rem 0 0.25rem 0 !important;
     justify-content: flex-start !important;
   }
 
