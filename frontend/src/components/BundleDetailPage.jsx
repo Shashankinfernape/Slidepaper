@@ -508,14 +508,14 @@ export default function BundleDetailPage({
           <div className="bundle-youtube-info">
             <h1 className="bundle-youtube-title">{bundle.name}</h1>
 
-            {/* YouTube style view, date, and downloads meta line under title (matching mobile player layout) */}
+            {/* YouTube style view, date, and downloads meta line under title (lean compact spacing) */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              fontSize: '0.85rem',
+              fontSize: '0.84rem',
               color: 'var(--text-secondary)',
-              margin: '0.3rem 0 1.25rem 0',
+              margin: '0.1rem 0 0.25rem 0',
               fontWeight: 500
             }}>
               <span>{formatNumber(bundle.stats.views)} views</span>

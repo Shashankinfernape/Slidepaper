@@ -3501,7 +3501,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.25rem 0 0.15rem 0;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.35rem;
 }
 
 .bundle-youtube-title {
