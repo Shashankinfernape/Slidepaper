@@ -5384,33 +5384,38 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .whatsapp-crop-btn {
-  padding: 0.75rem 2rem;
+  padding: 0.8rem 2.2rem;
   border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
+  letter-spacing: 0.3px;
 }
 
 .whatsapp-crop-btn.cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
 }
 
 .whatsapp-crop-btn.cancel:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
 }
 
 .whatsapp-crop-btn.done {
-  background: var(--color-google-blue, #3b82f6);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.4);
 }
 
 .whatsapp-crop-btn.done:hover {
-  filter: brightness(1.1);
+  background: #f0f0f0 !important;
   transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(255, 255, 255, 0.5);
 }
 .creator-about-body {
   min-width: 0;

@@ -1427,30 +1427,6 @@ export default function AdminDashboard({ onBack, logout }) {
                   />
                 </div>
 
-                {/* Accent Gradient presets */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Creator Accent Gradient</label>
-                  <div className="preset-grid">
-                    {[
-                      { id: 'midnight', name: 'Midnight', className: 'gradient-accent-midnight' },
-                      { id: 'sunset', name: 'Sunset Glow', className: 'gradient-accent-sunset' },
-                      { id: 'cyberpunk', name: 'Cyberpunk', className: 'gradient-accent-cyberpunk' },
-                      { id: 'youtube', name: 'Creator Red', className: 'gradient-accent-youtube' },
-                      { id: 'emerald', name: 'Emerald Forest', className: 'gradient-accent-emerald' },
-                      { id: 'google', name: 'Google Blue', className: 'gradient-accent-google' }
-                    ].map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => setEditedAccent(preset.id)}
-                        className={`preset-btn ${preset.className} ${editedAccent === preset.id ? 'active' : ''}`}
-                      >
-                        {preset.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   disabled={savingProfile || uploadingAvatar}
@@ -1505,7 +1481,7 @@ export default function AdminDashboard({ onBack, logout }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Live Creator Card Preview</span>
                   
-                  <div className={`creator-about-section gradient-accent-${editedAccent}`} style={{
+                  <div className="creator-about-section" style={{
                     padding: '1.25rem',
                     borderRadius: '12px',
                     border: '1px solid var(--border-color)',

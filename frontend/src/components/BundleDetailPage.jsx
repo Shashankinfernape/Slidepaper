@@ -84,10 +84,12 @@ function formatSubscribers(value) {
 
 export default function BundleDetailPage({
   bundle,
+  onBack,
   onOpenBundle,
+  onOpenChannel,
   user,
   loginWithGoogle,
-  bundles = [],
+  bundles = []
 }) {
   const { userProfile } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
@@ -178,32 +180,30 @@ export default function BundleDetailPage({
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
   const [authorProfile, setAuthorProfile] = useState(null);
   const resolvedAuthorProfile = useMemo(() => {
-    const isOwnBundle = bundle.author?.uid && userProfile?.uid === bundle.author.uid;
+    const isOwnBundle = (bundle.author?.uid && (userProfile?.uid === bundle.author.uid || user?.uid === bundle.author.uid)) ||
+                        (!bundle.author?.uid && (userProfile?.email === bundle.author?.email || userProfile?.uid === 'admin-mock-999'));
     const liveProfile = isOwnBundle ? userProfile : null;
     const remoteProfile = authorProfile || {};
 
     return {
       ...remoteProfile,
       ...(liveProfile || {}),
+      uid: liveProfile?.uid || remoteProfile.uid || bundle.author?.uid,
       displayName:
         liveProfile?.displayName ||
         remoteProfile.displayName ||
-        bundle.author.name,
+        bundle.author?.name || 'Creator',
       photoURL:
         liveProfile?.photoURL ||
         remoteProfile.photoURL ||
-        bundle.author.avatar,
+        bundle.author?.avatar,
       about: liveProfile?.about || remoteProfile.about || '',
       youtubeUrl: liveProfile?.youtubeUrl || remoteProfile.youtubeUrl || '',
       instagramUrl: liveProfile?.instagramUrl || remoteProfile.instagramUrl || '',
       twitterUrl: liveProfile?.twitterUrl || remoteProfile.twitterUrl || '',
-      accentGradient:
-        liveProfile?.accentGradient ||
-        remoteProfile.accentGradient ||
-        'midnight',
       joined: liveProfile?.joined || remoteProfile.joined || null,
     };
-  }, [authorProfile, bundle.author, userProfile]);
+  }, [authorProfile, bundle.author, userProfile, user]);
 
   // Fetch real subscriber count and subscription status
   useEffect(() => {
@@ -508,7 +508,12 @@ export default function BundleDetailPage({
 
             <div className="bundle-youtube-meta-row">
               <div className="bundle-youtube-author-block">
-                <div className="bundle-youtube-author-main">
+                <div 
+                  className="bundle-youtube-author-main"
+                  onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
+                  style={{ cursor: 'pointer' }}
+                  title="View Channel Page"
+                >
                   <img
                     src={getProxiedImageUrl(resolvedAuthorProfile.photoURL) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
                     alt={resolvedAuthorProfile.displayName}
@@ -707,94 +712,6 @@ export default function BundleDetailPage({
             <p className="youtube-description-text">
               {bundle.description || 'No description provided for this bundle. Enjoy these high quality screen outputs.'}
             </p>
-          </div>
-
-          {/* About the Creator Card */}
-          <div className={`creator-about-section gradient-accent-${resolvedAuthorProfile.accentGradient || 'midnight'}`} style={{
-            marginTop: '1.5rem',
-            padding: '1.25rem',
-            borderRadius: '12px',
-            border: '1px solid var(--border-color)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            background: 'var(--bg-primary)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
-          }}>
-            <h3 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.75)' }}>
-              About The Creator
-            </h3>
-            
-            <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }} className="creator-about-body">
-              <img
-                src={getProxiedImageUrl(resolvedAuthorProfile.photoURL) || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'}
-                alt={resolvedAuthorProfile.displayName}
-                className="creator-avatar-img"
-                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&q=80'; }}
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  background: 'var(--bg-secondary)'
-                }}
-              />
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
-                  <div>
-                    <span style={{ fontSize: '1.08rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {resolvedAuthorProfile.displayName}
-                      <span className="verified-badge-circle" title="Verified Creator" style={{ width: '13px', height: '13px', margin: 0, background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
-                        <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
-                        </svg>
-                      </span>
-                    </span>
-                    <span style={{ fontSize: '0.74rem', color: 'rgba(255, 255, 255, 0.7)', display: 'block', marginTop: '1px' }}>
-                      {resolvedAuthorProfile.joined ? `Joined ${new Date(resolvedAuthorProfile.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}` : 'Joined recently'}
-                    </span>
-                  </div>
-                  
-                  {/* Social Links */}
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {resolvedAuthorProfile.youtubeUrl && (
-                      <a href={resolvedAuthorProfile.youtubeUrl} target="_blank" rel="noopener noreferrer" title="YouTube" className="creator-social-icon youtube" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-                          <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.524 3.545 12 3.545 12 3.545s-7.525 0-9.387.51C1.05 4.382.518 5.42.518 6.163C0 8.025 0 12 0 12s0 3.975.518 5.837c.252.743.785 1.282 2.095 1.51C4.475 19.855 12 19.855 12 19.855s7.524 0 9.388-.508c1.312-.228 1.844-1.267 2.095-1.51c.517-1.862.517-5.837.517-5.837s0-3.975-.517-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                        </svg>
-                      </a>
-                    )}
-                    {resolvedAuthorProfile.instagramUrl && (
-                      <a href={resolvedAuthorProfile.instagramUrl} target="_blank" rel="noopener noreferrer" title="Instagram" className="creator-social-icon instagram" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                        </svg>
-                      </a>
-                    )}
-                    {resolvedAuthorProfile.twitterUrl && (
-                      <a href={resolvedAuthorProfile.twitterUrl} target="_blank" rel="noopener noreferrer" title="Twitter / X" className="creator-social-icon twitter" style={{ width: '30px', height: '30px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
-                        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                        </svg>
-                      </a>
-                    )}
-                  </div>
-                </div>
-                
-                <p style={{
-                  margin: '0.2rem 0 0 0',
-                  fontSize: '0.86rem',
-                  lineHeight: '1.45',
-                  color: 'rgba(255, 255, 255, 0.85)',
-                  whiteSpace: 'pre-line'
-                }}>
-                  {resolvedAuthorProfile.about || 'Professional digital artist and wallpaper creator. Enjoy the hand-crafted designs in this bundle!'}
-                </p>
-              </div>
-            </div>
           </div>
 
           <GoogleAd type="leaderboard" />

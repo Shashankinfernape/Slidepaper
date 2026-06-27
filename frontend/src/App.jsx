@@ -5,6 +5,7 @@ import {
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
 import BundleDetailPage from './components/BundleDetailPage';
+import ChannelPage from './components/ChannelPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminDashboard from './components/AdminDashboard';
 
@@ -379,12 +380,13 @@ function AppContent() {
     }
   };
   const [theme, setTheme] = useState('dark');
-  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'feed' | 'bundle'
+  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'feed' | 'bundle' | 'channel'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
   const [sortOption, setSortOption] = useState('default'); // default, views, downloads
   const [bundles, setBundles] = useState([]);
   const [activeBundle, setActiveBundle] = useState(null);
+  const [activeChannel, setActiveChannel] = useState(null);
 
   // Fetch bundles dynamically from backend JSON database
   useEffect(() => {
@@ -461,6 +463,11 @@ function AppContent() {
   const handleCloseBundle = () => {
     setCurrentView('feed');
     setActiveBundle(null);
+  };
+
+  const handleOpenChannel = (channel) => {
+    setActiveChannel(channel);
+    setCurrentView('channel');
   };
 
   // Extract unique genres/categories dynamically from all wallpaper bundle tags
@@ -697,9 +704,18 @@ function AppContent() {
             bundle={activeBundle}
             onBack={handleCloseBundle}
             onOpenBundle={handleOpenBundle}
+            onOpenChannel={handleOpenChannel}
             user={user}
             loginWithGoogle={loginWithGoogle}
             bundles={bundles}
+          />
+        ) : currentView === 'channel' && activeChannel ? (
+          <ChannelPage
+            channel={activeChannel}
+            bundles={bundles}
+            onSelectBundle={handleOpenBundle}
+            onBack={() => setCurrentView('feed')}
+            user={user}
           />
         ) : (
           <>
