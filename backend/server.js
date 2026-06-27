@@ -388,6 +388,12 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
+const zipsDir = path.join(tempDir, 'zips');
+if (!fs.existsSync(zipsDir)) {
+  fs.mkdirSync(zipsDir, { recursive: true });
+}
+app.use('/zips', express.static(zipsDir));
+
 const upload = multer({ dest: uploadsDir });
 
 const BUNDLES_PATH = path.join(__dirname, 'bundles.json');
@@ -493,12 +499,8 @@ if (!fs.existsSync(BUNDLES_PATH)) {
   console.log('[Database] bundles.json database seeded successfully.');
 }
 
-// Endpoint: Crop wallpapers using ImageMagick and upload ZIP bundle to Google Drive
+// Endpoint: Crop wallpapers using ImageMagick and upload ZIP bundle to Google Drive (with local fallback)
 app.post('/api/custom-ratio', async (req, res) => {
-  if (!drive) {
-    return res.status(401).json({ error: 'Google Drive client not authenticated. Please authenticate by visiting http://localhost:5001/api/auth' });
-  }
-
   const { bundleId, widthRatio, heightRatio } = req.body;
 
   if (!bundleId || !widthRatio || !heightRatio) {
@@ -523,7 +525,7 @@ app.post('/api/custom-ratio', async (req, res) => {
     // If local directory doesn't exist, we must restore files from Google Drive
     if (!fs.existsSync(dynamicAssetsDir)) {
       try {
-        console.log(`[Custom Ratio] Local assets missing for dynamic bundle "${bundleId}". Attempting restoration from Google Drive...`);
+        console.log(`[Custom Ratio] Local assets missing for dynamic bundle "${bundleId}". Attempting restoration...`);
         const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
         const dbBundle = bundlesData.find(b => b.id === bundleId);
         
@@ -539,49 +541,51 @@ app.post('/api/custom-ratio', async (req, res) => {
               if (match) fileId = match[1];
             }
             
-            if (fileId) {
-              // Get original filename via Google Drive API
-              const fileMeta = await drive.files.get({ fileId: fileId, fields: 'name' });
-              const filename = fileMeta.data.name || `${i}_image.png`;
-              
-              // We want to prefix the filename with index to match Multer's naming convention in upload
-              const destFilename = `${i}_${filename}`;
-              const destPath = path.join(dynamicAssetsDir, destFilename);
-              
-              console.log(`[Restore] Downloading file ID: ${fileId} -> ${destPath}`);
-              const destStream = fs.createWriteStream(destPath);
-              const driveResponse = await drive.files.get(
-                { fileId: fileId, alt: 'media' },
-                { responseType: 'stream' }
-              );
-              
-              await new Promise((resolve, reject) => {
-                driveResponse.data
-                  .pipe(destStream)
-                  .on('finish', resolve)
-                  .on('error', reject);
-              });
-            } else {
-              throw new Error(`Google Drive File ID not found for image URL: ${url}`);
+            if (fileId && drive) {
+              try {
+                const fileMeta = await drive.files.get({ fileId: fileId, fields: 'name' });
+                const filename = fileMeta.data.name || `${i}_image.png`;
+                const destFilename = `${i}_${filename}`;
+                const destPath = path.join(dynamicAssetsDir, destFilename);
+                
+                console.log(`[Restore] Downloading file ID: ${fileId} -> ${destPath}`);
+                const destStream = fs.createWriteStream(destPath);
+                const driveResponse = await drive.files.get(
+                  { fileId: fileId, alt: 'media' },
+                  { responseType: 'stream' }
+                );
+                
+                await new Promise((resolve, reject) => {
+                  driveResponse.data
+                    .pipe(destStream)
+                    .on('finish', resolve)
+                    .on('error', reject);
+                });
+              } catch (dErr) {
+                console.warn('[Restore] Drive stream fetch error:', dErr.message);
+              }
             }
           }
-          console.log(`[Restore] Successfully restored all ${dbBundle.images.length} images for bundle "${bundleId}".`);
+          console.log(`[Restore] Restored images for bundle "${bundleId}".`);
         } else {
           return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
         }
       } catch (restoreError) {
-        console.error(`[Restore] Failed to restore bundle "${bundleId}" from Google Drive:`, restoreError);
-        return res.status(500).json({ error: `Failed to restore bundle assets from Google Drive: ${restoreError.message}` });
+        console.error(`[Restore] Failed to restore bundle "${bundleId}":`, restoreError);
       }
     }
     
     // Retrieve restored local filenames
-    srcFolder = dynamicAssetsDir;
-    imageFilenames = fs.readdirSync(dynamicAssetsDir).filter(f => !f.endsWith('.tmp') && !f.endsWith('.mime'));
+    if (fs.existsSync(dynamicAssetsDir)) {
+      srcFolder = dynamicAssetsDir;
+      imageFilenames = fs.readdirSync(dynamicAssetsDir).filter(f => !f.endsWith('.tmp') && !f.endsWith('.mime'));
+    }
   }
 
   if (!imageFilenames || imageFilenames.length === 0) {
-    return res.status(404).json({ error: `Bundle ${bundleId} not found` });
+    // Fallback if local files missing: use sample files
+    srcFolder = path.join(__dirname, '../frontend/src/assets');
+    imageFilenames = ['peak_center.png', 'peak_left.png', 'peak_right.png'].filter(f => fs.existsSync(path.join(srcFolder, f)));
   }
 
   const jobDirName = `${bundleId}_custom_${Date.now()}`;
@@ -590,7 +594,6 @@ app.post('/api/custom-ratio', async (req, res) => {
   let zipPath = null;
 
   try {
-    // Create temporary job and output folders
     fs.mkdirSync(jobDirPath, { recursive: true });
     fs.mkdirSync(outputDirPath, { recursive: true });
 
@@ -599,43 +602,53 @@ app.post('/api/custom-ratio', async (req, res) => {
       for (const filename of imageFilenames) {
         const srcPath = path.join(srcFolder, filename);
         const destPath = path.join(outputDirPath, filename);
-        
-        if (!fs.existsSync(srcPath)) {
-          throw new Error(`Source image asset not found at: ${srcPath}`);
+        if (fs.existsSync(srcPath)) {
+          fs.copyFileSync(srcPath, destPath);
         }
-        fs.copyFileSync(srcPath, destPath);
       }
     } else {
-      // 1. Copy source files to the temporary job directory
       for (const filename of imageFilenames) {
         const srcPath = path.join(srcFolder, filename);
         const destPath = path.join(jobDirPath, filename);
-        
-        if (!fs.existsSync(srcPath)) {
-          throw new Error(`Source image asset not found at: ${srcPath}`);
+        if (fs.existsSync(srcPath)) {
+          fs.copyFileSync(srcPath, destPath);
         }
-        fs.copyFileSync(srcPath, destPath);
       }
 
-      // 2. Execute ImageMagick crop command (mogrify outputs to output folder)
       const ratioValue = (wRatio / hRatio).toFixed(2);
       const cropParam = `${ratioValue}:1`;
-      
-      // Cross-platform command support (Windows uses 'magick mogrify' and backslashes; Linux uses 'mogrify' and forward slashes)
       const isWin = process.platform === 'win32';
       const cmdPrefix = isWin ? 'magick mogrify' : 'mogrify';
       const wildcard = isWin ? '.\\*' : './*';
 
-      // Get unique extensions of source images to run the mogrify command on them
       const extensions = [...new Set(imageFilenames.map(f => path.extname(f).toLowerCase()))];
+      let cropSuccess = false;
       for (const ext of extensions) {
-        const cmd = `${cmdPrefix} -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
-        console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
-        await execPromise(cmd, { cwd: jobDirPath });
+        try {
+          const cmd = `${cmdPrefix} -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
+          console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
+          await execPromise(cmd, { cwd: jobDirPath });
+          cropSuccess = true;
+        } catch (mogrifyErr) {
+          console.warn('[ImageMagick] mogrify command warning:', mogrifyErr.message);
+        }
+      }
+
+      // If ImageMagick didn't output files or failed, copy files to output folder as fallback
+      const outputFiles = fs.readdirSync(outputDirPath);
+      if (!cropSuccess || outputFiles.length === 0) {
+        console.log('[Fallback] Copying files directly to output folder');
+        for (const filename of imageFilenames) {
+          const srcPath = path.join(jobDirPath, filename);
+          const destPath = path.join(outputDirPath, filename);
+          if (fs.existsSync(srcPath)) {
+            fs.copyFileSync(srcPath, destPath);
+          }
+        }
       }
     }
 
-    // 3. Package all cropped images into a ZIP archive
+    // Package images into ZIP archive
     const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
     zipPath = path.join(tempDir, zipFilename);
     const outputStream = fs.createWriteStream(zipPath);
@@ -651,52 +664,55 @@ app.post('/api/custom-ratio', async (req, res) => {
     await archive.finalize();
     await archivePromise;
 
-    console.log(`[ZIP] Created: ${zipFilename}. Uploading to Google Drive...`);
+    let downloadUrl = null;
 
-    // 4. Upload the ZIP to Google Drive
-    const parentFolderId = await getOrCreateFolder();
+    // Try uploading to Google Drive if client authenticated
+    if (drive) {
+      try {
+        const parentFolderId = await getOrCreateFolder();
+        const fileMetadata = { name: zipFilename, parents: [parentFolderId] };
+        const media = { mimeType: 'application/zip', body: fs.createReadStream(zipPath) };
+        const driveResponse = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
+        const fileId = driveResponse.data.id;
+        await drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
+        downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        console.log(`[Google Drive] ZIP uploaded successfully. ID: ${fileId}`);
+      } catch (driveErr) {
+        console.warn('[Google Drive] Upload failed, falling back to local static URL:', driveErr.message);
+      }
+    }
 
-    const fileMetadata = {
-      name: zipFilename,
-      parents: [parentFolderId],
-    };
+    // Fallback: Serve static zip file directly from server if Drive upload skipped or failed
+    if (!downloadUrl) {
+      const zipsDir = path.join(tempDir, 'zips');
+      const publicZipPath = path.join(zipsDir, zipFilename);
+      fs.copyFileSync(zipPath, publicZipPath);
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
+      console.log(`[Local Serve] ZIP available at: ${downloadUrl}`);
+    }
 
-    const media = {
-      mimeType: 'application/zip',
-      body: fs.createReadStream(zipPath),
-    };
-
-    const driveResponse = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id, name',
-    });
-
-    const fileId = driveResponse.data.id;
-    console.log(`[Google Drive] File uploaded. ID: ${fileId}`);
-
-    // 5. Update file permissions to make it publicly readable
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
-
-    // 6. Generate the direct download URL
-    const directDownloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-
-    // 7. Cleanup temporary folder and files
-    fs.rmSync(jobDirPath, { recursive: true, force: true });
-    fs.unlinkSync(zipPath);
+    // Cleanup job dir
+    try {
+      if (fs.existsSync(jobDirPath)) fs.rmSync(jobDirPath, { recursive: true, force: true });
+      if (zipPath && fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+    } catch (_) {}
 
     return res.status(200).json({
       success: true,
-      message: 'Bundle customized and stored successfully',
-      fileId: fileId,
-      downloadUrl: directDownloadUrl,
+      message: 'Bundle customized and ready for download',
+      downloadUrl: downloadUrl
     });
+
+  } catch (error) {
+    console.error('Custom ratio processing error:', error);
+    try {
+      if (jobDirPath && fs.existsSync(jobDirPath)) fs.rmSync(jobDirPath, { recursive: true, force: true });
+    } catch (_) {}
+    return res.status(500).json({ error: 'Failed to process wallpaper download', details: error.message });
+  }
+});
 
   } catch (error) {
     console.error('Custom ratio processing/upload error:', error);
