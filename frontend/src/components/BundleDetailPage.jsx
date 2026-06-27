@@ -262,8 +262,16 @@ export default function BundleDetailPage({
       }
     };
 
-    // 4. Increment view count in MongoDB
+    // 4. Increment view count in MongoDB (once per session per bundle)
     const incrementViewCount = async () => {
+      if (window._viewedBundles && window._viewedBundles.has(bundle.id)) {
+        return;
+      }
+      if (!window._viewedBundles) {
+        window._viewedBundles = new Set();
+      }
+      window._viewedBundles.add(bundle.id);
+
       try {
         const res = await fetch(`${API_URL}/api/bundles/${bundle.id}/view`, { method: 'POST' });
         if (res.ok) {
