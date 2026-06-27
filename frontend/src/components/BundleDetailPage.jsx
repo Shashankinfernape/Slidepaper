@@ -508,21 +508,19 @@ export default function BundleDetailPage({
           <div className="bundle-youtube-info">
             <h1 className="bundle-youtube-title">{bundle.name}</h1>
 
-            {/* YouTube style view, download and date meta line under title */}
+            {/* YouTube style view, date, and downloads meta line under title (matching mobile player layout) */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.88rem',
+              gap: '12px',
+              fontSize: '0.85rem',
               color: 'var(--text-secondary)',
-              margin: '0.35rem 0 1.25rem 0',
+              margin: '0.3rem 0 1.25rem 0',
               fontWeight: 500
             }}>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatNumber(bundle.stats.views)} views</span>
-              <span>•</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatNumber(bundle.stats.downloads)} downloads</span>
-              <span>•</span>
+              <span>{formatNumber(bundle.stats.views)} views</span>
               <span>2 weeks ago</span>
+              <span>{formatNumber(bundle.stats.downloads)} downloads</span>
             </div>
 
             <div className="bundle-youtube-meta-row">
@@ -582,15 +580,9 @@ export default function BundleDetailPage({
                     }
                     title="I like this"
                   >
-                    {reaction === 'like' ? (
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '6px' }}>
-                        <path d="M3 11h3v10H3zm15.3-1c0-1.66-1.34-3-3-3h-3.3l.9-3.6.1-.3c0-.4-.1-.8-.4-1L11.6 2 6.4 7.2C6.1 7.5 6 7.8 6 8.2V19c0 1.1.9 2 2 2h7.3c.8 0 1.5-.5 1.8-1.2l3-7.1c.1-.2.2-.5.2-.8v-2z" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-                      </svg>
-                    )}
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'like' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'like' ? '0' : '2'} style={{ marginRight: '6px' }}>
+                      <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+                    </svg>
                     <span>{formatNumber(Math.max(0, likeCount))}</span>
                   </button>
                   <div className="youtube-pill-divider"></div>
@@ -601,15 +593,9 @@ export default function BundleDetailPage({
                     }
                     title="I dislike this"
                   >
-                    {reaction === 'dislike' ? (
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M21 11h-3V1H8.7c-.8 0-1.5.5-1.8 1.2l-3 7c-.1.2-.2.5-.2.8v2c0 1.66 1.34 3 3 3h3.3l-.9 3.6-.1.3c0 .4.1.8.4 1l1.8 1.8 5.2-5.2c.3-.3.4-.6.4-1V11c0-1.1-.9-2-2-2z" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
-                      </svg>
-                    )}
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'dislike' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'dislike' ? '0' : '2'}>
+                      <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
+                    </svg>
                   </button>
                 </div>
 

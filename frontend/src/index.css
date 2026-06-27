@@ -3704,12 +3704,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .youtube-like-btn.active,
 .youtube-dislike-btn.active {
-  color: #3ea6ff !important;
+  color: #ffffff !important;
 }
 
 [data-theme="light"] .youtube-like-btn.active,
 [data-theme="light"] .youtube-dislike-btn.active {
-  color: #065fd4 !important;
+  color: #0f0f0f !important;
 }
 
 .youtube-like-btn.active svg,
