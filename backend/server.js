@@ -1146,6 +1146,98 @@ app.post('/api/notifications/read', async (req, res) => {
   }
 });
 
+// Endpoint: Get platform-wide AdSense & Creator Monetization Analytics
+app.get('/api/monetization/analytics', async (req, res) => {
+  try {
+    const allBundles = await Bundle.find({});
+    const allUsers = await User.find({});
+
+    let totalViews = 0;
+    let totalDownloads = 0;
+    let totalLikes = 0;
+
+    const creatorStatsMap = {};
+
+    allBundles.forEach(b => {
+      const v = b.stats?.views || 0;
+      const d = b.stats?.downloads || 0;
+      const l = b.stats?.likes || 0;
+
+      totalViews += v;
+      totalDownloads += d;
+      totalLikes += l;
+
+      const authorUid = b.author?.uid || 'admin-mock-999';
+      const authorName = b.author?.name || 'Infernape';
+      const authorAvatar = b.author?.avatar || '';
+
+      if (!creatorStatsMap[authorUid]) {
+        creatorStatsMap[authorUid] = {
+          uid: authorUid,
+          name: authorName,
+          avatar: authorAvatar,
+          packCount: 0,
+          views: 0,
+          downloads: 0,
+          likes: 0,
+          subscribers: b.author?.subscribers || 0
+        };
+      }
+
+      creatorStatsMap[authorUid].packCount += 1;
+      creatorStatsMap[authorUid].views += v;
+      creatorStatsMap[authorUid].downloads += d;
+      creatorStatsMap[authorUid].likes += l;
+    });
+
+    // Populate user profile info (real photoURL/subscribers)
+    allUsers.forEach(u => {
+      if (creatorStatsMap[u.uid]) {
+        if (u.photoURL && !u.photoURL.startsWith('data:image/svg')) creatorStatsMap[u.uid].avatar = u.photoURL;
+        if (u.displayName) creatorStatsMap[u.uid].name = u.displayName;
+        if (u.subscribers) creatorStatsMap[u.uid].subscribers = u.subscribers;
+      }
+    });
+
+    // Calculate simulated AdSense revenue ($2.40 average RPM)
+    const rpm = 2.40;
+    const totalImpressions = totalViews + (totalDownloads * 3); // Downloads weighted heavier
+    const totalAdRevenue = Number(((totalImpressions / 1000) * rpm + 450).toFixed(2)); // Base baseline pool
+    const creatorPool = Number((totalAdRevenue * 0.70).toFixed(2)); // 70% share
+
+    // Compute fair contribution score for each creator
+    const creatorList = Object.values(creatorStatsMap).map(c => {
+      const impactScore = (c.downloads * 0.40) + (c.views * 0.40) + (c.likes * 0.20) + 1;
+      return { ...c, impactScore };
+    });
+
+    const globalImpactScore = creatorList.reduce((sum, c) => sum + c.impactScore, 0);
+
+    const rankedCreators = creatorList.map(c => {
+      const shareFraction = globalImpactScore > 0 ? (c.impactScore / globalImpactScore) : 0;
+      const sharePercentage = Number((shareFraction * 100).toFixed(1));
+      const deservedPayout = Number((creatorPool * shareFraction).toFixed(2));
+      return {
+        ...c,
+        sharePercentage,
+        deservedPayout
+      };
+    }).sort((a, b) => b.deservedPayout - a.deservedPayout);
+
+    return res.status(200).json({
+      totalAdRevenue,
+      creatorPool,
+      rpm,
+      totalImpressions,
+      creators: rankedCreators,
+      isLiveAdSense: false // Prepared for Google AdSense Management API OAuth
+    });
+  } catch (error) {
+    console.error('Error fetching monetization analytics:', error);
+    return res.status(500).json({ error: 'Failed to compute monetization analytics' });
+  }
+});
+
 // Endpoint: Delete a wallpaper bundle
 app.delete('/api/bundles/:bundleId', async (req, res) => {
   if (!drive) {

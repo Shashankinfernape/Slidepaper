@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import MonetizationDashboard from './MonetizationDashboard';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -1355,92 +1356,7 @@ export default function AdminDashboard({ onBack, logout }) {
         )}
 
         {activeTab === 'monetize' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Earnings Stats */}
-            <div className="admin-stats-grid">
-              <div className="admin-stat-card" style={{ borderLeft: '4px solid #4caf50' }}>
-                <span className="stat-label">Estimated Revenue</span>
-                <span className="stat-value" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <DollarSign size={22} />
-                  <span>342.80</span>
-                </span>
-                <span className="stat-sub" style={{ color: '#4caf50' }}>+12.4% vs last month</span>
-              </div>
-              <div className="admin-stat-card">
-                <span className="stat-label">Ad Impressions RPM</span>
-                <span className="stat-value" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <DollarSign size={22} />
-                  <span>1.48</span>
-                </span>
-                <span className="stat-sub">Revenue per 1k views</span>
-              </div>
-              <div className="admin-stat-card">
-                <span className="stat-label">Premium Subscribers</span>
-                <span className="stat-value">48</span>
-                <span className="stat-sub">Paid members</span>
-              </div>
-              <div className="admin-stat-card">
-                <span className="stat-label">Monetized Plays</span>
-                <span className="stat-value">231.2K</span>
-                <span className="stat-sub">Ad-supported downloads</span>
-              </div>
-            </div>
-
-            {/* Earnings Chart placeholder */}
-            <div className="admin-card" style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 600 }}>Estimated Monthly Revenue Growth</h3>
-              
-              <div style={{ height: '180px', display: 'flex', alignItems: 'flex-end', gap: '2rem', padding: '1rem 2rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                {[
-                  { m: 'Jan', v: 180, h: '45%' },
-                  { m: 'Feb', v: 210, h: '55%' },
-                  { m: 'Mar', v: 245, h: '65%' },
-                  { m: 'Apr', v: 280, h: '75%' },
-                  { m: 'May', v: 310, h: '85%' },
-                  { m: 'Jun', v: 342, h: '95%' }
-                ].map((bar, idx) => (
-                  <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%' }}>
-                    <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                      <div style={{ width: '100%', height: bar.h, background: 'linear-gradient(to top, var(--color-google-blue), #4c8bf5)', borderRadius: '4px 4px 0 0', position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                        <span style={{ position: 'absolute', top: '-22px', fontSize: '0.75rem', fontWeight: 600 }}>${bar.v}</span>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{bar.m}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Monetization settings */}
-            <div className="admin-card" style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 600 }}>Monetization Tiers Settings</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>Define how ad segments and downloads should generate revenue for your hosted wallpapers.</p>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'block' }}>Vignette Ad Roll interstitials</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Display 5-second video/banner overlay ads before starting custom ratio download zips</span>
-                  </div>
-                  <label className="toggle-switch">
-                    <input type="checkbox" defaultChecked />
-                    <span className="toggle-slider"></span>
-                  </label>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 1rem', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'block' }}>YouTube Premium Ad-Free Downloads</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Allow logged-in subscribers to instantly bypass interstitial scripts and crop downloads immediately</span>
-                  </div>
-                  <label className="toggle-switch">
-                    <input type="checkbox" defaultChecked />
-                    <span className="toggle-slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
+          <MonetizationDashboard isInline={false} />
         )}
 
         {activeTab === 'profile' && (

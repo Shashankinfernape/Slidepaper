@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Check, ArrowLeft } from 'lucide-react';
+import { Check, ArrowLeft, DollarSign, Grid } from 'lucide-react';
 import WallpaperGrid from './WallpaperGrid';
+import MonetizationDashboard from './MonetizationDashboard';
 import { getProxiedImageUrl } from './AdminDashboard';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,6 +21,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   const [remoteAuthor, setRemoteAuthor] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 68400);
+  const [activeTab, setActiveTab] = useState('wallpapers'); // 'wallpapers' | 'monetization'
 
   // Fetch remote author profile if needed
   useEffect(() => {
@@ -294,16 +296,60 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         </div>
       </div>
 
-      {/* Clean Separator Line */}
-      <div style={{ borderBottom: '1px solid var(--border-color)', margin: '0.5rem 0 0 0' }} />
+      {/* Clean Tab Navigation */}
+      <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid var(--border-color)', margin: '1rem 0 1.5rem 0' }}>
+        <button
+          onClick={() => setActiveTab('wallpapers')}
+          style={{
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'wallpapers' ? '3px solid #3b82f6' : '3px solid transparent',
+            color: activeTab === 'wallpapers' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'wallpapers' ? 700 : 500,
+            fontSize: '0.95rem',
+            padding: '0.75rem 0.25rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <Grid size={16} />
+          <span>Wallpapers ({displayBundles.length})</span>
+        </button>
 
-      {/* Wallpapers Showcase Grid */}
-      <div>
-        <WallpaperGrid
-          bundles={displayBundles}
-          onSelectBundle={onSelectBundle}
-        />
+        <button
+          onClick={() => setActiveTab('monetization')}
+          style={{
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'monetization' ? '3px solid #22c55e' : '3px solid transparent',
+            color: activeTab === 'monetization' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'monetization' ? 700 : 500,
+            fontSize: '0.95rem',
+            padding: '0.75rem 0.25rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <DollarSign size={16} style={{ color: '#22c55e' }} />
+          <span>Monetization & Revenue</span>
+        </button>
       </div>
+
+      {/* Tab Content Showcase */}
+      {activeTab === 'wallpapers' ? (
+        <div>
+          <WallpaperGrid
+            bundles={displayBundles}
+            onSelectBundle={onSelectBundle}
+          />
+        </div>
+      ) : (
+        <MonetizationDashboard isInline={true} creatorUid={resolvedProfile?.uid} />
+      )}
     </div>
   );
 }
