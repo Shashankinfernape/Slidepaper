@@ -83,6 +83,7 @@ const notificationSchema = new mongoose.Schema({
   bundleId: { type: String, default: '' },
   bundleName: { type: String, default: '' },
   thumbnailUrl: { type: String, default: '' },
+  ratioTag: { type: String, default: '' },
   timestamp: { type: Date, default: Date.now },
   isRead: { type: Boolean, default: false }
 });
@@ -1005,6 +1006,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
         bundleId: createdBundle.id,
         bundleName: name,
         thumbnailUrl: firstImage,
+        ratioTag: newBundle.ratio || '16:9',
         timestamp: new Date()
       });
       console.log(`[Notification] Broadcasted new wallpaper notification for "${name}".`);
@@ -1063,6 +1065,7 @@ app.get('/api/notifications', async (req, res) => {
         bundleId: b.id,
         bundleName: b.name,
         thumbnailUrl: b.images && b.images[0] ? (b.images[0].previewUrl || b.images[0].url) : '',
+        ratioTag: b.ratio || '16:9',
         timestamp: b._id ? b._id.getTimestamp() : new Date(),
         isRead: false
       }));

@@ -1365,7 +1365,7 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   top: 2px;
   right: 2px;
-  background: #cc0000;
+  background: #ff0000;
   color: #ffffff;
   font-size: 0.68rem;
   font-weight: 700;
@@ -1377,6 +1377,13 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   border: 2px solid var(--bg-primary);
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+  animation: bellPulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes bellPulseGlow {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(255, 0, 0, 0.6); }
+  50% { transform: scale(1.15); box-shadow: 0 0 16px rgba(255, 0, 0, 1); }
 }
 
 /* YouTube Authentic Notification Dropdown Menu */
@@ -1415,6 +1422,84 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0.85rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: #181818 !important;
+}
+
+/* Tailored Notification Filter Tabs */
+.yt-notif-tabs-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 1rem;
+  background: #181818;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .yt-notif-tabs-container {
+  background: #f4f4f4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.yt-notif-tab {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.18s ease;
+}
+
+[data-theme="light"] .yt-notif-tab {
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.yt-notif-tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+}
+
+.yt-notif-tab.active {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+/* Setup-Specific Ratio Badge */
+.yt-notif-ratio-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.yt-notification-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.yt-notification-icon-badge.like {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.yt-notification-icon-badge.milestone {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
 }
 
 [data-theme="light"] .yt-notification-header {

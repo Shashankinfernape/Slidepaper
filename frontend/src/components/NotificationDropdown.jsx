@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Settings, Check, Trash2, MoreVertical } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Settings, Check, Sparkles, Heart, Trophy, Layers } from 'lucide-react';
 
 const getProxiedImageUrl = (url) => {
   if (!url) return '';
@@ -20,6 +20,7 @@ export default function NotificationDropdown({
   onDeleteNotification
 }) {
   const dropdownRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('All'); // 'All' | 'Drops' | 'Activity'
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -46,6 +47,12 @@ export default function NotificationDropdown({
     return date.toLocaleDateString();
   };
 
+  const filteredNotifications = notifications.filter((item) => {
+    if (activeTab === 'Drops') return item.type === 'upload';
+    if (activeTab === 'Activity') return item.type === 'like' || item.type === 'milestone';
+    return true;
+  });
+
   return (
     <div className="yt-notification-dropdown" ref={dropdownRef}>
       {/* YouTube Notification Header */}
@@ -67,10 +74,25 @@ export default function NotificationDropdown({
         </div>
       </div>
 
+      {/* Slidepapers Tailored Filter Tabs */}
+      <div className="yt-notif-tabs-container">
+        {['All', 'Drops', 'Activity'].map((tab) => (
+          <button
+            key={tab}
+            className={`yt-notif-tab ${activeTab === tab ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === 'Drops' && <Sparkles size={13} style={{ marginRight: 4 }} />}
+            {tab === 'Activity' && <Heart size={13} style={{ marginRight: 4 }} />}
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* Notification List */}
       <div className="yt-notification-list">
-        {notifications.length > 0 ? (
-          notifications.map((item) => (
+        {filteredNotifications.length > 0 ? (
+          filteredNotifications.map((item) => (
             <div
               key={item.id}
               className={`yt-notification-item ${!item.isRead ? 'unread' : ''}`}
@@ -79,23 +101,45 @@ export default function NotificationDropdown({
               {/* Unread dot indicator */}
               {!item.isRead && <span className="yt-notification-unread-dot"></span>}
 
-              {/* Channel / Author Avatar */}
-              <img
-                src={getProxiedImageUrl(item.authorAvatar) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
-                alt={item.authorName}
-                className="yt-notification-avatar"
-                onError={(e) => {
-                  e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
-                }}
-              />
+              {/* Channel / Author Avatar or Icon */}
+              {item.type === 'like' ? (
+                <div className="yt-notification-icon-badge like">
+                  <Heart size={18} />
+                </div>
+              ) : item.type === 'milestone' ? (
+                <div className="yt-notification-icon-badge milestone">
+                  <Trophy size={18} />
+                </div>
+              ) : (
+                <img
+                  src={getProxiedImageUrl(item.authorAvatar) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
+                  alt={item.authorName}
+                  className="yt-notification-avatar"
+                  onError={(e) => {
+                    e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
+                  }}
+                />
+              )}
 
               {/* Text Copy */}
               <div className="yt-notification-content">
                 <p className="yt-notification-text">
-                  <strong style={{ color: 'var(--text-primary)' }}>{item.authorName || 'Creator'}</strong>{' '}
+                  {item.authorName && (
+                    <strong style={{ color: 'var(--text-primary)' }}>{item.authorName}</strong>
+                  )}{' '}
                   {item.message || `uploaded a new wallpaper pack: ${item.bundleName}`}
                 </p>
-                <span className="yt-notification-time">{formatTimeAgo(item.timestamp)}</span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <span className="yt-notification-time">{formatTimeAgo(item.timestamp)}</span>
+                  {/* Setup-Specific Ratio Badge */}
+                  {item.ratioTag && (
+                    <span className="yt-notif-ratio-badge">
+                      <Layers size={10} style={{ marginRight: 3 }} />
+                      {item.ratioTag}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Wallpaper Thumbnail Preview */}
@@ -112,8 +156,8 @@ export default function NotificationDropdown({
         ) : (
           <div className="yt-notification-empty">
             <div className="yt-notification-empty-bell">🔔</div>
-            <p className="yt-notification-empty-title">Your notifications live here</p>
-            <p className="yt-notification-empty-sub">Subscribe to your favorite creators to get notified about new wallpaper drops!</p>
+            <p className="yt-notification-empty-title">No notifications in {activeTab}</p>
+            <p className="yt-notification-empty-sub">Stay tuned for new wallpaper drops and creator activity!</p>
           </div>
         )}
       </div>
