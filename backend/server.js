@@ -1124,18 +1124,40 @@ app.delete('/api/bundles/:bundleId', async (req, res) => {
       console.log(`[Cleanup] Deleted local backup assets at ${bundleAssetsDir}`);
     }
 
-    // 4. Delete files and subfolder from Google Drive
-    const parentFolderId = await getOrCreateFolder();
-    const driveFolderResponse = await drive.files.list({
-      q: `name = '${bundle.name}' and '${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-      fields: 'files(id)',
-      spaces: 'drive',
-    });
+    // 4. Delete files and subfolder permanently from Google Drive
+    try {
+      const parentFolderId = await getOrCreateFolder();
+      
+      // Delete any matching subfolders
+      const driveFolderResponse = await drive.files.list({
+        q: `(name = '${bundle.name.replace(/'/g, "\\'")}' or name = '${bundle.id}') and '${parentFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
 
-    if (driveFolderResponse.data.files && driveFolderResponse.data.files.length > 0) {
-      const driveFolderId = driveFolderResponse.data.files[0].id;
-      await drive.files.delete({ fileId: driveFolderId });
-      console.log(`[Google Drive] Deleted bundle folder: "${bundle.name}" (${driveFolderId})`);
+      if (driveFolderResponse.data.files && driveFolderResponse.data.files.length > 0) {
+        for (const folder of driveFolderResponse.data.files) {
+          await drive.files.delete({ fileId: folder.id });
+          console.log(`[Google Drive] Deleted bundle folder and contents: "${folder.name}" (${folder.id})`);
+        }
+      }
+
+      // Delete any individual files linked in bundle images
+      if (bundle.images && Array.isArray(bundle.images)) {
+        for (const img of bundle.images) {
+          if (img.url && img.url.includes('id=')) {
+            const match = img.url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+              try {
+                await drive.files.delete({ fileId: match[1] });
+                console.log(`[Google Drive] Deleted wallpaper file ID: ${match[1]}`);
+              } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (driveDelErr) {
+      console.warn('[Google Drive] Warning during drive file deletion:', driveDelErr.message);
     }
 
     // 5. Save updated bundles database back to Google Drive (backup)
