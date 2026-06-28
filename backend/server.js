@@ -662,8 +662,8 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Pre-fetch all image buffers in parallel
-    const bufferFetchers = imagesToProcess.map((imgObj, i) => async () => {
+    // Stream-based 1-ahead parallel prefetch pipeline
+    const streamFetchers = imagesToProcess.map((imgObj, i) => async () => {
       let imgName = `wallpaper_${i + 1}.png`;
       if (typeof imgObj === 'object' && imgObj.name) {
         imgName = imgObj.name;
@@ -676,44 +676,45 @@ app.post('/api/custom-ratio', async (req, res) => {
       if (gcsEnabled && GCS_BUCKET) {
         try {
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
-          const [exists] = await gcsFile.exists();
-          if (exists) {
-            const [buf] = await gcsFile.download();
-            return { buffer: buf, name: imgName };
-          }
+          return { stream: gcsFile.createReadStream(), name: imgName };
         } catch (gErr) {
-          console.warn(`[GCS Source Download Warning] File ${i}:`, gErr.message);
+          console.warn(`[GCS Stream Warning] File ${i}:`, gErr.message);
         }
       }
-      // Fallback to Drive if GCS source not migrated yet
+      // Fallback to Drive if GCS source not available
       const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
       const match = imgUrl?.match(/[?&]id=([^&]+)/);
       const fileId = match ? match[1] : null;
       if (fileId && drive) {
         try {
-          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
-          return { buffer: Buffer.from(driveRes.data), name: imgName };
+          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+          return { stream: driveRes.data, name: imgName };
         } catch (_) {}
       }
       const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
-      if (fs.existsSync(localPath)) return { buffer: fs.readFileSync(localPath), name: imgName };
+      if (fs.existsSync(localPath)) return { stream: fs.createReadStream(localPath), name: imgName };
       return null;
     });
 
-    // Process with 1-ahead prefetch pipeline and verified buffer appending
-    let nextFetch = bufferFetchers.length > 0 ? bufferFetchers[0]() : Promise.resolve(null);
-    for (let i = 0; i < bufferFetchers.length; i++) {
+    // Process with 1-ahead prefetch pipeline: pipe stream directly into ImageMagick spawn stdin
+    let nextFetch = streamFetchers.length > 0 ? streamFetchers[0]() : Promise.resolve(null);
+    for (let i = 0; i < streamFetchers.length; i++) {
       const current = await nextFetch;
-      if (i + 1 < bufferFetchers.length) {
-        nextFetch = bufferFetchers[i + 1]();
+      if (i + 1 < streamFetchers.length) {
+        nextFetch = streamFetchers[i + 1]();
       }
-      if (!current || !current.buffer || current.buffer.length === 0) continue;
+      if (!current || !current.stream) continue;
       try {
-        let finalBuffer = current.buffer;
-        if (!isOriginal) {
-          finalBuffer = await cropImageBufferPure(current.buffer, ratioStr);
-        }
-        archive.append(finalBuffer, { name: current.name });
+        const outputStream = isOriginal
+          ? current.stream
+          : cropImageStreamPure(current.stream, ratioStr);
+
+        await new Promise((resolve) => {
+          archive.append(outputStream, { name: current.name });
+          outputStream.on('end', resolve);
+          outputStream.on('close', resolve);
+          outputStream.on('error', (e) => { console.warn('[Stream Pipe Warning]', e.message); resolve(); });
+        });
       } catch (imgErr) {
         console.warn(`[Pipeline Warning] Image ${i}:`, imgErr.message);
       }
