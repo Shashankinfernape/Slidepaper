@@ -466,18 +466,35 @@ export default function BundleDetailPage({
     setShowTransferHud(true);
     const stepStart = Date.now();
 
-    // Live preparation ticker interval
+    // Live preparation ticker interval with smooth percentage ramping (5% -> 24%)
     const prepTimer = setInterval(() => {
-      const elapsed = ((Date.now() - stepStart) / 1000).toFixed(1);
+      const elapsedMs = Date.now() - stepStart;
+      const elapsedSec = (elapsedMs / 1000).toFixed(1);
+      const prepProgress = Math.min(24, Math.max(5, Math.floor(5 + (elapsedMs / 120))));
+
+      let step1Status = 'active', step1Dur = `${elapsedSec}s`;
+      let step2Status = 'pending', step2Dur = '';
+      let step3Status = 'pending', step3Dur = '';
+
+      if (elapsedMs >= 600) {
+        step1Status = 'done'; step1Dur = '0.6s';
+        step2Status = 'active'; step2Dur = `${((elapsedMs - 600) / 1000).toFixed(1)}s`;
+      }
+      if (elapsedMs >= 1400) {
+        step2Status = 'done'; step2Dur = '0.8s';
+        step3Status = 'active'; step3Dur = `${((elapsedMs - 1400) / 1000).toFixed(1)}s`;
+      }
+
       setHudMetrics(prev => {
         if (prev.stage.includes('Downloading payload stream')) return prev;
         return {
           ...prev,
-          stage: `Preparing cloud payload (${elapsed}s)...`,
+          progress: prepProgress,
+          stage: `Preparing cloud payload (${elapsedSec}s)...`,
           steps: [
-            { label: 'Cloud asset restore', status: 'done', duration: '0.12s' },
-            { label: 'ImageMagick ratio crop', status: 'done', duration: '0.18s' },
-            { label: 'Level-1 zip archive build', status: 'active', duration: `${elapsed}s` },
+            { label: 'Cloud asset restore', status: step1Status, duration: step1Dur },
+            { label: 'ImageMagick ratio crop', status: step2Status, duration: step2Dur },
+            { label: 'Level-1 zip archive build', status: step3Status, duration: step3Dur },
             { label: 'Payload stream delivery', status: 'pending', duration: '' }
           ]
         };
