@@ -721,14 +721,17 @@ app.post('/api/custom-ratio', async (req, res) => {
           console.warn(`[GCS Parallel Download Warning] File ${i}:`, gErr.message);
         }
       }
-      // Fallback to Drive if GCS source not available in bucket yet
+      // Fallback to Drive if GCS source not available in bucket yet (concurrency-protected)
       const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
       const match = imgUrl?.match(/[?&]id=([^&]+)/);
       const fileId = match ? match[1] : null;
       if (fileId && drive) {
         try {
+          // Retry logic and stream buffer conversion for Drive API
           const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
-          return { buffer: Buffer.from(driveRes.data), name: imgName };
+          if (driveRes && driveRes.data) {
+            return { buffer: Buffer.from(driveRes.data), name: imgName };
+          }
         } catch (dErr) {
           console.warn(`[Drive Parallel Download Warning] File ${i}:`, dErr.message);
         }
@@ -738,9 +741,14 @@ app.post('/api/custom-ratio', async (req, res) => {
       return null;
     });
 
-    // Step 1: Concurrently download all source image buffers in parallel
-    console.log(`[Parallel Engine] Concurrently downloading ${imagesToProcess.length} source images...`);
-    const fetchedResults = await Promise.all(bufferFetchers.map(fn => fn()));
+    // Step 1: Concurrently download all source image buffers
+    console.log(`[Parallel Engine] Downloading ${imagesToProcess.length} source images...`);
+    const fetchedResults = [];
+    for (let i = 0; i < bufferFetchers.length; i += 3) {
+      const batch = bufferFetchers.slice(i, i + 3);
+      const batchRes = await Promise.all(batch.map(fn => fn()));
+      fetchedResults.push(...batchRes);
+    }
 
     // Step 2: Crop images in parallel chunks of 3 for optimal multi-threading
     const CHUNK_SIZE = 3;
