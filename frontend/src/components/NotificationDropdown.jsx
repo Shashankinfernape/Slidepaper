@@ -1,0 +1,112 @@
+import { useEffect, useRef } from 'react';
+import { Settings, Check, Trash2, MoreVertical } from 'lucide-react';
+
+export default function NotificationDropdown({
+  notifications = [],
+  unreadCount = 0,
+  onClose,
+  onSelectNotification,
+  onMarkAllAsRead,
+  onDeleteNotification
+}) {
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return 'Recently';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now - date) / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <div className="yt-notification-dropdown" ref={dropdownRef}>
+      {/* YouTube Notification Header */}
+      <div className="yt-notification-header">
+        <span className="yt-notification-title">Notifications</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {unreadCount > 0 && (
+            <button
+              className="yt-notification-icon-btn"
+              title="Mark all as read"
+              onClick={onMarkAllAsRead}
+            >
+              <Check size={18} />
+            </button>
+          )}
+          <button className="yt-notification-icon-btn" title="Notification settings">
+            <Settings size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Notification List */}
+      <div className="yt-notification-list">
+        {notifications.length > 0 ? (
+          notifications.map((item) => (
+            <div
+              key={item.id}
+              className={`yt-notification-item ${!item.isRead ? 'unread' : ''}`}
+              onClick={() => onSelectNotification(item)}
+            >
+              {/* Unread dot indicator */}
+              {!item.isRead && <span className="yt-notification-unread-dot"></span>}
+
+              {/* Channel / Author Avatar */}
+              <img
+                src={item.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
+                alt={item.authorName}
+                className="yt-notification-avatar"
+                onError={(e) => {
+                  e.target.src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80';
+                }}
+              />
+
+              {/* Text Copy */}
+              <div className="yt-notification-content">
+                <p className="yt-notification-text">
+                  <strong style={{ color: 'var(--text-primary)' }}>{item.authorName || 'Creator'}</strong>{' '}
+                  {item.message || `uploaded a new wallpaper pack: ${item.bundleName}`}
+                </p>
+                <span className="yt-notification-time">{formatTimeAgo(item.timestamp)}</span>
+              </div>
+
+              {/* Wallpaper Thumbnail Preview */}
+              {item.thumbnailUrl && (
+                <img
+                  src={item.thumbnailUrl}
+                  alt="Wallpaper Preview"
+                  className="yt-notification-thumb"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="yt-notification-empty">
+            <div className="yt-notification-empty-bell">🔔</div>
+            <p className="yt-notification-empty-title">Your notifications live here</p>
+            <p className="yt-notification-empty-sub">Subscribe to your favorite creators to get notified about new wallpaper drops!</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

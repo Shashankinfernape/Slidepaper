@@ -70,6 +70,25 @@ const bundleSchema = new mongoose.Schema({
 
 const Bundle = mongoose.model('Bundle', bundleSchema);
 
+// Define Notification Schema
+const notificationSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  recipientUid: { type: String, default: 'all' },
+  authorName: { type: String, default: '' },
+  authorAvatar: { type: String, default: '' },
+  authorUid: { type: String, default: '' },
+  title: { type: String, required: true },
+  message: { type: String, default: '' },
+  type: { type: String, default: 'upload' },
+  bundleId: { type: String, default: '' },
+  bundleName: { type: String, default: '' },
+  thumbnailUrl: { type: String, default: '' },
+  timestamp: { type: Date, default: Date.now },
+  isRead: { type: Boolean, default: false }
+});
+
+const Notification = mongoose.model('Notification', notificationSchema);
+
 // Seeding logic for first run
 async function seedDatabase() {
   try {
@@ -970,6 +989,29 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     const createdBundle = await Bundle.create(newBundle);
     console.log(`[Database] Bundle "${name}" saved to MongoDB successfully.`);
 
+    // Automatically create a notification for subscribers & platform users
+    try {
+      const notifId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+      const firstImage = imageUrls && imageUrls[0] ? (imageUrls[0].previewUrl || imageUrls[0].url) : '';
+      await Notification.create({
+        id: notifId,
+        recipientUid: 'all',
+        authorName: newBundle.author.name,
+        authorAvatar: newBundle.author.avatar,
+        authorUid: newBundle.author.uid,
+        title: `New wallpaper drop by ${newBundle.author.name}!`,
+        message: `uploaded a new wallpaper pack: ${name}`,
+        type: 'upload',
+        bundleId: createdBundle.id,
+        bundleName: name,
+        thumbnailUrl: firstImage,
+        timestamp: new Date()
+      });
+      console.log(`[Notification] Broadcasted new wallpaper notification for "${name}".`);
+    } catch (nErr) {
+      console.warn('[Notification] Failed to create notification:', nErr.message);
+    }
+
     // Sync the updated database to Google Drive for persistence across server restarts
     await saveBundlesToDrive();
 
@@ -995,6 +1037,57 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     }
 
     return res.status(500).json({ error: 'Failed to process and upload new wallpaper bundle', details: error.message });
+  }
+});
+
+// Endpoint: Get notifications list for user
+app.get('/api/notifications', async (req, res) => {
+  const { uid } = req.query;
+  try {
+    let notifications = await Notification.find({
+      $or: [ { recipientUid: 'all' }, { recipientUid: uid } ]
+    }).sort({ timestamp: -1 }).limit(20);
+
+    // If no notifications exist yet in DB, provide clean initial creator updates
+    if (notifications.length === 0) {
+      const recentBundles = await Bundle.find({}).sort({ _id: -1 }).limit(5);
+      notifications = recentBundles.map(b => ({
+        id: 'notif_bundle_' + b.id,
+        recipientUid: 'all',
+        authorName: b.author?.name || 'Infernape',
+        authorAvatar: b.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80',
+        authorUid: b.author?.uid || 'admin-mock-999',
+        title: `New wallpaper drop!`,
+        message: `uploaded a new wallpaper pack: ${b.name}`,
+        type: 'upload',
+        bundleId: b.id,
+        bundleName: b.name,
+        thumbnailUrl: b.images && b.images[0] ? (b.images[0].previewUrl || b.images[0].url) : '',
+        timestamp: b._id ? b._id.getTimestamp() : new Date(),
+        isRead: false
+      }));
+    }
+
+    return res.status(200).json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// Endpoint: Mark notifications as read
+app.post('/api/notifications/read', async (req, res) => {
+  const { notifIds, uid } = req.body;
+  try {
+    if (notifIds && Array.isArray(notifIds)) {
+      await Notification.updateMany({ id: { $in: notifIds } }, { $set: { isRead: true } });
+    } else {
+      await Notification.updateMany({ $or: [ { recipientUid: 'all' }, { recipientUid: uid } ] }, { $set: { isRead: true } });
+    }
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error marking notifications read:', error);
+    return res.status(500).json({ error: 'Failed to mark notifications read' });
   }
 });
 

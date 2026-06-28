@@ -9,6 +9,7 @@ import ChannelPage from './components/ChannelPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AdminDashboard from './components/AdminDashboard';
 import LegalModal from './components/LegalModal';
+import NotificationDropdown from './components/NotificationDropdown';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -389,6 +390,63 @@ function AppContent() {
   const [activeBundle, setActiveBundle] = useState(null);
   const [activeChannel, setActiveChannel] = useState(null);
   const [legalModalType, setLegalModalType] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Fetch live notifications from backend
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const uidParam = user ? `?uid=${user.uid}` : '';
+        const res = await fetch(`${API_URL}/api/notifications${uidParam}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) setNotifications(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch notifications:', err);
+      }
+    };
+    fetchNotifications();
+  }, [user, currentView]);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return notifications.filter(n => !n.isRead).length;
+  }, [notifications]);
+
+  const handleMarkAllNotificationsRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    try {
+      await fetch(`${API_URL}/api/notifications/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: user?.uid })
+      });
+    } catch (err) {
+      console.error('Failed to mark notifications read:', err);
+    }
+  };
+
+  const handleSelectNotification = async (item) => {
+    setShowNotifications(false);
+    // Mark as read locally
+    setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
+    try {
+      await fetch(`${API_URL}/api/notifications/read`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifIds: [item.id] })
+      });
+    } catch (_) {}
+
+    // Find bundle and open it
+    if (item.bundleId) {
+      const target = bundles.find(b => b.id === item.bundleId);
+      if (target) {
+        handleOpenBundle(target);
+      }
+    }
+  };
 
   // Fetch bundles dynamically from backend JSON database
   useEffect(() => {
@@ -620,14 +678,31 @@ function AppContent() {
             )}
           </button>
 
-          {/* Notification Bell */}
-          <button
-            className="notification-btn-header"
-            title="Notifications"
-            onClick={() => alert('No new notifications')}
-          >
-            <Bell size={18} />
-          </button>
+          {/* YouTube Authentic Notification Bell */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="notification-btn-header"
+              title="Notifications"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <Bell size={18} />
+              {unreadNotificationsCount > 0 && (
+                <span className="notification-badge-count">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <NotificationDropdown
+                notifications={notifications}
+                unreadCount={unreadNotificationsCount}
+                onClose={() => setShowNotifications(false)}
+                onSelectNotification={handleSelectNotification}
+                onMarkAllAsRead={handleMarkAllNotificationsRead}
+              />
+            )}
+          </div>
 
           {/* Firebase Authentication controls */}
           {user ? (
