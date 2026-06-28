@@ -10,6 +10,7 @@ import { promisify } from 'util';
 import archiver from 'archiver';
 import multer from 'multer';
 import mongoose from 'mongoose';
+import { fetchAdSenseReport } from './services/adsense.service.js';
 
 dotenv.config();
 
@@ -1199,15 +1200,29 @@ app.get('/api/monetization/analytics', async (req, res) => {
       }
     });
 
-    // Calculate simulated AdSense revenue ($2.40 average RPM)
-    const rpm = 2.40;
-    const totalImpressions = totalViews + (totalDownloads * 3); // Downloads weighted heavier
-    const totalAdRevenue = Number(((totalImpressions / 1000) * rpm + 450).toFixed(2)); // Base baseline pool
-    const creatorPool = Number((totalAdRevenue * 0.70).toFixed(2)); // 70% share
+    // Check Google AdSense Management API (v2) for real-time reporting data
+    const adSenseReport = await fetchAdSenseReport();
+
+    let totalAdRevenue = 0.00;
+    let rpm = 0.00;
+    let totalImpressions = totalViews;
+
+    if (adSenseReport.isConfigured && !adSenseReport.error) {
+      totalAdRevenue = adSenseReport.totalAdRevenue;
+      rpm = adSenseReport.rpm;
+      totalImpressions = adSenseReport.totalImpressions;
+    } else {
+      // Pre-approval real traffic calculations (strictly without fake demo baseline money)
+      totalImpressions = totalViews + (totalDownloads * 2);
+      rpm = totalImpressions > 0 ? 1.50 : 0.00;
+      totalAdRevenue = Number(((totalImpressions / 1000) * rpm).toFixed(2));
+    }
+
+    const creatorPool = Number((totalAdRevenue * 0.70).toFixed(2)); // 70% share to creators
 
     // Compute fair contribution score for each creator
     const creatorList = Object.values(creatorStatsMap).map(c => {
-      const impactScore = (c.downloads * 0.40) + (c.views * 0.40) + (c.likes * 0.20) + 1;
+      const impactScore = (c.downloads * 0.40) + (c.views * 0.40) + (c.likes * 0.20);
       return { ...c, impactScore };
     });
 
@@ -1230,7 +1245,7 @@ app.get('/api/monetization/analytics', async (req, res) => {
       rpm,
       totalImpressions,
       creators: rankedCreators,
-      isLiveAdSense: false // Prepared for Google AdSense Management API OAuth
+      isLiveAdSense: adSenseReport.isConfigured && !adSenseReport.error
     });
   } catch (error) {
     console.error('Error fetching monetization analytics:', error);
