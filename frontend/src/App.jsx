@@ -781,7 +781,7 @@ function AppContent() {
           <button onClick={() => setLegalModalType('contact')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>Contact Us</button>
         </div>
         <div className="clean-footer-left" style={{ justifyContent: 'center', gap: '1rem' }}>
-          <span className="footer-badge">Cloudflare Pages & R2 Hosting</span>
+          <span className="footer-badge">Vercel & Render Cloud Hosting</span>
           <span className="footer-badge">CC-BY 4.0 Art license</span>
         </div>
         <p style={{ opacity: 0.7, margin: 0, fontSize: '0.78rem' }}>© 2026 Slidepapers Hub. Desktop-First Continuity Platform. All rights reserved.</p>
