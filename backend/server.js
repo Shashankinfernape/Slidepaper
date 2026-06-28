@@ -858,12 +858,43 @@ app.get('/api/drive-status', async (req, res) => {
       pageSize: 10,
     });
 
+    // Get storage quota details from Google Drive API
+    let quota = null;
+    try {
+      const aboutRes = await drive.about.get({ fields: 'storageQuota' });
+      quota = aboutRes.data.storageQuota;
+    } catch (_) {}
+
+    // Calculate storage usage per creator from MongoDB bundles
+    const allBundles = await Bundle.find({});
+    const creatorStorageMap = {};
+    allBundles.forEach(b => {
+      const authorName = b.author?.name || 'Unknown Creator';
+      const authorEmail = b.author?.email || 'No Email';
+      const key = `${authorName} (${authorEmail})`;
+      
+      let bundleSize = 0;
+      if (b.images && Array.isArray(b.images)) {
+        b.images.forEach(img => {
+          if (img.size) bundleSize += Number(img.size);
+        });
+      }
+      
+      if (!creatorStorageMap[key]) {
+        creatorStorageMap[key] = { name: authorName, email: authorEmail, bundlesCount: 0, totalBytes: 0 };
+      }
+      creatorStorageMap[key].bundlesCount += 1;
+      creatorStorageMap[key].totalBytes += bundleSize;
+    });
+
     return res.status(200).json({
       authenticated: true,
       folderId: folderInfo.data.id,
       folderName: folderInfo.data.name,
       owner: folderInfo.data.owners && folderInfo.data.owners[0] ? folderInfo.data.owners[0].emailAddress : 'unknown',
       files: filesResponse.data.files || [],
+      quota: quota,
+      creatorStorage: Object.values(creatorStorageMap)
     });
   } catch (error) {
     console.error('[Admin] Drive status check error:', error);

@@ -916,7 +916,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       <span style={{ fontSize: '0.88rem', fontWeight: 500 }}>Successfully connected to Google Drive API using personal credentials.</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', background: 'var(--bg-secondary)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Folder Name</span>
                         <span style={{ fontSize: '0.95rem', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>{driveStatus.folderName}</span>
@@ -925,11 +925,52 @@ export default function AdminDashboard({ onBack, logout }) {
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Folder Owner</span>
                         <span style={{ fontSize: '0.95rem', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>{driveStatus.owner}</span>
                       </div>
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Folder Resource ID</span>
-                        <code style={{ fontSize: '0.85rem', display: 'block', marginTop: '0.25rem', color: 'var(--text-primary)', background: 'var(--bg-primary)', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-color)', wordBreak: 'break-all' }}>{driveStatus.folderId}</code>
+                      {driveStatus.quota && (
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Google Drive Account Quota</span>
+                          <span style={{ fontSize: '0.95rem', fontWeight: 600, display: 'block', marginTop: '0.25rem', color: 'var(--text-primary)' }}>
+                            {(Number(driveStatus.quota.usage || 0) / (1024 * 1024 * 1024)).toFixed(2)} GB used of {(Number(driveStatus.quota.limit || 0) / (1024 * 1024 * 1024)).toFixed(2)} GB Total
+                          </span>
+                        </div>
+                      )}
+                      <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Folder Resource Link</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                          <code style={{ fontSize: '0.85rem', color: 'var(--text-primary)', background: 'var(--bg-primary)', padding: '0.4rem', borderRadius: '4px', border: '1px solid var(--border-color)', wordBreak: 'break-all', flex: 1 }}>
+                            {driveStatus.folderId}
+                          </code>
+                          <a
+                            href={`https://drive.google.com/drive/folders/${driveStatus.folderId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="admin-btn primary"
+                            style={{ textDecoration: 'none', padding: '0.4rem 0.9rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+                          >
+                            Open Folder in Google Drive Web ↗
+                          </a>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Per-Creator Storage Usage Breakdown */}
+                    {driveStatus.creatorStorage && driveStatus.creatorStorage.length > 0 && (
+                      <div style={{ background: 'var(--bg-secondary)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 600 }}>Storage Usage by Creator / Admin</h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {driveStatus.creatorStorage.map((creator, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0.8rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                              <div>
+                                <span style={{ fontWeight: 600, display: 'block' }}>{creator.name}</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{creator.email} • {creator.bundlesCount} Packs</span>
+                              </div>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                {(creator.totalBytes / (1024 * 1024)).toFixed(2)} MB
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <h4 style={{ margin: '1rem 0 0.5rem 0', fontSize: '0.95rem', fontWeight: 600 }}>Recent Uploaded Files inside Folder ({driveStatus.files.length})</h4>
