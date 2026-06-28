@@ -470,6 +470,7 @@ if (!fs.existsSync(BUNDLES_PATH)) {
 
 // Endpoint: Pure RAM Compute, Zero-Storage Streaming Custom-Ratio Generation & GCS Caching
 app.post('/api/custom-ratio', async (req, res) => {
+  const reqStartTime = Date.now();
   const { bundleId, widthRatio, heightRatio } = req.body;
 
   if (!bundleId || !widthRatio || !heightRatio) {
@@ -547,6 +548,7 @@ app.post('/api/custom-ratio', async (req, res) => {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
 
+    res.setHeader('X-Prep-Ms', (Date.now() - reqStartTime).toString());
     const archive = archiver('zip', { store: true });
     const gcsPassThrough = new PassThrough();
 
@@ -559,7 +561,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       const destGcsPath = `bundles/${bundleId}_${ratioKey.replace(':', 'x')}.zip`;
       const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
       const gcsWriteStream = gcsFile.createWriteStream({ resumable: false, contentType: 'application/zip' });
-      gcsUploadPromise = new Promise((resolve, reject) => {
+      gcsUploadPromise = new Promise((resolve) => {
         gcsPassThrough.pipe(gcsWriteStream)
           .on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`))
           .on('error', (err) => { console.warn('[GCS Upload Stream Error]', err.message); resolve(null); });
@@ -569,42 +571,46 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Process images sequentially through RAM streaming (direct driveStream -> IM spawn stdin -> archiver)
-    for (let i = 0; i < imagesToProcess.length; i++) {
-      const imgObj = imagesToProcess[i];
+    // Pre-fetch all Drive streams in parallel (lazy HTTP connection openers)
+    const streamFetchers = imagesToProcess.map((imgObj, i) => async () => {
       const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
       const imgName = typeof imgObj === 'object' && imgObj.name ? imgObj.name : `wallpaper_${i + 1}.png`;
-
-      let fileId = null;
-      if (imgUrl && imgUrl.includes('drive.google.com')) {
-        const match = imgUrl.match(/[?&]id=([^&]+)/);
-        if (match) fileId = match[1];
-      }
-
-      try {
-        let driveStream = null;
-        if (fileId && drive) {
+      const match = imgUrl?.match(/[?&]id=([^&]+)/);
+      const fileId = match ? match[1] : null;
+      if (fileId && drive) {
+        try {
           const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
-          driveStream = driveRes.data;
-        } else {
-          const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
-          if (fs.existsSync(localPath)) driveStream = fs.createReadStream(localPath);
+          return { stream: driveRes.data, name: imgName };
+        } catch (dErr) {
+          console.warn(`[Drive Stream Fetch Warning] File ${i}:`, dErr.message);
         }
+      }
+      const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
+      if (fs.existsSync(localPath)) return { stream: fs.createReadStream(localPath), name: imgName };
+      return null;
+    });
 
-        if (driveStream) {
-          const outputStream = isOriginal
-            ? driveStream
-            : cropImageStream(driveStream, ratioStr);
+    // Process with 1-ahead prefetch pipeline: while IM processes image N, fetch image N+1
+    let nextFetch = streamFetchers.length > 0 ? streamFetchers[0]() : Promise.resolve(null);
+    for (let i = 0; i < streamFetchers.length; i++) {
+      const current = await nextFetch;
+      if (i + 1 < streamFetchers.length) {
+        nextFetch = streamFetchers[i + 1](); // kick off next fetch NOW in parallel
+      }
+      if (!current || !current.stream) continue;
+      try {
+        const outputStream = isOriginal
+          ? current.stream
+          : cropImageStream(current.stream, ratioStr);
 
-          await new Promise((resolve) => {
-            archive.append(outputStream, { name: imgName });
-            outputStream.on('end', resolve);
-            outputStream.on('close', resolve);
-            outputStream.on('error', resolve);
-          });
-        }
+        await new Promise((resolve) => {
+          archive.append(outputStream, { name: current.name });
+          outputStream.on('end', resolve);
+          outputStream.on('close', resolve);
+          outputStream.on('error', (e) => { console.warn('[Image stream error]', e.message); resolve(); });
+        });
       } catch (imgErr) {
-        console.warn(`[RAM Pipeline Warning] Image ${i} processing error:`, imgErr.message);
+        console.warn(`[Pipeline Warning] Image ${i}:`, imgErr.message);
       }
     }
 

@@ -623,17 +623,21 @@ export default function BundleDetailPage({
       }
 
       // Case B: Direct Pure RAM Stream (Binary ZIP response)
+      const prepMs = parseInt(response.headers.get('x-prep-ms') || '0', 10);
+      const prepSec = prepMs > 0 ? (prepMs / 1000).toFixed(1) : null;
       const reader = response.body.getReader();
       const contentLength = +(response.headers.get('content-length') || response.headers.get('x-content-length') || 0);
       const chunks = [];
       let receivedBytes = 0;
-      const startTime = Date.now();
+      let firstByteTime = null;
+      const requestSentTime = Date.now();
       let lastLoaded = 0;
-      let lastTime = startTime;
+      let lastTime = requestSentTime;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (!firstByteTime) firstByteTime = Date.now();
         chunks.push(value);
         receivedBytes += value.length;
 
@@ -647,20 +651,27 @@ export default function BundleDetailPage({
           const estimatedTotal = contentLength > 0 ? contentLength : (60 * 1024 * 1024);
           const pct = Math.min(99, Math.max(10, (receivedBytes / estimatedTotal) * 100));
           const remainingBytes = Math.max(0, estimatedTotal - receivedBytes);
-          const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0.5;
+          const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0;
+          const deliverySec = firstByteTime ? ((currentTime - firstByteTime) / 1000).toFixed(1) : '...';
 
           setHudMetrics({
             progress: pct,
-            speedMbps: Math.max(4.2, speedMbps),
+            speedMbps: Math.max(0, speedMbps),
             transferredMB: receivedBytes / (1024 * 1024),
             totalMB: estimatedTotal / (1024 * 1024),
             etaSeconds: eta,
             stage: 'Streaming pure RAM payload...',
             steps: [
-              { label: 'Drive image stream fetch', status: 'done', duration: '0.2s' },
-              { label: 'Native C++ ratio crop', status: 'done', duration: '0.4s' },
-              { label: 'Pure RAM zip stream', status: 'done', duration: '0.1s' },
-              { label: 'Real-time stream delivery', status: 'active', duration: `${((currentTime - startTime)/1000).toFixed(1)}s` }
+              {
+                label: 'Server prep & crop',
+                status: 'done',
+                duration: prepSec ? `${prepSec}s` : '...'
+              },
+              {
+                label: 'Stream delivery',
+                status: 'active',
+                duration: `${deliverySec}s`
+              }
             ]
           });
 
