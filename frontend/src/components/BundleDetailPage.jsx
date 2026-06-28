@@ -10,6 +10,7 @@ import {
 import { WALLPAPER_BUNDLES } from '../data';
 import BundleCard from './BundleCard';
 import GoogleAd from './GoogleAd';
+import TransferHUD from './TransferHUD';
 import { useAuth } from '../context/AuthContext';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
@@ -172,6 +173,15 @@ export default function BundleDetailPage({
   }, [bundle, presets, isPortrait]);
 
   const [downloadState, setDownloadState] = useState('idle');
+  const [showTransferHud, setShowTransferHud] = useState(false);
+  const [hudMetrics, setHudMetrics] = useState({
+    progress: 0,
+    speedMbps: 0,
+    transferredMB: 0,
+    totalMB: 0,
+    etaSeconds: 0,
+    stage: ''
+  });
   const [reaction, setReaction] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(bundle.author?.subscribers || 0);
@@ -452,6 +462,15 @@ export default function BundleDetailPage({
     if (selectedDownloadId === 'custom' && !customIsValid) return;
 
     setDownloadState('downloading');
+    setShowTransferHud(true);
+    setHudMetrics({
+      progress: 5,
+      speedMbps: 0,
+      transferredMB: 0,
+      totalMB: 0,
+      etaSeconds: 0,
+      stage: 'Compiling wallpaper pack...'
+    });
 
     try {
       let wStr, hStr;
@@ -487,18 +506,90 @@ export default function BundleDetailPage({
         if (bundle.stats) bundle.stats.downloads = data.downloads;
       }
 
-      // Trigger direct browser download (bypasses browser pop-up blockers completely on desktop & mobile)
-      window.location.href = data.downloadUrl;
+      setHudMetrics(prev => ({ ...prev, progress: 20, stage: 'Connecting to download stream...' }));
 
-      setDownloadState('completed');
+      // High-precision XHR stream reader to track exact bytes, Mbps speed, and ETA
+      const downloadUrl = data.downloadUrl.startsWith('http') ? data.downloadUrl : `${API_URL}${data.downloadUrl}`;
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', downloadUrl, true);
+      xhr.responseType = 'blob';
+
+      xhr.onprogress = (e) => {
+        const totalBytes = e.lengthComputable && e.total > 0 ? e.total : (25 * 1024 * 1024); // Fallback ~25MB
+        const loadedBytes = e.loaded;
+        const pct = Math.min(99, Math.max(20, (loadedBytes / totalBytes) * 100));
+
+        const currentTime = Date.now();
+        const timeDelta = (currentTime - lastTime) / 1000;
+
+        if (timeDelta >= 0.15) {
+          const bytesDelta = loadedBytes - lastLoaded;
+          const speedBps = bytesDelta / timeDelta;
+          const speedMbps = (speedBps * 8) / (1024 * 1024);
+          const remainingBytes = Math.max(0, totalBytes - loadedBytes);
+          const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0;
+
+          setHudMetrics({
+            progress: pct,
+            speedMbps: Math.max(0.2, speedMbps),
+            transferredMB: loadedBytes / (1024 * 1024),
+            totalMB: totalBytes / (1024 * 1024),
+            etaSeconds: Math.max(0, eta),
+            stage: 'Downloading file payload...'
+          });
+
+          lastLoaded = loadedBytes;
+          lastTime = currentTime;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const blob = xhr.response;
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(blobUrl);
+
+          setHudMetrics(prev => ({
+            ...prev,
+            progress: 100,
+            stage: 'Download complete!'
+          }));
+
+          setTimeout(() => {
+            setShowTransferHud(false);
+            setDownloadState('completed');
+          }, 2000);
+        } else {
+          // Fallback direct window navigation
+          window.location.href = downloadUrl;
+          setShowTransferHud(false);
+          setDownloadState('completed');
+        }
+      };
+
+      xhr.onerror = () => {
+        window.location.href = downloadUrl;
+        setShowTransferHud(false);
+        setDownloadState('completed');
+      };
+
+      xhr.send();
+
     } catch (error) {
       console.error('Download error:', error);
       alert(`Download failed: ${error.message}`);
+      setShowTransferHud(false);
       setDownloadState('idle');
-    } finally {
-      window.setTimeout(() => {
-        setDownloadState('idle');
-      }, 2000);
     }
   };
 
@@ -804,6 +895,22 @@ export default function BundleDetailPage({
                 Sign in with Google
               </button>
             </div>
+            {/* Secret Admin Login Modal */}
+            {/* Transfer HUD Floating Indicator */}
+            {showTransferHud && (
+              <TransferHUD
+                type="download"
+                title="Downloading Wallpaper Pack"
+                fileName={`${bundle.name} (${selectedDownloadId === 'custom' ? customRatio : selectedDownload?.ratio || '16:9'})`}
+                progress={hudMetrics.progress}
+                speedMbps={hudMetrics.speedMbps}
+                transferredMB={hudMetrics.transferredMB}
+                totalMB={hudMetrics.totalMB}
+                etaSeconds={hudMetrics.etaSeconds}
+                stage={hudMetrics.stage}
+                onClose={() => setShowTransferHud(false)}
+              />
+            )}
           </div>
         </div>
       )}

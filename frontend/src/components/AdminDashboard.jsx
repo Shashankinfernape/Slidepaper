@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import MonetizationDashboard from './MonetizationDashboard';
+import TransferHUD from './TransferHUD';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -146,6 +147,15 @@ export default function AdminDashboard({ onBack, logout }) {
   const [bundleIncludes, setBundleIncludes] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [showUploadHud, setShowUploadHud] = useState(false);
+  const [uploadMetrics, setUploadMetrics] = useState({
+    progress: 0,
+    speedMbps: 0,
+    transferredMB: 0,
+    totalMB: 0,
+    etaSeconds: 0,
+    stage: ''
+  });
   const fileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
@@ -660,23 +670,85 @@ export default function AdminDashboard({ onBack, logout }) {
       }
     }
 
-    try {
-      const response = await fetch(`${API_URL}/api/bundles/upload`, {
-        method: 'POST',
-        body: formData,
-      });
+    setShowUploadHud(true);
+    setUploadMetrics({
+      progress: 5,
+      speedMbps: 0,
+      transferredMB: 0,
+      totalMB: 0,
+      etaSeconds: 0,
+      stage: 'Preparing image payload & metadata...'
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'Failed to publish wallpaper bundle.';
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorData.details || errorMessage;
-        } catch (_) {
-          errorMessage = errorText || errorMessage;
+    try {
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_URL}/api/bundles/upload`, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable || e.total > 0) {
+          const totalBytes = e.total;
+          const loadedBytes = e.loaded;
+          const pct = Math.min(99, Math.max(5, (loadedBytes / totalBytes) * 100));
+
+          const currentTime = Date.now();
+          const timeDelta = (currentTime - lastTime) / 1000;
+
+          if (timeDelta >= 0.15) {
+            const bytesDelta = loadedBytes - lastLoaded;
+            const speedBps = bytesDelta / timeDelta;
+            const speedMbps = (speedBps * 8) / (1024 * 1024);
+            const remainingBytes = Math.max(0, totalBytes - loadedBytes);
+            const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0;
+
+            setUploadMetrics({
+              progress: pct,
+              speedMbps: Math.max(0.2, speedMbps),
+              transferredMB: loadedBytes / (1024 * 1024),
+              totalMB: totalBytes / (1024 * 1024),
+              etaSeconds: Math.max(0, eta),
+              stage: 'Uploading images to cloud storage...'
+            });
+
+            lastLoaded = loadedBytes;
+            lastTime = currentTime;
+          }
         }
-        throw new Error(errorMessage);
-      }
+      };
+
+      await new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setUploadMetrics(prev => ({
+              ...prev,
+              progress: 100,
+              stage: 'Upload complete! Processing database...'
+            }));
+            setTimeout(() => {
+              setShowUploadHud(false);
+              resolve();
+            }, 1500);
+          } else {
+            let errorMessage = 'Failed to publish wallpaper bundle.';
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              errorMessage = errorData.error || errorData.details || errorMessage;
+            } catch (_) {}
+            setShowUploadHud(false);
+            reject(new Error(errorMessage));
+          }
+        };
+
+        xhr.onerror = () => {
+          setShowUploadHud(false);
+          reject(new Error('Network error during bundle upload.'));
+        };
+
+        xhr.send(formData);
+      });
 
       alert('Wallpaper bundle uploaded and published successfully!');
       
@@ -1651,6 +1723,22 @@ export default function AdminDashboard({ onBack, logout }) {
 
             </div>
           </div>
+        )}
+
+        {/* Transfer HUD Floating Indicator */}
+        {showUploadHud && (
+          <TransferHUD
+            type="upload"
+            title="Publishing Wallpaper Pack"
+            fileName={`${bundleName} (${selectedFiles.length} files)`}
+            progress={uploadMetrics.progress}
+            speedMbps={uploadMetrics.speedMbps}
+            transferredMB={uploadMetrics.transferredMB}
+            totalMB={uploadMetrics.totalMB}
+            etaSeconds={uploadMetrics.etaSeconds}
+            stage={uploadMetrics.stage}
+            onClose={() => setShowUploadHud(false)}
+          />
         )}
       </main>
       </div>
