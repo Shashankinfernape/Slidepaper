@@ -1386,15 +1386,21 @@ h1, h2, h3, h4, h5, h6 {
   right: 0;
   width: 440px;
   max-width: 92vw;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: #212121 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-  z-index: 999;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8) !important;
+  z-index: 999999 !important;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: ytFadeDown 0.18s ease-out;
+}
+
+[data-theme="light"] .yt-notification-dropdown {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25) !important;
 }
 
 @keyframes ytFadeDown {
@@ -1407,8 +1413,13 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: space-between;
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #181818 !important;
+}
+
+[data-theme="light"] .yt-notification-header {
+  background: #f9f9f9 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .yt-notification-title {
@@ -1440,6 +1451,11 @@ h1, h2, h3, h4, h5, h6 {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  background: #212121 !important;
+}
+
+[data-theme="light"] .yt-notification-list {
+  background: #ffffff !important;
 }
 
 .yt-notification-item {
@@ -1447,15 +1463,33 @@ h1, h2, h3, h4, h5, h6 {
   align-items: flex-start;
   gap: 12px;
   padding: 0.9rem 1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #212121 !important;
   cursor: pointer;
   position: relative;
   transition: background 0.15s ease;
   text-decoration: none;
 }
 
+[data-theme="light"] .yt-notification-item {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .yt-notification-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: #383838 !important;
+}
+
+[data-theme="light"] .yt-notification-item:hover {
+  background: #f2f2f2 !important;
+}
+
+.yt-notification-item.unread {
+  background: #282828 !important;
+}
+
+[data-theme="light"] .yt-notification-item.unread {
+  background: #f0f7ff !important;
 }
 
 [data-theme="light"] .yt-notification-item:hover {
