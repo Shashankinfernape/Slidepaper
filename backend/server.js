@@ -215,21 +215,69 @@ async function getGcsSignedUrl(gcsUri) {
   }
 }
 
-function cropImageStream(inputStream, ratioStr) {
-  const isWin = process.platform === 'win32';
-  const convertCmd = isWin ? 'magick' : 'convert';
-  const convertArgs = isWin 
-    ? ['convert', '-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-']
-    : ['-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-'];
+async function cropImageBuffer(inputBuffer, ratioStr, targetAspect) {
+  if (!inputBuffer || inputBuffer.length === 0) return null;
 
-  const proc = spawn(convertCmd, convertArgs);
-  inputStream.pipe(proc.stdin);
-  proc.stderr.on('data', d => console.warn('[ImageMagick spawn]', d.toString().trim()));
-  proc.on('error', err => {
-    console.error('[ImageMagick spawn error]', err.message);
-    proc.stdout.destroy(err);
-  });
-  return proc.stdout;
+  // 1. Primary Engine: ImageMagick CLI spawn via Buffer stdin
+  try {
+    const croppedWithMagick = await new Promise((resolve) => {
+      const isWin = process.platform === 'win32';
+      const convertCmd = isWin ? 'magick' : 'convert';
+      const convertArgs = isWin 
+        ? ['convert', '-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-']
+        : ['-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-'];
+
+      const proc = spawn(convertCmd, convertArgs);
+      const chunks = [];
+
+      proc.stdout.on('data', chunk => chunks.push(chunk));
+      proc.stderr.on('data', d => console.warn('[ImageMagick spawn stderr]', d.toString().trim()));
+
+      proc.on('close', code => {
+        const result = Buffer.concat(chunks);
+        if (code === 0 && result.length > 200) {
+          resolve(result);
+        } else {
+          resolve(null);
+        }
+      });
+
+      proc.on('error', () => resolve(null));
+
+      proc.stdin.write(inputBuffer);
+      proc.stdin.end();
+    });
+
+    if (croppedWithMagick && croppedWithMagick.length > 200) {
+      return croppedWithMagick;
+    }
+  } catch (mErr) {
+    console.warn('[ImageMagick spawn warning]', mErr.message);
+  }
+
+  // 2. High-Speed Fallback Engine: Sharp C++ library
+  try {
+    const sharpImg = sharp(inputBuffer);
+    const metadata = await sharpImg.metadata();
+    const currentAspect = metadata.width / metadata.height;
+    let cropWidth = metadata.width;
+    let cropHeight = metadata.height;
+    if (targetAspect && targetAspect > 0) {
+      if (currentAspect > targetAspect) {
+        cropWidth = Math.round(metadata.height * targetAspect);
+      } else {
+        cropHeight = Math.round(metadata.width / targetAspect);
+      }
+    }
+    const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
+    const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
+    return await sharp(inputBuffer)
+      .extract({ left, top, width: cropWidth, height: cropHeight })
+      .toBuffer();
+  } catch (sharpErr) {
+    console.warn('[Sharp crop fallback warning]', sharpErr.message);
+    return inputBuffer;
+  }
 }
 
 // Helper: Generate and Cache Preset/Custom Ratio ZIP into GCS
@@ -258,25 +306,24 @@ async function generateAndCacheRatio(bundleId, ratioStr, sourceFiles) {
       const srcObj = sourceFiles[i];
       const fileName = srcObj.name || `wallpaper_${i + 1}.png`;
       try {
-        let inputStream = null;
+        let inputBuffer = null;
         if (srcObj.gcsPath) {
-          inputStream = gcs.bucket(GCS_BUCKET).file(srcObj.gcsPath).createReadStream();
+          const [buf] = await gcs.bucket(GCS_BUCKET).file(srcObj.gcsPath).download();
+          inputBuffer = buf;
         } else if (srcObj.buffer) {
-          const pt = new PassThrough();
-          pt.end(srcObj.buffer);
-          inputStream = pt;
+          inputBuffer = srcObj.buffer;
         } else if (srcObj.localPath && fs.existsSync(srcObj.localPath)) {
-          inputStream = fs.createReadStream(srcObj.localPath);
+          inputBuffer = fs.readFileSync(srcObj.localPath);
         }
 
-        if (inputStream) {
-          const outputStream = isOriginal ? inputStream : cropImageStream(inputStream, ratioStr);
-          await new Promise((resolve) => {
-            archive.append(outputStream, { name: fileName });
-            outputStream.on('end', resolve);
-            outputStream.on('close', resolve);
-            outputStream.on('error', (e) => { console.warn('[Pre-Gen Stream Error]', e.message); resolve(); });
-          });
+        if (inputBuffer && inputBuffer.length > 0) {
+          let finalBuffer = inputBuffer;
+          if (!isOriginal) {
+            const [w, h] = ratioStr.split(':').map(Number);
+            const targetAspect = w && h ? (w / h) : 1.77;
+            finalBuffer = await cropImageBuffer(inputBuffer, ratioStr, targetAspect);
+          }
+          archive.append(finalBuffer, { name: fileName });
         }
       } catch (err) {
         console.warn(`[Pre-Gen File Warning] File ${fileName}:`, err.message);
@@ -635,8 +682,8 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // On-demand custom ratio path: Fetch source images directly from GCS sources bucket (fast same-network)
-    const streamFetchers = imagesToProcess.map((imgObj, i) => async () => {
+    // Pre-fetch all image buffers in parallel
+    const bufferFetchers = imagesToProcess.map((imgObj, i) => async () => {
       let imgName = `wallpaper_${i + 1}.png`;
       if (typeof imgObj === 'object' && imgObj.name) {
         imgName = imgObj.name;
@@ -651,10 +698,11 @@ app.post('/api/custom-ratio', async (req, res) => {
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
           const [exists] = await gcsFile.exists();
           if (exists) {
-            return { stream: gcsFile.createReadStream(), name: imgName };
+            const [buf] = await gcsFile.download();
+            return { buffer: buf, name: imgName };
           }
         } catch (gErr) {
-          console.warn(`[GCS Source Stream Warning] File ${i}:`, gErr.message);
+          console.warn(`[GCS Source Download Warning] File ${i}:`, gErr.message);
         }
       }
       // Fallback to Drive if GCS source not migrated yet
@@ -663,34 +711,30 @@ app.post('/api/custom-ratio', async (req, res) => {
       const fileId = match ? match[1] : null;
       if (fileId && drive) {
         try {
-          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
-          return { stream: driveRes.data, name: imgName };
+          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
+          return { buffer: Buffer.from(driveRes.data), name: imgName };
         } catch (_) {}
       }
       const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
-      if (fs.existsSync(localPath)) return { stream: fs.createReadStream(localPath), name: imgName };
+      if (fs.existsSync(localPath)) return { buffer: fs.readFileSync(localPath), name: imgName };
       return null;
     });
 
-    // Process with 1-ahead prefetch pipeline
-    let nextFetch = streamFetchers.length > 0 ? streamFetchers[0]() : Promise.resolve(null);
-    for (let i = 0; i < streamFetchers.length; i++) {
+    // Process with 1-ahead prefetch pipeline and verified buffer appending
+    let nextFetch = bufferFetchers.length > 0 ? bufferFetchers[0]() : Promise.resolve(null);
+    for (let i = 0; i < bufferFetchers.length; i++) {
       const current = await nextFetch;
-      if (i + 1 < streamFetchers.length) {
-        nextFetch = streamFetchers[i + 1]();
+      if (i + 1 < bufferFetchers.length) {
+        nextFetch = bufferFetchers[i + 1]();
       }
-      if (!current || !current.stream) continue;
+      if (!current || !current.buffer || current.buffer.length === 0) continue;
       try {
-        const outputStream = isOriginal
-          ? current.stream
-          : cropImageStream(current.stream, ratioStr);
-
-        await new Promise((resolve) => {
-          archive.append(outputStream, { name: current.name });
-          outputStream.on('end', resolve);
-          outputStream.on('close', resolve);
-          outputStream.on('error', (e) => { console.warn('[Image stream error]', e.message); resolve(); });
-        });
+        let finalBuffer = current.buffer;
+        if (!isOriginal) {
+          const targetAspect = wRatio / hRatio;
+          finalBuffer = await cropImageBuffer(current.buffer, ratioStr, targetAspect);
+        }
+        archive.append(finalBuffer, { name: current.name });
       } catch (imgErr) {
         console.warn(`[Pipeline Warning] Image ${i}:`, imgErr.message);
       }
