@@ -465,20 +465,24 @@ export default function BundleDetailPage({
     setDownloadState('downloading');
     setShowTransferHud(true);
     const stepStart = Date.now();
-    setHudMetrics({
-      progress: 15,
-      speedMbps: 12.5,
-      transferredMB: 0.5,
-      totalMB: 15.0,
-      etaSeconds: 1.2,
-      stage: 'Preparing cloud payload...',
-      steps: [
-        { label: 'Cloud asset restore', status: 'done', duration: '0.12s' },
-        { label: 'ImageMagick ratio crop', status: 'done', duration: '0.18s' },
-        { label: 'Level-1 zip archive build', status: 'active', duration: '0.04s' },
-        { label: 'Payload stream delivery', status: 'pending', duration: '' }
-      ]
-    });
+
+    // Live preparation ticker interval
+    const prepTimer = setInterval(() => {
+      const elapsed = ((Date.now() - stepStart) / 1000).toFixed(1);
+      setHudMetrics(prev => {
+        if (prev.stage.includes('Downloading payload stream')) return prev;
+        return {
+          ...prev,
+          stage: `Preparing cloud payload (${elapsed}s)...`,
+          steps: [
+            { label: 'Cloud asset restore', status: 'done', duration: '0.12s' },
+            { label: 'ImageMagick ratio crop', status: 'done', duration: '0.18s' },
+            { label: 'Level-1 zip archive build', status: 'active', duration: `${elapsed}s` },
+            { label: 'Payload stream delivery', status: 'pending', duration: '' }
+          ]
+        };
+      });
+    }, 100);
 
     try {
       let wStr, hStr;
@@ -501,6 +505,8 @@ export default function BundleDetailPage({
           heightRatio: hStr,
         }),
       });
+
+      clearInterval(prepTimer);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -597,6 +603,7 @@ export default function BundleDetailPage({
       xhr.send();
 
     } catch (error) {
+      clearInterval(prepTimer);
       console.error('Download error:', error);
       alert(`Download failed: ${error.message}`);
       setShowTransferHud(false);
