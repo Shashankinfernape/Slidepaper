@@ -1208,14 +1208,15 @@ app.get('/api/monetization/analytics', async (req, res) => {
     let totalImpressions = totalViews;
 
     if (adSenseReport.isConfigured && !adSenseReport.error) {
+      // Direct 1:1 payout based strictly on actual Google AdSense deposit dollar amount
       totalAdRevenue = adSenseReport.totalAdRevenue;
       rpm = adSenseReport.rpm;
       totalImpressions = adSenseReport.totalImpressions;
     } else {
-      // Pre-approval real traffic calculations (strictly without fake demo baseline money)
-      totalImpressions = totalViews + (totalDownloads * 2);
-      rpm = totalImpressions > 0 ? 1.50 : 0.00;
-      totalAdRevenue = Number(((totalImpressions / 1000) * rpm).toFixed(2));
+      // Unconfigured or pending approval: strictly 0.00 until Google AdSense reports real revenue
+      totalAdRevenue = 0.00;
+      rpm = 0.00;
+      totalImpressions = totalViews;
     }
 
     const creatorPool = Number((totalAdRevenue * 0.70).toFixed(2)); // 70% share to creators
