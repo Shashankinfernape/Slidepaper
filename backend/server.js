@@ -541,14 +541,19 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
     } else {
       const targetAspect = wRatio / hRatio;
-      console.log(`[Sharp Crop] Processing ${imageFilenames.length} images for ratio ${wRatio}:${hRatio} (${targetAspect.toFixed(3)})`);
+      console.log(`[ImageMagick Crop] Processing ${imageFilenames.length} images for ratio ${wRatio}:${hRatio} (${targetAspect.toFixed(3)})`);
+
+      const isWin = process.platform === 'win32';
+      const convertCmd = isWin ? 'magick convert' : 'convert';
 
       for (const filename of imageFilenames) {
         const srcPath = path.join(srcFolder, filename);
         const destPath = path.join(outputDirPath, filename);
 
         if (fs.existsSync(srcPath)) {
+          let croppedWithMagick = false;
           try {
+            // Get image dimensions using sharp/metadata
             const metadata = await sharp(srcPath).metadata();
             const currentAspect = metadata.width / metadata.height;
 
@@ -561,15 +566,40 @@ app.post('/api/custom-ratio', async (req, res) => {
               cropHeight = Math.round(metadata.width / targetAspect);
             }
 
-            const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
-            const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
+            // Execute ImageMagick convert command for exact center crop
+            const cmd = `${convertCmd} "${srcPath}" -gravity center -crop ${cropWidth}x${cropHeight}+0+0 +repage "${destPath}"`;
+            await Promise.race([
+              execPromise(cmd),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('ImageMagick CLI timeout')), 2500))
+            ]);
+            croppedWithMagick = true;
+          } catch (magickErr) {
+            console.warn(`[ImageMagick Warning] CLI crop skipped for ${filename} (${magickErr.message}). Using sharp fallback.`);
+          }
 
-            await sharp(srcPath)
-              .extract({ left, top, width: cropWidth, height: cropHeight })
-              .toFile(destPath);
-          } catch (sharpErr) {
-            console.warn(`[Sharp Crop Warning] Failed to crop ${filename}, copying original:`, sharpErr.message);
-            fs.copyFileSync(srcPath, destPath);
+          // Native sharp fallback if ImageMagick CLI binary is not present on cloud server
+          if (!croppedWithMagick && fs.existsSync(srcPath)) {
+            try {
+              const metadata = await sharp(srcPath).metadata();
+              const currentAspect = metadata.width / metadata.height;
+              let cropWidth = metadata.width;
+              let cropHeight = metadata.height;
+
+              if (currentAspect > targetAspect) {
+                cropWidth = Math.round(metadata.height * targetAspect);
+              } else {
+                cropHeight = Math.round(metadata.width / targetAspect);
+              }
+
+              const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
+              const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
+
+              await sharp(srcPath)
+                .extract({ left, top, width: cropWidth, height: cropHeight })
+                .toFile(destPath);
+            } catch (sharpErr) {
+              fs.copyFileSync(srcPath, destPath);
+            }
           }
         }
       }
