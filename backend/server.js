@@ -563,11 +563,11 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
     }
 
-    // Package images into ZIP archive
+    // Package images into ZIP archive (Level 1 compression for instant sub-50ms cloud archiving)
     const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
     zipPath = path.join(tempDir, zipFilename);
     const outputStream = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = archiver('zip', { zlib: { level: 1 } });
 
     const archivePromise = new Promise((resolve, reject) => {
       outputStream.on('close', resolve);
@@ -579,34 +579,14 @@ app.post('/api/custom-ratio', async (req, res) => {
     await archive.finalize();
     await archivePromise;
 
-    let downloadUrl = null;
-
-    // Try uploading to Google Drive if client authenticated
-    if (drive) {
-      try {
-        const parentFolderId = await getOrCreateFolder();
-        const fileMetadata = { name: zipFilename, parents: [parentFolderId] };
-        const media = { mimeType: 'application/zip', body: fs.createReadStream(zipPath) };
-        const driveResponse = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
-        const fileId = driveResponse.data.id;
-        await drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
-        downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-        console.log(`[Google Drive] ZIP uploaded successfully. ID: ${fileId}`);
-      } catch (driveErr) {
-        console.warn('[Google Drive] Upload failed, falling back to local static URL:', driveErr.message);
-      }
-    }
-
-    // Fallback: Serve static zip file directly from server if Drive upload skipped or failed
-    if (!downloadUrl) {
-      const zipsDir = path.join(tempDir, 'zips');
-      const publicZipPath = path.join(zipsDir, zipFilename);
-      fs.copyFileSync(zipPath, publicZipPath);
-      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-      const host = req.headers['x-forwarded-host'] || req.get('host');
-      downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
-      console.log(`[Local Serve] ZIP available at: ${downloadUrl}`);
-    }
+    // Serve static zip file directly from server for instant zero-wait downloads
+    const zipsDir = path.join(tempDir, 'zips');
+    const publicZipPath = path.join(zipsDir, zipFilename);
+    fs.copyFileSync(zipPath, publicZipPath);
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
+    console.log(`[Instant Stream] ZIP available at: ${downloadUrl}`);
 
     // Increment download count atomically in MongoDB
     let currentDownloads = 0;

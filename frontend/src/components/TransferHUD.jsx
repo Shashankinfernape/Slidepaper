@@ -1,4 +1,5 @@
-import { Download, Upload, Zap, Clock, CheckCircle2, X } from 'lucide-react';
+import { Download, Upload, Zap, Clock, CheckCircle2, X, ChevronDown, ChevronUp, Cpu } from 'lucide-react';
+import { useState } from 'react';
 
 export default function TransferHUD({
   type = 'download', // 'download' | 'upload'
@@ -10,8 +11,10 @@ export default function TransferHUD({
   totalMB = 0,
   etaSeconds = 0,
   stage = '',
+  steps = [],
   onClose
 }) {
+  const [showDetails, setShowDetails] = useState(false);
   const isUpload = type === 'upload';
   const brandColor = isUpload ? '#3b82f6' : '#22c55e';
 
@@ -29,8 +32,8 @@ export default function TransferHUD({
       bottom: '28px',
       right: '28px',
       zIndex: 999999,
-      width: 'min(calc(100vw - 32px), 340px)',
-      background: 'rgba(24, 24, 27, 0.95)',
+      width: 'min(calc(100vw - 32px), 350px)',
+      background: 'rgba(24, 24, 27, 0.96)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       border: '1px solid var(--border-color, rgba(255, 255, 255, 0.12))',
@@ -64,15 +67,57 @@ export default function TransferHUD({
           </div>
         </div>
 
-        {onClose && (
-          <button 
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--text-secondary, #a1a1aa)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-          >
-            <X size={15} />
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {steps && steps.length > 0 && (
+            <button
+              onClick={() => setShowDetails(!showDetails)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary, #a1a1aa)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+              title="Toggle Step Durations"
+            >
+              {showDetails ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+          )}
+          {onClose && (
+            <button 
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary, #a1a1aa)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Stage Banner */}
+      <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.85)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Cpu size={12} style={{ color: brandColor }} />
+          <strong>{stage || (progress >= 100 ? 'Download Complete' : 'Processing stream')}</strong>
+        </span>
+        <span style={{ fontSize: '0.72rem', color: brandColor, fontWeight: 700 }}>{Math.round(progress)}%</span>
+      </div>
+
+      {/* Expandable Step Durations Box */}
+      {showDetails && steps && steps.length > 0 && (
+        <div style={{
+          background: 'rgba(0,0,0,0.3)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '8px',
+          padding: '8px 10px',
+          marginBottom: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          fontSize: '0.72rem'
+        }}>
+          {steps.map((s, idx) => (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: s.status === 'done' ? '#22c55e' : (s.status === 'active' ? '#3b82f6' : 'rgba(255,255,255,0.4)') }}>
+              <span>{s.status === 'done' ? '✓' : (s.status === 'active' ? '⚡' : '○')} {s.label}</span>
+              <strong style={{ fontFamily: 'monospace' }}>{s.duration || (s.status === 'active' ? 'calculating...' : '--')}</strong>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Stats Row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.76rem', color: 'var(--text-secondary, #a1a1aa)', marginBottom: '8px' }}>

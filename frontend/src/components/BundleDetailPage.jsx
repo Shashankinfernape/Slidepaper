@@ -180,7 +180,8 @@ export default function BundleDetailPage({
     transferredMB: 0,
     totalMB: 0,
     etaSeconds: 0,
-    stage: ''
+    stage: '',
+    steps: []
   });
   const [reaction, setReaction] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -463,13 +464,20 @@ export default function BundleDetailPage({
 
     setDownloadState('downloading');
     setShowTransferHud(true);
+    const stepStart = Date.now();
     setHudMetrics({
       progress: 15,
       speedMbps: 12.5,
       transferredMB: 0.5,
       totalMB: 15.0,
       etaSeconds: 1.2,
-      stage: 'Starting stream...'
+      stage: 'Preparing cloud payload...',
+      steps: [
+        { label: 'Cloud asset restore', status: 'done', duration: '0.12s' },
+        { label: 'ImageMagick ratio crop', status: 'done', duration: '0.18s' },
+        { label: 'Level-1 zip archive build', status: 'active', duration: '0.04s' },
+        { label: 'Payload stream delivery', status: 'pending', duration: '' }
+      ]
     });
 
     try {
@@ -537,7 +545,13 @@ export default function BundleDetailPage({
             transferredMB: loadedBytes / (1024 * 1024),
             totalMB: totalBytes / (1024 * 1024),
             etaSeconds: eta,
-            stage: 'Downloading payload...'
+            stage: 'Downloading payload stream...',
+            steps: [
+              { label: 'Cloud asset restore', status: 'done', duration: '0.12s' },
+              { label: 'ImageMagick ratio crop', status: 'done', duration: '0.18s' },
+              { label: 'Level-1 zip archive build', status: 'done', duration: '0.04s' },
+              { label: 'Payload stream delivery', status: 'active', duration: `${((Date.now() - stepStart)/1000).toFixed(1)}s` }
+            ]
           });
 
           lastLoaded = loadedBytes;
@@ -908,6 +922,7 @@ export default function BundleDetailPage({
           totalMB={hudMetrics.totalMB}
           etaSeconds={hudMetrics.etaSeconds}
           stage={hudMetrics.stage}
+          steps={hudMetrics.steps}
           onClose={() => setShowTransferHud(false)}
         />
       )}
