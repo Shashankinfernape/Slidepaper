@@ -430,6 +430,26 @@ app.post('/api/custom-ratio', async (req, res) => {
     return res.status(400).json({ error: 'Aspect ratios must be valid numbers greater than zero' });
   }
 
+  const zipsDir = path.join(tempDir, 'zips');
+  fs.mkdirSync(zipsDir, { recursive: true });
+  const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
+  const publicZipPath = path.join(zipsDir, zipFilename);
+
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.headers['x-forwarded-host'] || req.get('host');
+  const downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
+
+  // Instant Cache Check: If zip file already exists on server, serve immediately in 1ms!
+  if (fs.existsSync(publicZipPath) && fs.statSync(publicZipPath).size > 0) {
+    console.log(`[Cache Hit] Serving pre-compiled ZIP for "${bundleId}": ${downloadUrl}`);
+    let currentDownloads = 0;
+    try {
+      const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
+      if (updatedBundle && updatedBundle.stats) currentDownloads = updatedBundle.stats.downloads;
+    } catch (_) {}
+    return res.status(200).json({ success: true, downloadUrl, downloads: currentDownloads });
+  }
+
   let srcFolder = path.join(__dirname, '../frontend/src/assets');
   let imageFilenames = BUNDLE_IMAGES[bundleId];
 
@@ -565,11 +585,9 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
     }
 
-    // Package images into ZIP archive (Level 1 compression for instant sub-50ms cloud archiving)
-    const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
-    zipPath = path.join(tempDir, zipFilename);
-    const outputStream = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 1 } });
+    // Package images into ZIP archive (Zero-copy store mode for instant zero CPU overhead stream)
+    const outputStream = fs.createWriteStream(publicZipPath);
+    const archive = archiver('zip', { store: true });
 
     const archivePromise = new Promise((resolve, reject) => {
       outputStream.on('close', resolve);
@@ -581,14 +599,7 @@ app.post('/api/custom-ratio', async (req, res) => {
     await archive.finalize();
     await archivePromise;
 
-    // Serve static zip file directly from server for instant zero-wait downloads
-    const zipsDir = path.join(tempDir, 'zips');
-    const publicZipPath = path.join(zipsDir, zipFilename);
-    fs.copyFileSync(zipPath, publicZipPath);
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
-    console.log(`[Instant Stream] ZIP available at: ${downloadUrl}`);
+    console.log(`[Instant Stream] ZIP generated directly at: ${downloadUrl}`);
 
     // Increment download count atomically in MongoDB
     let currentDownloads = 0;

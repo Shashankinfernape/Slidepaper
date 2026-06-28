@@ -511,15 +511,11 @@ export default function BundleDetailPage({
         [wStr, hStr] = ratioStr.split(':');
       }
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
       const response = await fetch(`${API_URL}/api/custom-ratio`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        signal: controller.signal,
         body: JSON.stringify({
           bundleId: bundle.id,
           widthRatio: wStr,
@@ -527,7 +523,6 @@ export default function BundleDetailPage({
         }),
       });
 
-      clearTimeout(timeoutId);
       clearInterval(prepTimer);
 
       if (!response.ok) {
