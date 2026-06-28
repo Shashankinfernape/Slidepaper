@@ -67,7 +67,8 @@ const bundleSchema = new mongoose.Schema({
     email: String,
     subscribers: { type: Number, default: 0 }
   },
-  isHero: { type: Boolean, default: false }
+  isHero: { type: Boolean, default: false },
+  ratioCaches: { type: Map, of: String, default: {} }
 });
 
 const Bundle = mongoose.model('Bundle', bundleSchema);
@@ -431,6 +432,7 @@ app.post('/api/custom-ratio', async (req, res) => {
     return res.status(400).json({ error: 'Aspect ratios must be valid numbers greater than zero' });
   }
 
+  const ratioKey = isOriginal ? 'original' : `${widthRatio}:${heightRatio}`;
   const zipsDir = path.join(tempDir, 'zips');
   fs.mkdirSync(zipsDir, { recursive: true });
   const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
@@ -440,9 +442,22 @@ app.post('/api/custom-ratio', async (req, res) => {
   const host = req.headers['x-forwarded-host'] || req.get('host');
   const downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
 
-  // Instant Cache Check: If zip file already exists on server, serve immediately in 1ms!
+  // 1. Persistent Cloud Cache Check (MongoDB / Google Cloud)
+  try {
+    const dbBundle = await Bundle.findOne({ id: bundleId });
+    if (dbBundle && dbBundle.ratioCaches && dbBundle.ratioCaches.get(ratioKey)) {
+      const cloudCachedUrl = dbBundle.ratioCaches.get(ratioKey);
+      console.log(`[Persistent Cloud Cache HIT] Found ratio "${ratioKey}" for bundle "${bundleId}": ${cloudCachedUrl}`);
+      const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
+      return res.status(200).json({ success: true, downloadUrl: cloudCachedUrl, downloads: updatedBundle?.stats?.downloads || 0 });
+    }
+  } catch (dbErr) {
+    console.warn('[Cloud Cache Check Error]', dbErr.message);
+  }
+
+  // 2. Local Disk Cache Check
   if (fs.existsSync(publicZipPath) && fs.statSync(publicZipPath).size > 0) {
-    console.log(`[Cache Hit] Serving pre-compiled ZIP for "${bundleId}": ${downloadUrl}`);
+    console.log(`[Local Disk Cache HIT] Serving pre-compiled ZIP for "${bundleId}": ${downloadUrl}`);
     let currentDownloads = 0;
     try {
       const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
@@ -626,12 +641,40 @@ app.post('/api/custom-ratio', async (req, res) => {
       console.warn('[MongoDB] Failed to increment download count:', dErr.message);
     }
 
-    return res.status(200).json({
+    // Send instant download response to client
+    res.status(200).json({
       success: true,
       message: 'Bundle customized and ready for download',
       downloadUrl: downloadUrl,
       downloads: currentDownloads
     });
+
+    // Background Async Worker: Upload zip copy to Google Cloud storage & persist link in MongoDB ratioCaches
+    if (drive && fs.existsSync(publicZipPath)) {
+      (async () => {
+        try {
+          console.log(`[Cloud Cache Worker] Uploading persistent backup copy for "${bundleId}" [${ratioKey}] to Google Cloud...`);
+          const parentFolderId = await getOrCreateFolder();
+          const fileMetadata = { name: `${bundleId}_${ratioKey.replace(':', 'x')}.zip`, parents: [parentFolderId] };
+          const media = { mimeType: 'application/zip', body: fs.createReadStream(publicZipPath) };
+          const driveResponse = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
+          const fileId = driveResponse.data.id;
+          await drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
+          const driveCloudUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+          // Save persistent cloud link in MongoDB ratioCaches map
+          await Bundle.findOneAndUpdate(
+            { id: bundleId },
+            { $set: { [`ratioCaches.${ratioKey}`]: driveCloudUrl } }
+          );
+          console.log(`[Cloud Cache Worker SUCCESS] Ratio "${ratioKey}" saved to cloud and linked in DB: ${driveCloudUrl}`);
+        } catch (workerErr) {
+          console.warn('[Cloud Cache Worker Error]', workerErr.message);
+        }
+      })();
+    }
+
+    return;
 
   } catch (error) {
     console.error('Custom ratio processing error:', error);
