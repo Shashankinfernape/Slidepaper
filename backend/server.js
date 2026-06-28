@@ -544,7 +544,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       let cropSuccess = false;
       for (const ext of extensions) {
         try {
-          const cmd = `${cmdPrefix} -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
+          const cmd = `${cmdPrefix} -background none -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
           console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
           await execPromise(cmd, { cwd: jobDirPath });
           cropSuccess = true;
