@@ -623,20 +623,21 @@ export default function BundleDetailPage({
 
     } catch (error) {
       clearInterval(prepTimer);
-      console.warn('Custom ratio stream error, triggering direct fallback:', error.message);
+      console.warn('Custom ratio stream error:', error.message);
       
-      // Graceful fallback: trigger direct link if bundle has driveUrl or image link
-      const fallbackUrl = bundle.driveUrl || (bundle.images && bundle.images[0]?.url) || (bundle.images && bundle.images[0]);
-      if (fallbackUrl) {
-        const targetUrl = fallbackUrl.includes('drive.google.com')
-          ? fallbackUrl
-          : (fallbackUrl.startsWith('http') ? fallbackUrl : `${API_URL}${fallbackUrl}`);
-        window.location.href = targetUrl;
+      // Fallback: trigger driveUrl zip download if present
+      if (bundle.driveUrl) {
+        const a = document.createElement('a');
+        a.href = bundle.driveUrl;
+        a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       } else {
-        alert('Download service is preparing. Please try again in a moment.');
+        alert('Server is currently compiling this high-res pack. Please click download again in 5 seconds!');
       }
       setShowTransferHud(false);
-      setDownloadState('completed');
+      setDownloadState('idle');
     }
   };
 
