@@ -437,33 +437,28 @@ app.post('/api/custom-ratio', async (req, res) => {
   const dynamicAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
 
   if (isDynamic) {
-    // If local directory doesn't exist, we must restore files from Google Drive
+    // If local directory doesn't exist, we must restore files from Google Drive in parallel
     if (!fs.existsSync(dynamicAssetsDir)) {
       try {
-        console.log(`[Custom Ratio] Local assets missing for dynamic bundle "${bundleId}". Attempting restoration...`);
+        console.log(`[Custom Ratio] Local assets missing for dynamic bundle "${bundleId}". Attempting fast parallel restoration...`);
         const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
         const dbBundle = bundlesData.find(b => b.id === bundleId);
         
         if (dbBundle && dbBundle.images && dbBundle.images.length > 0) {
           fs.mkdirSync(dynamicAssetsDir, { recursive: true });
           
-          for (let i = 0; i < dbBundle.images.length; i++) {
-            const img = dbBundle.images[i];
+          const restorePromises = dbBundle.images.map(async (img, i) => {
             const url = img.url;
             let fileId = null;
-            if (url.includes('drive.google.com')) {
+            if (url && url.includes('drive.google.com')) {
               const match = url.match(/[?&]id=([^&]+)/);
               if (match) fileId = match[1];
             }
             
             if (fileId && drive) {
               try {
-                const fileMeta = await drive.files.get({ fileId: fileId, fields: 'name' });
-                const filename = fileMeta.data.name || `${i}_image.png`;
-                const destFilename = `${i}_${filename}`;
+                const destFilename = `${i}_wallpaper.png`;
                 const destPath = path.join(dynamicAssetsDir, destFilename);
-                
-                console.log(`[Restore] Downloading file ID: ${fileId} -> ${destPath}`);
                 const destStream = fs.createWriteStream(destPath);
                 const driveResponse = await drive.files.get(
                   { fileId: fileId, alt: 'media' },
@@ -477,11 +472,13 @@ app.post('/api/custom-ratio', async (req, res) => {
                     .on('error', reject);
                 });
               } catch (dErr) {
-                console.warn('[Restore] Drive stream fetch error:', dErr.message);
+                console.warn(`[Restore] Drive fetch error for image ${i}:`, dErr.message);
               }
             }
-          }
-          console.log(`[Restore] Restored images for bundle "${bundleId}".`);
+          });
+
+          await Promise.all(restorePromises);
+          console.log(`[Restore] Parallel restoration complete for bundle "${bundleId}".`);
         } else {
           return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
         }

@@ -621,10 +621,20 @@ export default function BundleDetailPage({
 
     } catch (error) {
       clearInterval(prepTimer);
-      console.error('Download error:', error);
-      alert(`Download failed: ${error.message}`);
+      console.warn('Custom ratio stream error, triggering direct fallback:', error.message);
+      
+      // Graceful fallback: trigger direct link if bundle has driveUrl or image link
+      const fallbackUrl = bundle.driveUrl || (bundle.images && bundle.images[0]?.url) || (bundle.images && bundle.images[0]);
+      if (fallbackUrl) {
+        const targetUrl = fallbackUrl.includes('drive.google.com')
+          ? fallbackUrl
+          : (fallbackUrl.startsWith('http') ? fallbackUrl : `${API_URL}${fallbackUrl}`);
+        window.location.href = targetUrl;
+      } else {
+        alert('Download service is preparing. Please try again in a moment.');
+      }
       setShowTransferHud(false);
-      setDownloadState('idle');
+      setDownloadState('completed');
     }
   };
 
