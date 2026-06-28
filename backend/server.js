@@ -124,8 +124,7 @@ async function seedDatabase() {
         $set: { 
           'author.uid': 'admin-mock-999', 
           'author.email': 'admin@slidepapers.com',
-          'author.name': 'Infernape',
-          'author.avatar': 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'
+          'author.name': 'Infernape'
         } 
       }
     );
@@ -140,7 +139,6 @@ async function seedDatabase() {
         uid: 'admin-mock-999',
         displayName: 'Infernape',
         email: 'admin@slidepapers.com',
-        photoURL: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>',
         subscribers: 68400,
         subscriberUids: [],
         about: 'Digital artist & wallpaper curator.',
@@ -1083,19 +1081,15 @@ app.get('/api/notifications', async (req, res) => {
     }
 
     // Populate live author profile photos from User and Bundle collections
-    const userUids = [...new Set(notifications.map(n => n.authorUid).filter(Boolean))];
-    const authorNames = [...new Set(notifications.map(n => n.authorName).filter(Boolean))];
+    const allUsers = await User.find({});
     const bundleIds = [...new Set(notifications.map(n => n.bundleId).filter(Boolean))];
-
-    const [usersByUid, usersByName, bundlesById] = await Promise.all([
-      User.find({ uid: { $in: userUids } }),
-      User.find({ displayName: { $in: authorNames } }),
-      Bundle.find({ id: { $in: bundleIds } })
-    ]);
+    const bundlesById = await Bundle.find({ id: { $in: bundleIds } });
 
     const userMap = {};
-    usersByUid.forEach(u => { userMap[u.uid] = u; });
-    usersByName.forEach(u => { if (u.displayName) userMap[u.displayName.toLowerCase()] = u; });
+    allUsers.forEach(u => {
+      if (u.uid) userMap[u.uid] = u;
+      if (u.displayName) userMap[u.displayName.toLowerCase()] = u;
+    });
 
     const bundleMap = {};
     bundlesById.forEach(b => { bundleMap[b.id] = b; });
@@ -1108,13 +1102,13 @@ app.get('/api/notifications', async (req, res) => {
         matchedUser = userMap[notifObj.authorName.toLowerCase()];
       }
 
-      if (matchedUser) {
-        if (matchedUser.photoURL) notifObj.authorAvatar = matchedUser.photoURL;
+      if (matchedUser && matchedUser.photoURL) {
+        notifObj.authorAvatar = matchedUser.photoURL;
         if (matchedUser.displayName) notifObj.authorName = matchedUser.displayName;
-      } else if (notifObj.bundleId && bundleMap[notifObj.bundleId]) {
-        const b = bundleMap[notifObj.bundleId];
-        if (b.author?.avatar) notifObj.authorAvatar = b.author.avatar;
-        if (b.author?.name) notifObj.authorName = b.author.name;
+      } else if (notifObj.bundleId && bundleMap[notifObj.bundleId] && bundleMap[notifObj.bundleId].author) {
+        const bAuthor = bundleMap[notifObj.bundleId].author;
+        if (bAuthor.avatar) notifObj.authorAvatar = bAuthor.avatar;
+        if (bAuthor.name) notifObj.authorName = bAuthor.name;
       }
       return notifObj;
     });
@@ -1241,17 +1235,19 @@ app.post('/api/users/sync-profile', async (req, res) => {
       console.log(`[Database] Created new user profile for UID: ${uid}`);
     }
 
-    // Also update any bundles uploaded by this author so that name/avatar updates everywhere!
-    await Bundle.updateMany(
-      { 'author.uid': uid },
-      { 
-        $set: { 
-          'author.name': displayName || user.displayName, 
-          'author.avatar': photoURL || user.photoURL,
-          'author.email': email || user.email 
-        } 
-      }
-    );
+    // Also update any bundles and notifications uploaded by this author so that name/avatar updates everywhere!
+    const newName = displayName || user.displayName;
+    const newAvatar = photoURL || user.photoURL;
+    if (newAvatar) {
+      await Bundle.updateMany(
+        { $or: [{ 'author.uid': uid }, { 'author.name': newName }] },
+        { $set: { 'author.name': newName, 'author.avatar': newAvatar, 'author.email': email || user.email } }
+      );
+      await Notification.updateMany(
+        { $or: [{ authorUid: uid }, { authorName: newName }] },
+        { $set: { authorName: newName, authorAvatar: newAvatar } }
+      );
+    }
 
     return res.status(200).json({ success: true, user });
   } catch (error) {
@@ -1460,16 +1456,17 @@ app.post('/api/users/update-profile', async (req, res) => {
       { returnDocument: 'after', upsert: true }
     );
 
-    // Also update any bundles uploaded by this author so that name/avatar updates everywhere!
-    await Bundle.updateMany(
-      { 'author.uid': uid },
-      { 
-        $set: { 
-          'author.name': user.displayName, 
-          'author.avatar': user.photoURL
-        } 
-      }
-    );
+    // Also update any bundles and notifications uploaded by this author so that name/avatar updates everywhere!
+    if (user.photoURL) {
+      await Bundle.updateMany(
+        { $or: [{ 'author.uid': uid }, { 'author.name': user.displayName }] },
+        { $set: { 'author.name': user.displayName, 'author.avatar': user.photoURL } }
+      );
+      await Notification.updateMany(
+        { $or: [{ authorUid: uid }, { authorName: user.displayName }] },
+        { $set: { authorName: user.displayName, authorAvatar: user.photoURL } }
+      );
+    }
 
     // Trigger Drive sync backup in background
     saveBundlesToDrive().catch(err => console.error('[Sync] Background sync error:', err));
