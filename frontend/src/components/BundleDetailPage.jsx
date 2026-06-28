@@ -895,24 +895,24 @@ export default function BundleDetailPage({
                 Sign in with Google
               </button>
             </div>
-            {/* Secret Admin Login Modal */}
-            {/* Transfer HUD Floating Indicator */}
-            {showTransferHud && (
-              <TransferHUD
-                type="download"
-                title="Downloading Wallpaper Pack"
-                fileName={`${bundle.name} (${selectedDownloadId === 'custom' ? customRatio : selectedDownload?.ratio || '16:9'})`}
-                progress={hudMetrics.progress}
-                speedMbps={hudMetrics.speedMbps}
-                transferredMB={hudMetrics.transferredMB}
-                totalMB={hudMetrics.totalMB}
-                etaSeconds={hudMetrics.etaSeconds}
-                stage={hudMetrics.stage}
-                onClose={() => setShowTransferHud(false)}
-              />
-            )}
           </div>
         </div>
+      )}
+
+      {/* Floating Transfer HUD Indicator - Root Level */}
+      {showTransferHud && (
+        <TransferHUD
+          type="download"
+          title="Downloading Wallpaper Pack"
+          fileName={`${bundle.name} (${selectedDownloadId === 'custom' ? customRatio : selectedDownload?.ratio || '16:9'})`}
+          progress={hudMetrics.progress}
+          speedMbps={hudMetrics.speedMbps}
+          transferredMB={hudMetrics.transferredMB}
+          totalMB={hudMetrics.totalMB}
+          etaSeconds={hudMetrics.etaSeconds}
+          stage={hudMetrics.stage}
+          onClose={() => setShowTransferHud(false)}
+        />
       )}
     </div>
   );
