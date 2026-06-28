@@ -232,6 +232,70 @@ function cropImageStream(inputStream, ratioStr) {
   return proc.stdout;
 }
 
+// Helper: Generate and Cache Preset/Custom Ratio ZIP into GCS
+async function generateAndCacheRatio(bundleId, ratioStr, sourceFiles) {
+  if (!gcs || !GCS_BUCKET) return null;
+  const ratioKey = ratioStr;
+  const isOriginal = ratioStr === 'original';
+  console.log(`[Pre-Gen Worker] Starting ratio "${ratioKey}" for bundle "${bundleId}"...`);
+
+  try {
+    const archive = archiver('zip', { store: true });
+    const gcsPassThrough = new PassThrough();
+    const destGcsPath = `bundles/${bundleId}_${ratioKey.replace(':', 'x')}.zip`;
+    const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
+    const gcsWriteStream = gcsFile.createWriteStream({ resumable: false, contentType: 'application/zip' });
+
+    archive.pipe(gcsPassThrough);
+
+    const gcsUploadPromise = new Promise((resolve) => {
+      gcsPassThrough.pipe(gcsWriteStream)
+        .on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`))
+        .on('error', (err) => { console.warn('[Pre-Gen GCS Upload Error]', err.message); resolve(null); });
+    });
+
+    for (let i = 0; i < sourceFiles.length; i++) {
+      const srcObj = sourceFiles[i];
+      const fileName = srcObj.name || `wallpaper_${i + 1}.png`;
+      try {
+        let inputStream = null;
+        if (srcObj.gcsPath) {
+          inputStream = gcs.bucket(GCS_BUCKET).file(srcObj.gcsPath).createReadStream();
+        } else if (srcObj.buffer) {
+          const pt = new PassThrough();
+          pt.end(srcObj.buffer);
+          inputStream = pt;
+        } else if (srcObj.localPath && fs.existsSync(srcObj.localPath)) {
+          inputStream = fs.createReadStream(srcObj.localPath);
+        }
+
+        if (inputStream) {
+          const outputStream = isOriginal ? inputStream : cropImageStream(inputStream, ratioStr);
+          await new Promise((resolve) => {
+            archive.append(outputStream, { name: fileName });
+            outputStream.on('end', resolve);
+            outputStream.on('close', resolve);
+            outputStream.on('error', (e) => { console.warn('[Pre-Gen Stream Error]', e.message); resolve(); });
+          });
+        }
+      } catch (err) {
+        console.warn(`[Pre-Gen File Warning] File ${fileName}:`, err.message);
+      }
+    }
+
+    await archive.finalize();
+    const gcsUri = await gcsUploadPromise;
+    if (gcsUri) {
+      await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${ratioKey}`]: gcsUri } });
+      console.log(`[Pre-Gen SUCCESS] Ratio "${ratioKey}" saved to GCS & DB for "${bundleId}": ${gcsUri}`);
+    }
+    return gcsUri;
+  } catch (workerErr) {
+    console.error(`[Pre-Gen Error] Failed ratio "${ratioKey}" for "${bundleId}":`, workerErr.message);
+    return null;
+  }
+}
+
 // Helper: Find bundles.json on Google Drive
 async function getBundlesFileId(folderId) {
   try {
@@ -571,31 +635,42 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Pre-fetch all Drive streams in parallel (lazy HTTP connection openers)
+    // On-demand custom ratio path: Fetch source images directly from GCS sources bucket (fast same-network)
     const streamFetchers = imagesToProcess.map((imgObj, i) => async () => {
-      const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
       const imgName = typeof imgObj === 'object' && imgObj.name ? imgObj.name : `wallpaper_${i + 1}.png`;
+      const gcsSourcePath = `sources/${bundleId}/${imgName}`;
+      if (gcsEnabled && GCS_BUCKET) {
+        try {
+          const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
+          const [exists] = await gcsFile.exists();
+          if (exists) {
+            return { stream: gcsFile.createReadStream(), name: imgName };
+          }
+        } catch (gErr) {
+          console.warn(`[GCS Source Stream Warning] File ${i}:`, gErr.message);
+        }
+      }
+      // Fallback to Drive if GCS source not migrated yet
+      const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
       const match = imgUrl?.match(/[?&]id=([^&]+)/);
       const fileId = match ? match[1] : null;
       if (fileId && drive) {
         try {
           const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
           return { stream: driveRes.data, name: imgName };
-        } catch (dErr) {
-          console.warn(`[Drive Stream Fetch Warning] File ${i}:`, dErr.message);
-        }
+        } catch (_) {}
       }
       const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
       if (fs.existsSync(localPath)) return { stream: fs.createReadStream(localPath), name: imgName };
       return null;
     });
 
-    // Process with 1-ahead prefetch pipeline: while IM processes image N, fetch image N+1
+    // Process with 1-ahead prefetch pipeline
     let nextFetch = streamFetchers.length > 0 ? streamFetchers[0]() : Promise.resolve(null);
     for (let i = 0; i < streamFetchers.length; i++) {
       const current = await nextFetch;
       if (i + 1 < streamFetchers.length) {
-        nextFetch = streamFetchers[i + 1](); // kick off next fetch NOW in parallel
+        nextFetch = streamFetchers[i + 1]();
       }
       if (!current || !current.stream) continue;
       try {
@@ -921,8 +996,22 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       });
       
       const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-      // Use Google Drive's built-in thumbnail generator for previewing (sz=w1920 for high-resolution)
       const previewDownloadUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+
+      // Store source image directly in GCS during the exact same upload loop pass!
+      const gcsSourcePath = `sources/${bundleId}/${file.originalname}`;
+      if (gcsEnabled && GCS_BUCKET) {
+        try {
+          const fileBuffer = fs.readFileSync(file.path);
+          await gcs.bucket(GCS_BUCKET).file(gcsSourcePath).save(fileBuffer, {
+            contentType: file.mimetype,
+            resumable: false
+          });
+          console.log(`[GCS Source] Saved source image "${file.originalname}" at gs://${GCS_BUCKET}/${gcsSourcePath}`);
+        } catch (gcsSaveErr) {
+          console.warn(`[GCS Source Error] Failed to save "${file.originalname}":`, gcsSaveErr.message);
+        }
+      }
 
       // Clean up multer temporary file
       try {
@@ -931,6 +1020,8 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
 
       uploadResults.push({
         index: i,
+        name: file.originalname,
+        gcsPath: gcsSourcePath,
         url: downloadUrl,
         previewUrl: previewDownloadUrl,
         label: `Screen ${i + 1}: ${file.originalname.split('.')[0]}`,
@@ -940,7 +1031,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
 
     // Sort results to preserve the original selection order
     uploadResults.sort((a, b) => a.index - b.index);
-    const imageUrls = uploadResults.map(r => ({ url: r.url, previewUrl: r.previewUrl, label: r.label, size: r.size }));
+    const imageUrls = uploadResults.map(r => ({ name: r.name, gcsPath: r.gcsPath, url: r.url, previewUrl: r.previewUrl, label: r.label, size: r.size }));
 
     const tagsArray = tags ? tags.split(',').map(t => t.trim()) : [];
     const includesArray = includes ? includes.split(',').map(i => i.trim()) : [];
@@ -1019,10 +1110,29 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
       console.warn('[Notification] Failed to create notification:', nErr.message);
     }
 
-    // Sync the updated database to Google Drive for persistence across server restarts
-    await saveBundlesToDrive();
+    // Sync database
+    saveBundlesToDrive().catch(e => console.warn('[Drive Sync Warning]', e.message));
 
-    return res.status(200).json({ success: true, message: 'Bundle uploaded and published successfully!', bundle: createdBundle });
+    // Non-blocking background worker: Pre-generate preset ratio ZIPs in GCS (Fire and Forget)
+    Bundle.create(newBundle).then((createdBundle) => {
+      (async () => {
+        try {
+          const LANDSCAPE_PRESETS = ['original', '16:9', '21:9'];
+          const PORTRAIT_PRESETS  = ['original', '9:16', '9:19.5'];
+          const presets = orientation === 'portrait' ? PORTRAIT_PRESETS : LANDSCAPE_PRESETS;
+          console.log(`[Background Worker] Starting preset pre-gen for "${bundleId}" [${orientation}]:`, presets);
+          const gcsSources = imageUrls.map((img, idx) => ({ name: img.name || `wallpaper_${idx + 1}.png`, gcsPath: img.gcsPath }));
+          for (const ratioStr of presets) {
+            await generateAndCacheRatio(bundleId, ratioStr, gcsSources);
+          }
+          console.log(`[Background Worker COMPLETE] All preset ZIPs cached in GCS for "${bundleId}".`);
+        } catch (bgErr) {
+          console.warn('[Background Worker Error]', bgErr.message);
+        }
+      })();
+    }).catch(e => console.error('[Bundle.create Error]', e.message));
+
+    return res.status(200).json({ success: true, message: 'Bundle uploaded and published successfully!', bundle: newBundle });
 
   } catch (error) {
     console.error('Bundle upload failed:', error);
@@ -1045,6 +1155,66 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
 
     return res.status(500).json({ error: 'Failed to process and upload new wallpaper bundle', details: error.message });
   }
+});
+
+// Admin-Only Endpoint: Retroactively migrate existing bundles to GCS sources & pre-generate preset ZIPs
+app.post('/api/admin/migrate-to-gcs', async (req, res) => {
+  const adminSecret = process.env.ADMIN_SECRET || 'slidepapers-admin-secret';
+  if (req.headers['x-admin-secret'] !== adminSecret) {
+    return res.status(403).json({ error: 'Unauthorized admin access: Invalid X-Admin-Secret header' });
+  }
+
+  res.status(202).json({ success: true, message: 'Migration job started in background. Monitor server logs for progress.' });
+
+  (async () => {
+    try {
+      console.log('[Admin Migration] Starting background GCS migration for existing bundles...');
+      const allBundles = await Bundle.find({});
+      console.log(`[Admin Migration] Found ${allBundles.length} bundles in MongoDB to process.`);
+
+      for (const b of allBundles) {
+        console.log(`[Admin Migration] Processing bundle "${b.name}" (${b.id})...`);
+        const LANDSCAPE_PRESETS = ['original', '16:9', '21:9'];
+        const PORTRAIT_PRESETS  = ['original', '9:16', '9:19.5'];
+        const presets = b.orientation === 'portrait' ? PORTRAIT_PRESETS : LANDSCAPE_PRESETS;
+
+        const gcsSources = [];
+        for (let i = 0; i < (b.images || []).length; i++) {
+          const imgObj = b.images[i];
+          const imgName = typeof imgObj === 'object' && imgObj.name ? imgObj.name : `wallpaper_${i + 1}.png`;
+          const gcsSourcePath = `sources/${b.id}/${imgName}`;
+
+          // Upload source file to GCS if missing
+          if (gcsEnabled && GCS_BUCKET) {
+            const fileRef = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
+            const [exists] = await fileRef.exists();
+            if (!exists) {
+              const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
+              const match = imgUrl?.match(/[?&]id=([^&]+)/);
+              const fileId = match ? match[1] : null;
+              if (fileId && drive) {
+                try {
+                  const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
+                  await fileRef.save(Buffer.from(driveRes.data), { resumable: false });
+                  console.log(`[Admin Migration] Uploaded missing source image "${imgName}" to GCS.`);
+                } catch (dErr) {
+                  console.warn(`[Admin Migration Drive Error] ${imgName}:`, dErr.message);
+                }
+              }
+            }
+          }
+          gcsSources.push({ name: imgName, gcsPath: gcsSourcePath });
+        }
+
+        for (const ratioStr of presets) {
+          await generateAndCacheRatio(b.id, ratioStr, gcsSources);
+        }
+      }
+      console.log('[Admin Migration COMPLETE] All legacy bundles migrated and cached in GCS.');
+    } catch (migErr) {
+      console.error('[Admin Migration Error]', migErr.message);
+    }
+  })();
 });
 
 // Endpoint: Get notifications list for user
