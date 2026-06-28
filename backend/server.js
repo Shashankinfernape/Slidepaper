@@ -539,10 +539,15 @@ app.post('/api/custom-ratio', async (req, res) => {
         try {
           const cmd = `${cmdPrefix} -background none -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
           console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
-          await execPromise(cmd, { cwd: jobDirPath });
+          
+          // Wrap with 2-second timeout to prevent cloud shell freezing
+          await Promise.race([
+            execPromise(cmd, { cwd: jobDirPath }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('ImageMagick timeout')), 2000))
+          ]);
           cropSuccess = true;
         } catch (mogrifyErr) {
-          console.warn('[ImageMagick] mogrify command warning:', mogrifyErr.message);
+          console.warn('[ImageMagick] mogrify command skipped/timed out:', mogrifyErr.message);
         }
       }
 
