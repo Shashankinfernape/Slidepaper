@@ -698,8 +698,8 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Stream-based 1-ahead parallel prefetch pipeline
-    const streamFetchers = imagesToProcess.map((imgObj, i) => async () => {
+    // Option 2: Parallel In-Memory Buffer Chunking Engine (Parallel Downloads & Concurrency-Controlled Cropping)
+    const bufferFetchers = imagesToProcess.map((imgObj, i) => async () => {
       let imgName = `wallpaper_${i + 1}.png`;
       if (typeof imgObj === 'object' && imgObj.name) {
         imgName = imgObj.name;
@@ -714,10 +714,11 @@ app.post('/api/custom-ratio', async (req, res) => {
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
           const [exists] = await gcsFile.exists();
           if (exists) {
-            return { stream: gcsFile.createReadStream(), name: imgName };
+            const [buf] = await gcsFile.download();
+            return { buffer: buf, name: imgName };
           }
         } catch (gErr) {
-          console.warn(`[GCS Stream Warning] File ${i}:`, gErr.message);
+          console.warn(`[GCS Parallel Download Warning] File ${i}:`, gErr.message);
         }
       }
       // Fallback to Drive if GCS source not available in bucket yet
@@ -726,39 +727,37 @@ app.post('/api/custom-ratio', async (req, res) => {
       const fileId = match ? match[1] : null;
       if (fileId && drive) {
         try {
-          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
-          return { stream: driveRes.data, name: imgName };
+          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
+          return { buffer: Buffer.from(driveRes.data), name: imgName };
         } catch (dErr) {
-          console.warn(`[Drive Stream Warning] File ${i}:`, dErr.message);
+          console.warn(`[Drive Parallel Download Warning] File ${i}:`, dErr.message);
         }
       }
       const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
-      if (fs.existsSync(localPath)) return { stream: fs.createReadStream(localPath), name: imgName };
+      if (fs.existsSync(localPath)) return { buffer: fs.readFileSync(localPath), name: imgName };
       return null;
     });
 
-    // Process with 1-ahead prefetch pipeline: pipe stream directly into ImageMagick spawn stdin
-    let nextFetch = streamFetchers.length > 0 ? streamFetchers[0]() : Promise.resolve(null);
-    for (let i = 0; i < streamFetchers.length; i++) {
-      const current = await nextFetch;
-      if (i + 1 < streamFetchers.length) {
-        nextFetch = streamFetchers[i + 1]();
-      }
-      if (!current || !current.stream) continue;
-      try {
-        const outputStream = isOriginal
-          ? current.stream
-          : cropImageStreamPure(current.stream, ratioStr);
+    // Step 1: Concurrently download all source image buffers in parallel
+    console.log(`[Parallel Engine] Concurrently downloading ${imagesToProcess.length} source images...`);
+    const fetchedResults = await Promise.all(bufferFetchers.map(fn => fn()));
 
-        await new Promise((resolve) => {
-          archive.append(outputStream, { name: current.name });
-          outputStream.on('end', resolve);
-          outputStream.on('close', resolve);
-          outputStream.on('error', (e) => { console.warn('[Stream Pipe Warning]', e.message); resolve(); });
-        });
-      } catch (imgErr) {
-        console.warn(`[Pipeline Warning] Image ${i}:`, imgErr.message);
-      }
+    // Step 2: Crop images in parallel chunks of 3 for optimal multi-threading
+    const CHUNK_SIZE = 3;
+    for (let i = 0; i < fetchedResults.length; i += CHUNK_SIZE) {
+      const chunk = fetchedResults.slice(i, i + CHUNK_SIZE);
+      await Promise.all(chunk.map(async (item) => {
+        if (!item || !item.buffer || item.buffer.length === 0) return;
+        try {
+          let finalBuffer = item.buffer;
+          if (!isOriginal) {
+            finalBuffer = await cropImageBufferPure(item.buffer, ratioStr);
+          }
+          archive.append(finalBuffer, { name: item.name });
+        } catch (cropErr) {
+          console.warn(`[Parallel Crop Warning] Image ${item.name}:`, cropErr.message);
+        }
+      }));
     }
 
     await archive.finalize();
