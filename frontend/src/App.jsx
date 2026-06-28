@@ -683,7 +683,12 @@ function AppContent() {
             <button
               className="notification-btn-header"
               title="Notifications"
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => {
+                if (!showNotifications) {
+                  handleMarkAllNotificationsRead();
+                }
+                setShowNotifications(!showNotifications);
+              }}
             >
               <Bell size={18} />
               {unreadNotificationsCount > 0 && (

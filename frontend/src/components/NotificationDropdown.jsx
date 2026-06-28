@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Check, Sparkles, Heart, Trophy, Layers } from 'lucide-react';
+import { Sparkles, Heart, Trophy, Layers, X } from 'lucide-react';
 
 const getProxiedImageUrl = (url) => {
   if (!url) return '';
@@ -55,23 +55,12 @@ export default function NotificationDropdown({
 
   return (
     <div className="yt-notification-dropdown" ref={dropdownRef}>
-      {/* YouTube Notification Header */}
+      {/* Sleek Header */}
       <div className="yt-notification-header">
         <span className="yt-notification-title">Notifications</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {unreadCount > 0 && (
-            <button
-              className="yt-notification-icon-btn"
-              title="Mark all as read"
-              onClick={onMarkAllAsRead}
-            >
-              <Check size={18} />
-            </button>
-          )}
-          <button className="yt-notification-icon-btn" title="Notification settings">
-            <Settings size={18} />
-          </button>
-        </div>
+        <button className="yt-notification-icon-btn" title="Close" onClick={onClose}>
+          <X size={18} />
+        </button>
       </div>
 
       {/* Slidepapers Tailored Filter Tabs */}
