@@ -132,24 +132,20 @@ async function seedDatabase() {
       console.log(`[MongoDB] Migrated ${migrationResult.modifiedCount} legacy bundles to have default admin author.uid.`);
     }
 
-    // Seed/Update default Admin profile in MongoDB
-    let defaultAdmin = await User.findOne({ uid: 'admin-mock-999' });
-    if (!defaultAdmin) {
-      await User.create({
-        uid: 'admin-mock-999',
-        displayName: 'Infernape',
-        email: 'admin@slidepapers.com',
-        subscribers: 68400,
-        subscriberUids: [],
-        about: 'Digital artist & wallpaper curator.',
-        accentGradient: 'midnight'
-      });
-      console.log('[MongoDB] Seeded default Admin author profile (Infernape) with 68,400 subscribers.');
-    } else if (defaultAdmin.displayName === 'Admin (Local Bypass)') {
-      defaultAdmin.displayName = 'Infernape';
-      await defaultAdmin.save();
-      console.log('[MongoDB] Updated default Admin author profile display name to Infernape.');
-    }
+    // Migration: Clean up any stale SVG avatars stored in MongoDB for bundles/users so real uploaded photos take precedence
+    await Bundle.updateMany(
+      { 'author.avatar': { $regex: '^data:image/svg' } },
+      { $unset: { 'author.avatar': '' } }
+    );
+    await Notification.updateMany(
+      { authorAvatar: { $regex: '^data:image/svg' } },
+      { $unset: { authorAvatar: '' } }
+    );
+    await User.updateMany(
+      { photoURL: { $regex: '^data:image/svg' } },
+      { $unset: { photoURL: '' } }
+    );
+    console.log('[MongoDB] Cleaned up legacy SVG avatar overrides.');
   } catch (err) {
     console.error('[MongoDB] Error seeding database:', err);
   }
@@ -1097,18 +1093,32 @@ app.get('/api/notifications', async (req, res) => {
     const enrichedNotifications = notifications.map(n => {
       const notifObj = n.toObject ? n.toObject() : { ...n };
       
+      // 1. Try exact match by UID or DisplayName
       let matchedUser = notifObj.authorUid ? userMap[notifObj.authorUid] : null;
       if (!matchedUser && notifObj.authorName) {
         matchedUser = userMap[notifObj.authorName.toLowerCase()];
       }
 
-      if (matchedUser && matchedUser.photoURL) {
+      // 2. If matched user has valid non-SVG photo, use it
+      if (matchedUser && matchedUser.photoURL && !matchedUser.photoURL.startsWith('data:image/svg')) {
         notifObj.authorAvatar = matchedUser.photoURL;
         if (matchedUser.displayName) notifObj.authorName = matchedUser.displayName;
-      } else if (notifObj.bundleId && bundleMap[notifObj.bundleId] && bundleMap[notifObj.bundleId].author) {
-        const bAuthor = bundleMap[notifObj.bundleId].author;
-        if (bAuthor.avatar) notifObj.authorAvatar = bAuthor.avatar;
-        if (bAuthor.name) notifObj.authorName = bAuthor.name;
+      } else {
+        // 3. Look for ANY user in DB with matching name/uid that has a real photoURL
+        const realUser = allUsers.find(u => 
+          u.photoURL && 
+          !u.photoURL.startsWith('data:image/svg') && 
+          (u.uid === notifObj.authorUid || (u.displayName && notifObj.authorName && u.displayName.toLowerCase() === notifObj.authorName.toLowerCase()))
+        ) || allUsers.find(u => u.photoURL && !u.photoURL.startsWith('data:image/svg') && u.displayName?.toLowerCase() === 'infernape');
+
+        if (realUser) {
+          notifObj.authorAvatar = realUser.photoURL;
+          if (realUser.displayName) notifObj.authorName = realUser.displayName;
+        } else if (notifObj.bundleId && bundleMap[notifObj.bundleId] && bundleMap[notifObj.bundleId].author) {
+          const bAuthor = bundleMap[notifObj.bundleId].author;
+          if (bAuthor.avatar && !bAuthor.avatar.startsWith('data:image/svg')) notifObj.authorAvatar = bAuthor.avatar;
+          if (bAuthor.name) notifObj.authorName = bAuthor.name;
+        }
       }
       return notifObj;
     });
