@@ -497,6 +497,16 @@ function AppContent() {
           setActiveChannel({ uid: channelId, name: channelId });
           setCurrentView('channel');
         }
+      } else if (path.startsWith('/privacy')) {
+        setLegalModalType('privacy');
+      } else if (path.startsWith('/terms')) {
+        setLegalModalType('terms');
+      } else if (path.startsWith('/dmca')) {
+        setLegalModalType('dmca');
+      } else if (path.startsWith('/about')) {
+        setLegalModalType('about');
+      } else if (path.startsWith('/contact')) {
+        setLegalModalType('contact');
       } else if (path === '/' || path === '') {
         setCurrentView('landing');
       }
@@ -854,11 +864,11 @@ function AppContent() {
       {/* AdSense Compliant Publisher Footer */}
       <footer className="clean-footer" style={{ flexDirection: 'column', gap: '0.75rem', padding: '1.5rem 2rem' }}>
         <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 500 }}>
-          <button onClick={() => setLegalModalType('about')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>About Us</button>
-          <button onClick={() => setLegalModalType('privacy')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>Privacy Policy</button>
-          <button onClick={() => setLegalModalType('terms')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>Terms of Service</button>
-          <button onClick={() => setLegalModalType('dmca')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>DMCA Policy</button>
-          <button onClick={() => setLegalModalType('contact')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>Contact Us</button>
+          <a href="/about" onClick={(e) => { e.preventDefault(); setLegalModalType('about'); window.history.pushState(null, '', '/about'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>About Us</a>
+          <a href="/privacy" onClick={(e) => { e.preventDefault(); setLegalModalType('privacy'); window.history.pushState(null, '', '/privacy'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/terms" onClick={(e) => { e.preventDefault(); setLegalModalType('terms'); window.history.pushState(null, '', '/terms'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms of Service</a>
+          <a href="/dmca" onClick={(e) => { e.preventDefault(); setLegalModalType('dmca'); window.history.pushState(null, '', '/dmca'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>DMCA Policy</a>
+          <a href="/contact" onClick={(e) => { e.preventDefault(); setLegalModalType('contact'); window.history.pushState(null, '', '/contact'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Contact Us</a>
         </div>
         <div className="clean-footer-left" style={{ justifyContent: 'center', gap: '1rem' }}>
           <span className="footer-badge">Vercel & Render Cloud Hosting</span>
