@@ -10,7 +10,6 @@ import { promisify } from 'util';
 import archiver from 'archiver';
 import multer from 'multer';
 import mongoose from 'mongoose';
-import sharp from 'sharp';
 import { Storage } from '@google-cloud/storage';
 import { PassThrough } from 'stream';
 import { fetchAdSenseReport } from './services/adsense.service.js';
@@ -215,69 +214,52 @@ async function getGcsSignedUrl(gcsUri) {
   }
 }
 
-async function cropImageBuffer(inputBuffer, ratioStr, targetAspect) {
+function cropImageStreamPure(inputStream, ratioStr) {
+  const isWin = process.platform === 'win32';
+  const convertCmd = isWin ? 'magick' : 'convert';
+  const convertArgs = isWin 
+    ? ['convert', '-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-']
+    : ['-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-'];
+
+  const proc = spawn(convertCmd, convertArgs);
+  inputStream.pipe(proc.stdin);
+  proc.stderr.on('data', d => console.warn('[ImageMagick spawn]', d.toString().trim()));
+  proc.on('error', err => {
+    console.error('[ImageMagick spawn error]', err.message);
+    proc.stdout.destroy(err);
+  });
+  return proc.stdout;
+}
+
+async function cropImageBufferPure(inputBuffer, ratioStr) {
   if (!inputBuffer || inputBuffer.length === 0) return null;
+  return new Promise((resolve) => {
+    const isWin = process.platform === 'win32';
+    const convertCmd = isWin ? 'magick' : 'convert';
+    const convertArgs = isWin 
+      ? ['convert', '-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-']
+      : ['-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-'];
 
-  // 1. Primary Engine: ImageMagick CLI spawn via Buffer stdin
-  try {
-    const croppedWithMagick = await new Promise((resolve) => {
-      const isWin = process.platform === 'win32';
-      const convertCmd = isWin ? 'magick' : 'convert';
-      const convertArgs = isWin 
-        ? ['convert', '-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-']
-        : ['-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-'];
+    const proc = spawn(convertCmd, convertArgs);
+    const chunks = [];
 
-      const proc = spawn(convertCmd, convertArgs);
-      const chunks = [];
+    proc.stdout.on('data', chunk => chunks.push(chunk));
+    proc.stderr.on('data', d => console.warn('[ImageMagick spawn stderr]', d.toString().trim()));
 
-      proc.stdout.on('data', chunk => chunks.push(chunk));
-      proc.stderr.on('data', d => console.warn('[ImageMagick spawn stderr]', d.toString().trim()));
-
-      proc.on('close', code => {
-        const result = Buffer.concat(chunks);
-        if (code === 0 && result.length > 200) {
-          resolve(result);
-        } else {
-          resolve(null);
-        }
-      });
-
-      proc.on('error', () => resolve(null));
-
-      proc.stdin.write(inputBuffer);
-      proc.stdin.end();
+    proc.on('close', code => {
+      const result = Buffer.concat(chunks);
+      if (code === 0 && result.length > 200) {
+        resolve(result);
+      } else {
+        resolve(inputBuffer);
+      }
     });
 
-    if (croppedWithMagick && croppedWithMagick.length > 200) {
-      return croppedWithMagick;
-    }
-  } catch (mErr) {
-    console.warn('[ImageMagick spawn warning]', mErr.message);
-  }
+    proc.on('error', () => resolve(inputBuffer));
 
-  // 2. High-Speed Fallback Engine: Sharp C++ library
-  try {
-    const sharpImg = sharp(inputBuffer);
-    const metadata = await sharpImg.metadata();
-    const currentAspect = metadata.width / metadata.height;
-    let cropWidth = metadata.width;
-    let cropHeight = metadata.height;
-    if (targetAspect && targetAspect > 0) {
-      if (currentAspect > targetAspect) {
-        cropWidth = Math.round(metadata.height * targetAspect);
-      } else {
-        cropHeight = Math.round(metadata.width / targetAspect);
-      }
-    }
-    const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
-    const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
-    return await sharp(inputBuffer)
-      .extract({ left, top, width: cropWidth, height: cropHeight })
-      .toBuffer();
-  } catch (sharpErr) {
-    console.warn('[Sharp crop fallback warning]', sharpErr.message);
-    return inputBuffer;
-  }
+    proc.stdin.write(inputBuffer);
+    proc.stdin.end();
+  });
 }
 
 // Helper: Generate and Cache Preset/Custom Ratio ZIP into GCS
@@ -319,9 +301,7 @@ async function generateAndCacheRatio(bundleId, ratioStr, sourceFiles) {
         if (inputBuffer && inputBuffer.length > 0) {
           let finalBuffer = inputBuffer;
           if (!isOriginal) {
-            const [w, h] = ratioStr.split(':').map(Number);
-            const targetAspect = w && h ? (w / h) : 1.77;
-            finalBuffer = await cropImageBuffer(inputBuffer, ratioStr, targetAspect);
+            finalBuffer = await cropImageBufferPure(inputBuffer, ratioStr);
           }
           archive.append(finalBuffer, { name: fileName });
         }
@@ -731,8 +711,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       try {
         let finalBuffer = current.buffer;
         if (!isOriginal) {
-          const targetAspect = wRatio / hRatio;
-          finalBuffer = await cropImageBuffer(current.buffer, ratioStr, targetAspect);
+          finalBuffer = await cropImageBufferPure(current.buffer, ratioStr);
         }
         archive.append(finalBuffer, { name: current.name });
       } catch (imgErr) {
