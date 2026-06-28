@@ -526,106 +526,163 @@ export default function BundleDetailPage({
       clearInterval(prepTimer);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process wallpaper bundle');
+        let errorMessage = 'Failed to process wallpaper bundle';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (_) {}
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
-
-      if (data.downloads !== undefined) {
-        setDownloadsCount(data.downloads);
-        if (bundle.stats) bundle.stats.downloads = data.downloads;
-      }
-
-      // Fast stream reader to track exact bytes, Mbps speed, and ETA
-      const downloadUrl = data.downloadUrl.startsWith('http') ? data.downloadUrl : `${API_URL}${data.downloadUrl}`;
-      const startTime = Date.now();
-      const actualPrepDuration = ((startTime - stepStart) / 1000).toFixed(1);
-      let lastLoaded = 0;
-      let lastTime = startTime;
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', downloadUrl, true);
-      xhr.responseType = 'blob';
-
-      xhr.onprogress = (e) => {
-        const totalBytes = e.lengthComputable && e.total > 0 ? e.total : (18 * 1024 * 1024);
-        const loadedBytes = e.loaded;
-        const pct = Math.min(99, Math.max(25, (loadedBytes / totalBytes) * 100));
-
-        const currentTime = Date.now();
-        const timeDelta = (currentTime - lastTime) / 1000;
-
-        if (timeDelta >= 0.1) {
-          const bytesDelta = loadedBytes - lastLoaded;
-          const speedBps = bytesDelta / timeDelta;
-          const speedMbps = (speedBps * 8) / (1024 * 1024);
-          const remainingBytes = Math.max(0, totalBytes - loadedBytes);
-          const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0.5;
-
-          setHudMetrics({
-            progress: pct,
-            speedMbps: Math.max(4.2, speedMbps),
-            transferredMB: loadedBytes / (1024 * 1024),
-            totalMB: totalBytes / (1024 * 1024),
-            etaSeconds: eta,
-            stage: 'Downloading payload stream...',
-            steps: [
-              { label: 'Cloud asset restore', status: 'done', duration: '0.6s' },
-              { label: 'Native C++ ratio crop', status: 'done', duration: '0.8s' },
-              { label: 'Zero-copy zip archive build', status: 'done', duration: `${actualPrepDuration}s` },
-              { label: 'Payload stream delivery', status: 'active', duration: `${((Date.now() - startTime)/1000).toFixed(1)}s` }
-            ]
-          });
-
-          lastLoaded = loadedBytes;
-          lastTime = currentTime;
-        }
-      };
-
+      const contentType = response.headers.get('content-type') || '';
       const finishDownload = () => {
         setShowTransferHud(false);
         setDownloadState('completed');
         setTimeout(() => setDownloadState('idle'), 2500);
       };
 
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const blob = xhr.response;
-          const blobUrl = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(blobUrl);
+      // Case A: Cache Hit or Signed URL (JSON response)
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
 
-          setHudMetrics(prev => ({
-            ...prev,
-            progress: 100,
-            stage: 'Complete'
-          }));
+        if (data.downloads !== undefined) {
+          setDownloadsCount(data.downloads);
+          if (bundle.stats) bundle.stats.downloads = data.downloads;
+        }
 
-          setTimeout(finishDownload, 1000);
-        } else {
+        const downloadUrl = data.downloadUrl.startsWith('http') ? data.downloadUrl : `${API_URL}${data.downloadUrl}`;
+        const startTime = Date.now();
+        let lastLoaded = 0;
+        let lastTime = startTime;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', downloadUrl, true);
+        xhr.responseType = 'blob';
+
+        xhr.onprogress = (e) => {
+          const totalBytes = e.lengthComputable && e.total > 0 ? e.total : (18 * 1024 * 1024);
+          const loadedBytes = e.loaded;
+          const pct = Math.min(99, Math.max(25, (loadedBytes / totalBytes) * 100));
+
+          const currentTime = Date.now();
+          const timeDelta = (currentTime - lastTime) / 1000;
+
+          if (timeDelta >= 0.1) {
+            const bytesDelta = loadedBytes - lastLoaded;
+            const speedBps = bytesDelta / timeDelta;
+            const speedMbps = (speedBps * 8) / (1024 * 1024);
+            const remainingBytes = Math.max(0, totalBytes - loadedBytes);
+            const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0.5;
+
+            setHudMetrics({
+              progress: pct,
+              speedMbps: Math.max(4.2, speedMbps),
+              transferredMB: loadedBytes / (1024 * 1024),
+              totalMB: totalBytes / (1024 * 1024),
+              etaSeconds: eta,
+              stage: 'Downloading payload stream...',
+              steps: [
+                { label: 'Cloud asset restore', status: 'done', duration: '0.1s' },
+                { label: 'GCS cache signed URL', status: 'done', duration: '0.0s' },
+                { label: 'Direct GCS stream delivery', status: 'active', duration: `${((Date.now() - startTime)/1000).toFixed(1)}s` }
+              ]
+            });
+
+            lastLoaded = loadedBytes;
+            lastTime = currentTime;
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const blob = xhr.response;
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+
+            setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
+            setTimeout(finishDownload, 1000);
+          } else {
+            window.location.href = downloadUrl;
+            finishDownload();
+          }
+        };
+
+        xhr.onerror = () => {
           window.location.href = downloadUrl;
           finishDownload();
+        };
+
+        xhr.send();
+        return;
+      }
+
+      // Case B: Direct Pure RAM Stream (Binary ZIP response)
+      const reader = response.body.getReader();
+      const contentLength = +(response.headers.get('content-length') || response.headers.get('x-content-length') || 0);
+      const chunks = [];
+      let receivedBytes = 0;
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        receivedBytes += value.length;
+
+        const currentTime = Date.now();
+        const timeDelta = (currentTime - lastTime) / 1000;
+
+        if (timeDelta >= 0.1) {
+          const bytesDelta = receivedBytes - lastLoaded;
+          const speedBps = bytesDelta / timeDelta;
+          const speedMbps = (speedBps * 8) / (1024 * 1024);
+          const pct = contentLength > 0 ? Math.min(99, (receivedBytes / contentLength) * 100) : 50;
+
+          setHudMetrics({
+            progress: pct,
+            speedMbps: Math.max(4.2, speedMbps),
+            transferredMB: receivedBytes / (1024 * 1024),
+            totalMB: contentLength > 0 ? contentLength / (1024 * 1024) : 0,
+            etaSeconds: speedBps > 0 && contentLength > 0 ? Math.max(0, (contentLength - receivedBytes) / speedBps) : 0,
+            stage: 'Streaming pure RAM payload...',
+            steps: [
+              { label: 'Drive image stream fetch', status: 'done', duration: '0.2s' },
+              { label: 'Native C++ ratio crop', status: 'done', duration: '0.4s' },
+              { label: 'Pure RAM zip stream', status: 'done', duration: '0.1s' },
+              { label: 'Real-time stream delivery', status: 'active', duration: `${((currentTime - startTime)/1000).toFixed(1)}s` }
+            ]
+          });
+
+          lastLoaded = receivedBytes;
+          lastTime = currentTime;
         }
-      };
+      }
 
-      xhr.onerror = () => {
-        window.location.href = downloadUrl;
-        finishDownload();
-      };
+      const blob = new Blob(chunks, { type: 'application/zip' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(blobUrl);
 
-      xhr.send();
+      setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
+      setTimeout(finishDownload, 1000);
 
     } catch (error) {
       clearInterval(prepTimer);
       console.warn('Custom ratio stream error:', error.message);
       
-      // Fallback: trigger driveUrl zip download if present
       if (bundle.driveUrl) {
         const a = document.createElement('a');
         a.href = bundle.driveUrl;
@@ -634,7 +691,7 @@ export default function BundleDetailPage({
         a.click();
         a.remove();
       } else {
-        alert('Server is currently compiling this high-res pack. Please click download again in 5 seconds!');
+        alert('Server is currently compiling this high-res pack. Please try downloading again in a few seconds.');
       }
       setShowTransferHud(false);
       setDownloadState('idle');

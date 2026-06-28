@@ -11,6 +11,8 @@ import archiver from 'archiver';
 import multer from 'multer';
 import mongoose from 'mongoose';
 import sharp from 'sharp';
+import { Storage } from '@google-cloud/storage';
+import { PassThrough } from 'stream';
 import { fetchAdSenseReport } from './services/adsense.service.js';
 
 dotenv.config();
@@ -179,6 +181,39 @@ const SCOPES = ['https://www.googleapis.com/auth/drive'];
 let oauth2Client = null;
 let drive = null;
 let isServiceAccount = false;
+
+// GCS client — reuses existing service account JSON
+const gcsEnabled = !!process.env.GCS_BUCKET_NAME;
+const gcs = gcsEnabled ? new Storage({ keyFilename: SERVICE_ACCOUNT_PATH }) : null;
+const GCS_BUCKET = process.env.GCS_BUCKET_NAME || '';
+
+// Semaphore: max 2 simultaneous crop jobs on Render to protect RAM
+class Semaphore {
+  constructor(max) { this.max = max; this.count = 0; this.queue = []; }
+  acquire() { return new Promise(r => this.count < this.max ? (this.count++, r()) : this.queue.push(r)); }
+  release() { this.count--; if (this.queue.length) { this.count++; this.queue.shift()(); } }
+}
+const cropSemaphore = new Semaphore(2);
+
+// Deduplication: if multiple users request same bundle+ratio simultaneously, only 1 job runs
+const processingJobs = new Map(); // `${bundleId}_${ratioKey}` -> Promise<string>
+
+async function getGcsSignedUrl(gcsUri) {
+  if (!gcs) return null;
+  try {
+    const without = gcsUri.replace('gs://', '');
+    const [bucket, ...parts] = without.split('/');
+    const filePath = parts.join('/');
+    const [url] = await gcs.bucket(bucket).file(filePath).getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000, // 1 hour
+    });
+    return url;
+  } catch (err) {
+    console.error('[GCS Signed URL Error]', err.message);
+    return null;
+  }
+}
 
 // Helper: Find bundles.json on Google Drive
 async function getBundlesFileId(folderId) {
@@ -416,7 +451,7 @@ if (!fs.existsSync(BUNDLES_PATH)) {
   console.log('[Database] bundles.json database seeded successfully.');
 }
 
-// Endpoint: Crop wallpapers using ImageMagick and upload ZIP bundle to Google Drive (with local fallback)
+// Endpoint: Pure RAM Compute, Zero-Storage Streaming Custom-Ratio Generation & GCS Caching
 app.post('/api/custom-ratio', async (req, res) => {
   const { bundleId, widthRatio, heightRatio } = req.body;
 
@@ -433,273 +468,176 @@ app.post('/api/custom-ratio', async (req, res) => {
   }
 
   const ratioKey = isOriginal ? 'original' : `${widthRatio}:${heightRatio}`;
-  const zipsDir = path.join(tempDir, 'zips');
-  fs.mkdirSync(zipsDir, { recursive: true });
-  const zipFilename = isOriginal ? `${bundleId}_original.zip` : `${bundleId}_${wRatio}x${hRatio}.zip`;
-  const publicZipPath = path.join(zipsDir, zipFilename);
+  const jobKey = `${bundleId}_${ratioKey}`;
 
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const host = req.headers['x-forwarded-host'] || req.get('host');
-  const downloadUrl = `${protocol}://${host}/zips/${zipFilename}`;
-
-  // 1. Persistent Cloud Cache Check (MongoDB / Google Cloud)
+  // 1. Check MongoDB ratioCaches for this bundleId + ratioKey (Cache Hit)
   try {
     const dbBundle = await Bundle.findOne({ id: bundleId });
     if (dbBundle && dbBundle.ratioCaches && dbBundle.ratioCaches.get(ratioKey)) {
-      const cloudCachedUrl = dbBundle.ratioCaches.get(ratioKey);
-      console.log(`[Persistent Cloud Cache HIT] Found ratio "${ratioKey}" for bundle "${bundleId}": ${cloudCachedUrl}`);
+      const cachedUri = dbBundle.ratioCaches.get(ratioKey);
+      console.log(`[Cache HIT] Found cached ratio "${ratioKey}" for bundle "${bundleId}": ${cachedUri}`);
+
+      let downloadUrl = cachedUri;
+      if (cachedUri.startsWith('gs://')) {
+        const signedUrl = await getGcsSignedUrl(cachedUri);
+        if (signedUrl) downloadUrl = signedUrl;
+      }
+
       const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
-      return res.status(200).json({ success: true, downloadUrl: cloudCachedUrl, downloads: updatedBundle?.stats?.downloads || 0 });
+      return res.status(200).json({ success: true, downloadUrl: downloadUrl, downloads: updatedBundle?.stats?.downloads || 0 });
     }
   } catch (dbErr) {
-    console.warn('[Cloud Cache Check Error]', dbErr.message);
+    console.warn('[Cache Check Error]', dbErr.message);
   }
 
-  // 2. Local Disk Cache Check
-  if (fs.existsSync(publicZipPath) && fs.statSync(publicZipPath).size > 0) {
-    console.log(`[Local Disk Cache HIT] Serving pre-compiled ZIP for "${bundleId}": ${downloadUrl}`);
-    let currentDownloads = 0;
+  // 2. Job Deduplication: If identical request is currently processing, await same Promise
+  if (processingJobs.has(jobKey)) {
+    console.log(`[Job Dedup] Awaiting active processing job for "${jobKey}"...`);
     try {
-      const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
-      if (updatedBundle && updatedBundle.stats) currentDownloads = updatedBundle.stats.downloads;
-    } catch (_) {}
-    return res.status(200).json({ success: true, downloadUrl, downloads: currentDownloads });
-  }
-
-  let srcFolder = path.join(__dirname, '../frontend/src/assets');
-  let imageFilenames = BUNDLE_IMAGES[bundleId];
-
-  const isDynamic = !BUNDLE_IMAGES[bundleId];
-  const dynamicAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
-
-  if (isDynamic) {
-    // If local directory doesn't exist, we must restore files from Google Drive in parallel
-    if (!fs.existsSync(dynamicAssetsDir)) {
-      try {
-        console.log(`[Custom Ratio] Local assets missing for dynamic bundle "${bundleId}". Attempting fast parallel restoration...`);
-        const bundlesData = JSON.parse(fs.readFileSync(BUNDLES_PATH, 'utf-8'));
-        const dbBundle = bundlesData.find(b => b.id === bundleId);
-        
-        if (dbBundle && dbBundle.images && dbBundle.images.length > 0) {
-          fs.mkdirSync(dynamicAssetsDir, { recursive: true });
-          
-          const restorePromises = dbBundle.images.map(async (img, i) => {
-            const url = img.url;
-            let fileId = null;
-            if (url && url.includes('drive.google.com')) {
-              const match = url.match(/[?&]id=([^&]+)/);
-              if (match) fileId = match[1];
-            }
-            
-            if (fileId && drive) {
-              try {
-                const destFilename = `${i}_wallpaper.png`;
-                const destPath = path.join(dynamicAssetsDir, destFilename);
-                const destStream = fs.createWriteStream(destPath);
-                const driveResponse = await drive.files.get(
-                  { fileId: fileId, alt: 'media' },
-                  { responseType: 'stream' }
-                );
-                
-                await new Promise((resolve, reject) => {
-                  driveResponse.data
-                    .pipe(destStream)
-                    .on('finish', resolve)
-                    .on('error', reject);
-                });
-              } catch (dErr) {
-                console.warn(`[Restore] Drive fetch error for image ${i}:`, dErr.message);
-              }
-            }
-          });
-
-          await Promise.all(restorePromises);
-          console.log(`[Restore] Parallel restoration complete for bundle "${bundleId}".`);
-        } else {
-          return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
-        }
-      } catch (restoreError) {
-        console.error(`[Restore] Failed to restore bundle "${bundleId}":`, restoreError);
+      const gcsUri = await processingJobs.get(jobKey);
+      let downloadUrl = gcsUri;
+      if (gcsUri && gcsUri.startsWith('gs://')) {
+        const signedUrl = await getGcsSignedUrl(gcsUri);
+        if (signedUrl) downloadUrl = signedUrl;
       }
-    }
-    
-    // Retrieve restored local filenames
-    if (fs.existsSync(dynamicAssetsDir)) {
-      srcFolder = dynamicAssetsDir;
-      imageFilenames = fs.readdirSync(dynamicAssetsDir).filter(f => !f.endsWith('.tmp') && !f.endsWith('.mime'));
+      const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
+      return res.status(200).json({ success: true, downloadUrl, downloads: updatedBundle?.stats?.downloads || 0 });
+    } catch (dedupErr) {
+      console.warn('[Job Dedup Failed, restarting job]', dedupErr.message);
     }
   }
 
-  if (!imageFilenames || imageFilenames.length === 0) {
-    // Fallback if local files missing: use sample files
-    srcFolder = path.join(__dirname, '../frontend/src/assets');
-    imageFilenames = ['peak_center.png', 'peak_left.png', 'peak_right.png'].filter(f => fs.existsSync(path.join(srcFolder, f)));
-  }
-
-  const jobDirName = `${bundleId}_custom_${Date.now()}`;
-  const jobDirPath = path.join(tempDir, jobDirName);
-  const outputDirPath = path.join(jobDirPath, 'output');
-  let zipPath = null;
+  // Create Promise deferred holder for deduplication map
+  let resolveJob, rejectJob;
+  const jobPromise = new Promise((resFn, rejFn) => { resolveJob = resFn; rejectJob = rejFn; });
+  processingJobs.set(jobKey, jobPromise);
 
   try {
-    fs.mkdirSync(jobDirPath, { recursive: true });
-    fs.mkdirSync(outputDirPath, { recursive: true });
+    await cropSemaphore.acquire();
+    console.log(`[Pure RAM Pipeline] Acquired semaphore for job "${jobKey}"`);
 
-    if (isOriginal) {
-      console.log(`[ZIP] Copying original uncropped files for bundle ${bundleId}`);
-      for (const filename of imageFilenames) {
-        const srcPath = path.join(srcFolder, filename);
-        const destPath = path.join(outputDirPath, filename);
-        if (fs.existsSync(srcPath)) {
-          fs.copyFileSync(srcPath, destPath);
-        }
-      }
-    } else {
-      const targetAspect = wRatio / hRatio;
-      console.log(`[ImageMagick Crop] Processing ${imageFilenames.length} images for ratio ${wRatio}:${hRatio} (${targetAspect.toFixed(3)})`);
-
-      const isWin = process.platform === 'win32';
-      const convertCmd = isWin ? 'magick convert' : 'convert';
-
-      for (const filename of imageFilenames) {
-        const srcPath = path.join(srcFolder, filename);
-        const destPath = path.join(outputDirPath, filename);
-
-        if (fs.existsSync(srcPath)) {
-          let croppedWithMagick = false;
-          try {
-            // Execute ImageMagick convert command using exact aspect ratio syntax (e.g. 16:10, 21:9)
-            const ratioParam = `${widthRatio}:${heightRatio}`;
-            const cmd = `${convertCmd} "${srcPath}" -gravity center -crop ${ratioParam} +repage "${destPath}"`;
-            console.log(`[ImageMagick CLI] Executing: "${cmd}"`);
-            await Promise.race([
-              execPromise(cmd),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('ImageMagick CLI timeout')), 2500))
-            ]);
-            croppedWithMagick = true;
-          } catch (magickErr) {
-            console.warn(`[ImageMagick Warning] CLI crop skipped for ${filename} (${magickErr.message}). Using sharp fallback.`);
-          }
-
-          // Native sharp fallback if ImageMagick CLI binary is not present on cloud server
-          if (!croppedWithMagick && fs.existsSync(srcPath)) {
-            try {
-              const metadata = await sharp(srcPath).metadata();
-              const currentAspect = metadata.width / metadata.height;
-              let cropWidth = metadata.width;
-              let cropHeight = metadata.height;
-
-              if (currentAspect > targetAspect) {
-                cropWidth = Math.round(metadata.height * targetAspect);
-              } else {
-                cropHeight = Math.round(metadata.width / targetAspect);
-              }
-
-              const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
-              const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
-
-              await sharp(srcPath)
-                .extract({ left, top, width: cropWidth, height: cropHeight })
-                .toFile(destPath);
-            } catch (sharpErr) {
-              fs.copyFileSync(srcPath, destPath);
-            }
-          }
-        }
-      }
+    // Fetch bundle details from MongoDB
+    const dbBundle = await Bundle.findOne({ id: bundleId });
+    if (!dbBundle) {
+      cropSemaphore.release();
+      processingJobs.delete(jobKey);
+      rejectJob(new Error('Bundle not found'));
+      return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
     }
 
-    // High-Performance Native System C / Kernel Zipping Architecture
-    let zippedWithNativeC = false;
-    try {
-      const isWin = process.platform === 'win32';
-      if (!isWin) {
-        // Linux Render Cloud: Use native Linux C zip binary for sub-10ms raw kernel speed
-        const zipCmd = `zip -0 -r -j "${publicZipPath}" "${outputDirPath}"/*`;
-        console.log(`[Native C Zip] Executing system kernel zip: "${zipCmd}"`);
-        await execPromise(zipCmd);
-        zippedWithNativeC = fs.existsSync(publicZipPath) && fs.statSync(publicZipPath).size > 0;
-      }
-    } catch (nativeZipErr) {
-      console.warn('[Native C Zip Warning] System zip binary skipped:', nativeZipErr.message);
-    }
+    // Set streaming ZIP response headers for direct download
+    const safeFilename = `${dbBundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${ratioKey.replace(':', 'x')}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
 
-    // Node Stream Fallback (Zero-copy store mode)
-    if (!zippedWithNativeC) {
-      console.log('[Archiver] Building zip stream with Zero-Copy Store mode...');
-      const outputStream = fs.createWriteStream(publicZipPath);
-      const archive = archiver('zip', { store: true });
+    const archive = archiver('zip', { store: true });
+    const gcsPassThrough = new PassThrough();
 
-      const archivePromise = new Promise((resolve, reject) => {
-        outputStream.on('close', resolve);
-        archive.on('error', reject);
+    // Pipe archiver directly to client response (real-time stream) AND to GCS upload stream
+    archive.pipe(res);
+
+    let gcsUploadPromise = Promise.resolve(null);
+    if (gcsEnabled && GCS_BUCKET) {
+      archive.pipe(gcsPassThrough);
+      const destGcsPath = `bundles/${bundleId}_${ratioKey.replace(':', 'x')}.zip`;
+      const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
+      const gcsWriteStream = gcsFile.createWriteStream({ resumable: false, contentType: 'application/zip' });
+      gcsUploadPromise = new Promise((resolve, reject) => {
+        gcsPassThrough.pipe(gcsWriteStream)
+          .on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`))
+          .on('error', (err) => { console.warn('[GCS Upload Stream Error]', err.message); resolve(null); });
       });
-
-      archive.pipe(outputStream);
-      archive.directory(outputDirPath, false);
-      await archive.finalize();
-      await archivePromise;
     }
 
-    console.log(`[Instant Stream SUCCESS] ZIP ready at: ${downloadUrl}`);
+    const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
+    const targetAspect = wRatio / hRatio;
 
-    // Increment download count atomically in MongoDB
-    let currentDownloads = 0;
-    try {
-      const updatedBundle = await Bundle.findOneAndUpdate(
-        { id: bundleId },
-        { $inc: { 'stats.downloads': 1 } },
-        { returnDocument: 'after' }
-      );
-      if (updatedBundle && updatedBundle.stats) {
-        currentDownloads = updatedBundle.stats.downloads;
-        console.log(`[MongoDB] Download recorded for "${bundleId}". Total downloads: ${currentDownloads}`);
+    // Process images sequentially through RAM (1 image in RAM at a time)
+    for (let i = 0; i < imagesToProcess.length; i++) {
+      const imgObj = imagesToProcess[i];
+      const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
+      const imgName = typeof imgObj === 'object' && imgObj.name ? imgObj.name : `wallpaper_${i + 1}.png`;
+
+      let fileId = null;
+      if (imgUrl && imgUrl.includes('drive.google.com')) {
+        const match = imgUrl.match(/[?&]id=([^&]+)/);
+        if (match) fileId = match[1];
       }
-    } catch (dErr) {
-      console.warn('[MongoDB] Failed to increment download count:', dErr.message);
-    }
 
-    // Send instant download response to client
-    res.status(200).json({
-      success: true,
-      message: 'Bundle customized and ready for download',
-      downloadUrl: downloadUrl,
-      downloads: currentDownloads
-    });
-
-    // Background Async Worker: Upload zip copy to Google Cloud storage & persist link in MongoDB ratioCaches
-    if (drive && fs.existsSync(publicZipPath)) {
-      (async () => {
-        try {
-          console.log(`[Cloud Cache Worker] Uploading persistent backup copy for "${bundleId}" [${ratioKey}] to Google Cloud...`);
-          const parentFolderId = await getOrCreateFolder();
-          const fileMetadata = { name: `${bundleId}_${ratioKey.replace(':', 'x')}.zip`, parents: [parentFolderId] };
-          const media = { mimeType: 'application/zip', body: fs.createReadStream(publicZipPath) };
-          const driveResponse = await drive.files.create({ requestBody: fileMetadata, media, fields: 'id, name' });
-          const fileId = driveResponse.data.id;
-          await drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } });
-          const driveCloudUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-
-          // Save persistent cloud link in MongoDB ratioCaches map
-          await Bundle.findOneAndUpdate(
-            { id: bundleId },
-            { $set: { [`ratioCaches.${ratioKey}`]: driveCloudUrl } }
-          );
-          console.log(`[Cloud Cache Worker SUCCESS] Ratio "${ratioKey}" saved to cloud and linked in DB: ${driveCloudUrl}`);
-        } catch (workerErr) {
-          console.warn('[Cloud Cache Worker Error]', workerErr.message);
+      try {
+        let inputBuffer = null;
+        if (fileId && drive) {
+          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
+          inputBuffer = Buffer.from(driveRes.data);
+        } else {
+          const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
+          if (fs.existsSync(localPath)) inputBuffer = fs.readFileSync(localPath);
         }
-      })();
+
+        if (inputBuffer) {
+          if (isOriginal) {
+            archive.append(inputBuffer, { name: imgName });
+          } else {
+            const sharpImg = sharp(inputBuffer);
+            const metadata = await sharpImg.metadata();
+            const currentAspect = metadata.width / metadata.height;
+
+            let cropWidth = metadata.width;
+            let cropHeight = metadata.height;
+            if (currentAspect > targetAspect) {
+              cropWidth = Math.round(metadata.height * targetAspect);
+            } else {
+              cropHeight = Math.round(metadata.width / targetAspect);
+            }
+
+            const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
+            const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
+
+            const croppedBuffer = await sharp(inputBuffer)
+              .extract({ left, top, width: cropWidth, height: cropHeight })
+              .toBuffer();
+
+            archive.append(croppedBuffer, { name: imgName });
+          }
+        }
+      } catch (imgErr) {
+        console.warn(`[RAM Pipeline Warning] Image ${i} processing error:`, imgErr.message);
+      }
     }
 
-    return;
+    await archive.finalize();
+    console.log(`[Pure RAM Pipeline SUCCESS] Streamed ZIP payload directly for "${jobKey}"`);
+
+    cropSemaphore.release();
+
+    // Fire and forget MongoDB download count update & GCS ratioCaches persistence
+    (async () => {
+      try {
+        await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } });
+        const gcsUri = await gcsUploadPromise;
+        if (gcsUri) {
+          await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${ratioKey}`]: gcsUri } });
+          console.log(`[GCS Cache Saved] Ratio "${ratioKey}" stored to GCS and DB: ${gcsUri}`);
+          resolveJob(gcsUri);
+        } else {
+          resolveJob(null);
+        }
+      } catch (bgErr) {
+        console.warn('[Background Worker Error]', bgErr.message);
+        resolveJob(null);
+      } finally {
+        processingJobs.delete(jobKey);
+      }
+    })();
 
   } catch (error) {
-    console.error('Custom ratio processing error:', error);
-    try {
-      if (jobDirPath && fs.existsSync(jobDirPath)) fs.rmSync(jobDirPath, { recursive: true, force: true });
-    } catch (_) {}
-    return res.status(500).json({ error: 'Failed to process wallpaper download', details: error.message });
+    console.error('Custom ratio streaming error:', error);
+    cropSemaphore.release();
+    processingJobs.delete(jobKey);
+    rejectJob(error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to process wallpaper stream' });
+    }
   }
 });
 
