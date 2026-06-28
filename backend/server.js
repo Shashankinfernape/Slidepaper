@@ -1071,21 +1071,39 @@ app.get('/api/notifications', async (req, res) => {
       }));
     }
 
-    // Populate live author profile photos from User collection
+    // Populate live author profile photos from User and Bundle collections
     const userUids = [...new Set(notifications.map(n => n.authorUid).filter(Boolean))];
-    const users = await User.find({ uid: { $in: userUids } });
+    const authorNames = [...new Set(notifications.map(n => n.authorName).filter(Boolean))];
+    const bundleIds = [...new Set(notifications.map(n => n.bundleId).filter(Boolean))];
+
+    const [usersByUid, usersByName, bundlesById] = await Promise.all([
+      User.find({ uid: { $in: userUids } }),
+      User.find({ displayName: { $in: authorNames } }),
+      Bundle.find({ id: { $in: bundleIds } })
+    ]);
+
     const userMap = {};
-    users.forEach(u => { userMap[u.uid] = u; });
+    usersByUid.forEach(u => { userMap[u.uid] = u; });
+    usersByName.forEach(u => { if (u.displayName) userMap[u.displayName.toLowerCase()] = u; });
+
+    const bundleMap = {};
+    bundlesById.forEach(b => { bundleMap[b.id] = b; });
 
     const enrichedNotifications = notifications.map(n => {
       const notifObj = n.toObject ? n.toObject() : { ...n };
-      if (notifObj.authorUid && userMap[notifObj.authorUid]) {
-        if (userMap[notifObj.authorUid].photoURL) {
-          notifObj.authorAvatar = userMap[notifObj.authorUid].photoURL;
-        }
-        if (userMap[notifObj.authorUid].displayName) {
-          notifObj.authorName = userMap[notifObj.authorUid].displayName;
-        }
+      
+      let matchedUser = notifObj.authorUid ? userMap[notifObj.authorUid] : null;
+      if (!matchedUser && notifObj.authorName) {
+        matchedUser = userMap[notifObj.authorName.toLowerCase()];
+      }
+
+      if (matchedUser) {
+        if (matchedUser.photoURL) notifObj.authorAvatar = matchedUser.photoURL;
+        if (matchedUser.displayName) notifObj.authorName = matchedUser.displayName;
+      } else if (notifObj.bundleId && bundleMap[notifObj.bundleId]) {
+        const b = bundleMap[notifObj.bundleId];
+        if (b.author?.avatar) notifObj.authorAvatar = b.author.avatar;
+        if (b.author?.name) notifObj.authorName = b.author.name;
       }
       return notifObj;
     });
