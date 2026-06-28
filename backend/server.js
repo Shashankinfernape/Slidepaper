@@ -676,12 +676,15 @@ app.post('/api/custom-ratio', async (req, res) => {
       if (gcsEnabled && GCS_BUCKET) {
         try {
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
-          return { stream: gcsFile.createReadStream(), name: imgName };
+          const [exists] = await gcsFile.exists();
+          if (exists) {
+            return { stream: gcsFile.createReadStream(), name: imgName };
+          }
         } catch (gErr) {
           console.warn(`[GCS Stream Warning] File ${i}:`, gErr.message);
         }
       }
-      // Fallback to Drive if GCS source not available
+      // Fallback to Drive if GCS source not available in bucket yet
       const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
       const match = imgUrl?.match(/[?&]id=([^&]+)/);
       const fileId = match ? match[1] : null;
@@ -689,7 +692,9 @@ app.post('/api/custom-ratio', async (req, res) => {
         try {
           const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
           return { stream: driveRes.data, name: imgName };
-        } catch (_) {}
+        } catch (dErr) {
+          console.warn(`[Drive Stream Warning] File ${i}:`, dErr.message);
+        }
       }
       const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
       if (fs.existsSync(localPath)) return { stream: fs.createReadStream(localPath), name: imgName };
