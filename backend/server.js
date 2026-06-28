@@ -634,6 +634,42 @@ app.post('/api/custom-ratio', async (req, res) => {
       return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
     }
 
+    // High-Performance Delegate: Cloud Function Serverless Edge Worker
+    if (process.env.CLOUD_FUNCTION_URL && GCS_BUCKET) {
+      try {
+        console.log(`[Cloud Function Delegate] Offloading job "${jobKey}" to Google Cloud Function...`);
+        const sourceFiles = (dbBundle.images || []).map((imgObj, idx) => {
+          let imgName = `wallpaper_${idx + 1}.png`;
+          if (typeof imgObj === 'object' && imgObj.name) {
+            imgName = imgObj.name;
+          } else if (typeof imgObj === 'object' && imgObj.label) {
+            const cleanLabel = imgObj.label.split(':').pop().trim();
+            imgName = cleanLabel.includes('.') ? cleanLabel : `${cleanLabel}.png`;
+          }
+          const gcsSourcePath = typeof imgObj === 'object' && imgObj.gcsPath ? imgObj.gcsPath : `sources/${bundleId}/${imgName}`;
+          return { name: imgName, gcsPath: gcsSourcePath };
+        });
+
+        const cfRes = await fetch(process.env.CLOUD_FUNCTION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bundleId, ratioStr: ratioKey, sourceFiles, gcsBucket: GCS_BUCKET })
+        });
+        const cfData = await cfRes.json();
+        if (cfData && cfData.success && cfData.gcsUri) {
+          const signedUrl = await getGcsSignedUrl(cfData.gcsUri);
+          await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${ratioKey}`]: cfData.gcsUri }, $inc: { 'stats.downloads': 1 } });
+          cropSemaphore.release();
+          processingJobs.delete(jobKey);
+          resolveJob(cfData.gcsUri);
+          console.log(`[Cloud Function SUCCESS] Returned Signed URL for "${jobKey}" in <1s`);
+          return res.status(200).json({ success: true, downloadUrl: signedUrl || cfData.gcsUri });
+        }
+      } catch (cfErr) {
+        console.warn('[Cloud Function Delegate Warning, falling back to local]', cfErr.message);
+      }
+    }
+
     // Set streaming ZIP response headers for direct download
     const safeFilename = `${dbBundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${ratioKey.replace(':', 'x')}.zip`;
     res.setHeader('Content-Type', 'application/zip');
