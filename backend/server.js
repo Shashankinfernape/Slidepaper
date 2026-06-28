@@ -637,8 +637,15 @@ app.post('/api/custom-ratio', async (req, res) => {
 
     // On-demand custom ratio path: Fetch source images directly from GCS sources bucket (fast same-network)
     const streamFetchers = imagesToProcess.map((imgObj, i) => async () => {
-      const imgName = typeof imgObj === 'object' && imgObj.name ? imgObj.name : `wallpaper_${i + 1}.png`;
-      const gcsSourcePath = `sources/${bundleId}/${imgName}`;
+      let imgName = `wallpaper_${i + 1}.png`;
+      if (typeof imgObj === 'object' && imgObj.name) {
+        imgName = imgObj.name;
+      } else if (typeof imgObj === 'object' && imgObj.label) {
+        const cleanLabel = imgObj.label.split(':').pop().trim();
+        imgName = cleanLabel.includes('.') ? cleanLabel : `${cleanLabel}.png`;
+      }
+
+      const gcsSourcePath = typeof imgObj === 'object' && imgObj.gcsPath ? imgObj.gcsPath : `sources/${bundleId}/${imgName}`;
       if (gcsEnabled && GCS_BUCKET) {
         try {
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
@@ -651,7 +658,7 @@ app.post('/api/custom-ratio', async (req, res) => {
         }
       }
       // Fallback to Drive if GCS source not migrated yet
-      const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
+      const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
       const match = imgUrl?.match(/[?&]id=([^&]+)/);
       const fileId = match ? match[1] : null;
       if (fileId && drive) {
