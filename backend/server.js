@@ -5,7 +5,7 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import archiver from 'archiver';
 import multer from 'multer';
@@ -213,6 +213,20 @@ async function getGcsSignedUrl(gcsUri) {
     console.error('[GCS Signed URL Error]', err.message);
     return null;
   }
+}
+
+function cropImageStream(inputStream, ratioStr) {
+  const isWin = process.platform === 'win32';
+  const convertCmd = isWin ? 'magick' : 'convert';
+  const convertArgs = isWin 
+    ? ['convert', 'PNG:-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'PNG:-']
+    : ['PNG:-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'PNG:-'];
+
+  const proc = spawn(convertCmd, convertArgs);
+  inputStream.pipe(proc.stdin);
+  proc.stderr.on('data', d => console.warn('[ImageMagick spawn]', d.toString().trim()));
+  proc.on('error', err => proc.stdout.destroy(err));
+  return proc.stdout;
 }
 
 // Helper: Find bundles.json on Google Drive
@@ -550,9 +564,9 @@ app.post('/api/custom-ratio', async (req, res) => {
     }
 
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
-    const targetAspect = wRatio / hRatio;
+    const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Process images sequentially through RAM (1 image in RAM at a time)
+    // Process images sequentially through RAM streaming (1 image stream at a time)
     for (let i = 0; i < imagesToProcess.length; i++) {
       const imgObj = imagesToProcess[i];
       const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
@@ -565,40 +579,26 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
 
       try {
-        let inputBuffer = null;
+        let driveStream = null;
         if (fileId && drive) {
-          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
-          inputBuffer = Buffer.from(driveRes.data);
+          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+          driveStream = driveRes.data;
         } else {
           const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
-          if (fs.existsSync(localPath)) inputBuffer = fs.readFileSync(localPath);
+          if (fs.existsSync(localPath)) driveStream = fs.createReadStream(localPath);
         }
 
-        if (inputBuffer) {
-          if (isOriginal) {
-            archive.append(inputBuffer, { name: imgName });
-          } else {
-            const sharpImg = sharp(inputBuffer);
-            const metadata = await sharpImg.metadata();
-            const currentAspect = metadata.width / metadata.height;
+        if (driveStream) {
+          const outputStream = isOriginal
+            ? driveStream
+            : cropImageStream(driveStream, ratioStr);
 
-            let cropWidth = metadata.width;
-            let cropHeight = metadata.height;
-            if (currentAspect > targetAspect) {
-              cropWidth = Math.round(metadata.height * targetAspect);
-            } else {
-              cropHeight = Math.round(metadata.width / targetAspect);
-            }
-
-            const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
-            const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
-
-            const croppedBuffer = await sharp(inputBuffer)
-              .extract({ left, top, width: cropWidth, height: cropHeight })
-              .toBuffer();
-
-            archive.append(croppedBuffer, { name: imgName });
-          }
+          await new Promise((resolve, reject) => {
+            archive.append(outputStream, { name: imgName });
+            outputStream.on('end', resolve);
+            outputStream.on('finish', resolve);
+            outputStream.on('error', reject);
+          });
         }
       } catch (imgErr) {
         console.warn(`[RAM Pipeline Warning] Image ${i} processing error:`, imgErr.message);
