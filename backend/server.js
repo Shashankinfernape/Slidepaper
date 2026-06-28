@@ -1050,10 +1050,10 @@ app.get('/api/notifications', async (req, res) => {
       $or: [ { recipientUid: 'all' }, { recipientUid: uid } ]
     }).sort({ timestamp: -1 }).limit(20);
 
-    // If no notifications exist yet in DB, provide clean initial creator updates
+    // If no notifications exist yet in DB, provide clean initial creator updates and persist them to DB
     if (notifications.length === 0) {
       const recentBundles = await Bundle.find({}).sort({ _id: -1 }).limit(5);
-      notifications = recentBundles.map(b => ({
+      const notifsToCreate = recentBundles.map(b => ({
         id: 'notif_bundle_' + b.id,
         recipientUid: 'all',
         authorName: b.author?.name || 'Infernape',
@@ -1069,6 +1069,17 @@ app.get('/api/notifications', async (req, res) => {
         timestamp: b._id ? b._id.getTimestamp() : new Date(),
         isRead: false
       }));
+
+      try {
+        for (const item of notifsToCreate) {
+          await Notification.updateOne({ id: item.id }, { $setOnInsert: item }, { upsert: true });
+        }
+        notifications = await Notification.find({
+          $or: [ { recipientUid: 'all' }, { recipientUid: uid } ]
+        }).sort({ timestamp: -1 }).limit(20);
+      } catch (_) {
+        notifications = notifsToCreate;
+      }
     }
 
     // Populate live author profile photos from User and Bundle collections
@@ -1122,7 +1133,7 @@ app.post('/api/notifications/read', async (req, res) => {
     if (notifIds && Array.isArray(notifIds)) {
       await Notification.updateMany({ id: { $in: notifIds } }, { $set: { isRead: true } });
     } else {
-      await Notification.updateMany({ $or: [ { recipientUid: 'all' }, { recipientUid: uid } ] }, { $set: { isRead: true } });
+      await Notification.updateMany({}, { $set: { isRead: true } });
     }
     return res.status(200).json({ success: true });
   } catch (error) {
