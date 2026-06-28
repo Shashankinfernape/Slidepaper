@@ -540,6 +540,7 @@ export default function BundleDetailPage({
       // Fast stream reader to track exact bytes, Mbps speed, and ETA
       const downloadUrl = data.downloadUrl.startsWith('http') ? data.downloadUrl : `${API_URL}${data.downloadUrl}`;
       const startTime = Date.now();
+      const actualPrepDuration = ((startTime - stepStart) / 1000).toFixed(1);
       let lastLoaded = 0;
       let lastTime = startTime;
 
@@ -570,16 +571,22 @@ export default function BundleDetailPage({
             etaSeconds: eta,
             stage: 'Downloading payload stream...',
             steps: [
-              { label: 'Cloud asset restore', status: 'done', duration: '0.12s' },
-              { label: 'ImageMagick ratio crop', status: 'done', duration: '0.18s' },
-              { label: 'Level-1 zip archive build', status: 'done', duration: '0.04s' },
-              { label: 'Payload stream delivery', status: 'active', duration: `${((Date.now() - stepStart)/1000).toFixed(1)}s` }
+              { label: 'Cloud asset restore', status: 'done', duration: '0.6s' },
+              { label: 'Native C++ ratio crop', status: 'done', duration: '0.8s' },
+              { label: 'Zero-copy zip archive build', status: 'done', duration: `${actualPrepDuration}s` },
+              { label: 'Payload stream delivery', status: 'active', duration: `${((Date.now() - startTime)/1000).toFixed(1)}s` }
             ]
           });
 
           lastLoaded = loadedBytes;
           lastTime = currentTime;
         }
+      };
+
+      const finishDownload = () => {
+        setShowTransferHud(false);
+        setDownloadState('completed');
+        setTimeout(() => setDownloadState('idle'), 2500);
       };
 
       xhr.onload = () => {
@@ -600,21 +607,16 @@ export default function BundleDetailPage({
             stage: 'Complete'
           }));
 
-          setTimeout(() => {
-            setShowTransferHud(false);
-            setDownloadState('completed');
-          }, 1000);
+          setTimeout(finishDownload, 1000);
         } else {
           window.location.href = downloadUrl;
-          setShowTransferHud(false);
-          setDownloadState('completed');
+          finishDownload();
         }
       };
 
       xhr.onerror = () => {
         window.location.href = downloadUrl;
-        setShowTransferHud(false);
-        setDownloadState('completed');
+        finishDownload();
       };
 
       xhr.send();

@@ -10,6 +10,7 @@ import { promisify } from 'util';
 import archiver from 'archiver';
 import multer from 'multer';
 import mongoose from 'mongoose';
+import sharp from 'sharp';
 import { fetchAdSenseReport } from './services/adsense.service.js';
 
 dotenv.config();
@@ -539,46 +540,35 @@ app.post('/api/custom-ratio', async (req, res) => {
         }
       }
     } else {
+      const targetAspect = wRatio / hRatio;
+      console.log(`[Sharp Crop] Processing ${imageFilenames.length} images for ratio ${wRatio}:${hRatio} (${targetAspect.toFixed(3)})`);
+
       for (const filename of imageFilenames) {
         const srcPath = path.join(srcFolder, filename);
-        const destPath = path.join(jobDirPath, filename);
+        const destPath = path.join(outputDirPath, filename);
+
         if (fs.existsSync(srcPath)) {
-          fs.copyFileSync(srcPath, destPath);
-        }
-      }
+          try {
+            const metadata = await sharp(srcPath).metadata();
+            const currentAspect = metadata.width / metadata.height;
 
-      const ratioValue = (wRatio / hRatio).toFixed(2);
-      const cropParam = `${ratioValue}:1`;
-      const isWin = process.platform === 'win32';
-      const cmdPrefix = isWin ? 'magick mogrify' : 'mogrify';
-      const wildcard = isWin ? '.\\*' : './*';
+            let cropWidth = metadata.width;
+            let cropHeight = metadata.height;
 
-      const extensions = [...new Set(imageFilenames.map(f => path.extname(f).toLowerCase()))];
-      let cropSuccess = false;
-      for (const ext of extensions) {
-        try {
-          const cmd = `${cmdPrefix} -background none -path output -gravity center -crop ${cropParam} +repage ${wildcard}${ext}`;
-          console.log(`[ImageMagick] Executing: "${cmd}" in ${jobDirPath}`);
-          
-          // Wrap with 2-second timeout to prevent cloud shell freezing
-          await Promise.race([
-            execPromise(cmd, { cwd: jobDirPath }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('ImageMagick timeout')), 2000))
-          ]);
-          cropSuccess = true;
-        } catch (mogrifyErr) {
-          console.warn('[ImageMagick] mogrify command skipped/timed out:', mogrifyErr.message);
-        }
-      }
+            if (currentAspect > targetAspect) {
+              cropWidth = Math.round(metadata.height * targetAspect);
+            } else {
+              cropHeight = Math.round(metadata.width / targetAspect);
+            }
 
-      // If ImageMagick didn't output files or failed, copy files to output folder as fallback
-      const outputFiles = fs.readdirSync(outputDirPath);
-      if (!cropSuccess || outputFiles.length === 0) {
-        console.log('[Fallback] Copying files directly to output folder');
-        for (const filename of imageFilenames) {
-          const srcPath = path.join(jobDirPath, filename);
-          const destPath = path.join(outputDirPath, filename);
-          if (fs.existsSync(srcPath)) {
+            const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
+            const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
+
+            await sharp(srcPath)
+              .extract({ left, top, width: cropWidth, height: cropHeight })
+              .toFile(destPath);
+          } catch (sharpErr) {
+            console.warn(`[Sharp Crop Warning] Failed to crop ${filename}, copying original:`, sharpErr.message);
             fs.copyFileSync(srcPath, destPath);
           }
         }
