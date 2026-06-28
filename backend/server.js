@@ -1192,11 +1192,15 @@ app.get('/api/monetization/analytics', async (req, res) => {
     });
 
     // Populate user profile info (real photoURL/subscribers)
-    allUsers.forEach(u => {
-      if (creatorStatsMap[u.uid]) {
-        if (u.photoURL && !u.photoURL.startsWith('data:image/svg')) creatorStatsMap[u.uid].avatar = u.photoURL;
-        if (u.displayName) creatorStatsMap[u.uid].name = u.displayName;
-        if (u.subscribers) creatorStatsMap[u.uid].subscribers = u.subscribers;
+    Object.values(creatorStatsMap).forEach(c => {
+      const matchedUser = allUsers.find(u => 
+        (u.uid === c.uid) || 
+        (u.displayName && c.name && u.displayName.toLowerCase() === c.name.toLowerCase())
+      );
+      if (matchedUser) {
+        if (matchedUser.photoURL && !matchedUser.photoURL.startsWith('data:image/svg')) c.avatar = matchedUser.photoURL;
+        if (matchedUser.displayName) c.name = matchedUser.displayName;
+        if (matchedUser.subscribers) c.subscribers = matchedUser.subscribers;
       }
     });
 

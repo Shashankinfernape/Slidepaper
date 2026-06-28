@@ -12,6 +12,21 @@ if (
   API_URL = API_URL.replace('http://', 'https://');
 }
 
+const getProxiedImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/[?&]id=([^&]+)/);
+    if (match) {
+      return `${API_URL}/api/proxy-image?id=${match[1]}`;
+    }
+  }
+  if (url.startsWith('/uploads/')) {
+    return `${API_URL}${url}`;
+  }
+  return url;
+};
+
 export default function MonetizationDashboard({ isInline = false, creatorUid = null }) {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -177,35 +192,39 @@ export default function MonetizationDashboard({ isInline = false, creatorUid = n
             </thead>
             <tbody>
               {creators.length > 0 ? (
-                creators.map((c, i) => (
-                  <tr key={c.uid || i} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '0.85rem 0.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img 
-                        src={c.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'} 
-                        alt={c.name}
-                        style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                      <div>
-                        <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{c.name}</strong>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.subscribers?.toLocaleString()} subs</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-primary)' }}>{c.packCount}</td>
-                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-primary)' }}>{c.views?.toLocaleString()}</td>
-                    <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-primary)' }}>{c.downloads?.toLocaleString()}</td>
-                    <td style={{ padding: '0.85rem 0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${c.sharePercentage}%`, height: '100%', background: '#3b82f6' }}></div>
+                creators.map((c, i) => {
+                  const avatarSrc = getProxiedImageUrl(c.avatar) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
+                  return (
+                    <tr key={c.uid || i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '0.85rem 0.5rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img 
+                          src={avatarSrc} 
+                          alt={c.name}
+                          style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'; }}
+                        />
+                        <div>
+                          <strong style={{ display: 'block', color: 'var(--text-primary)' }}>{c.name}</strong>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{c.subscribers?.toLocaleString()} subs</span>
                         </div>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#3b82f6' }}>{c.sharePercentage}%</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right', fontWeight: 700, color: '#22c55e', fontSize: '1rem' }}>
-                      ${c.deservedPayout?.toFixed(2)}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-primary)' }}>{c.packCount}</td>
+                      <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-primary)' }}>{c.views?.toLocaleString()}</td>
+                      <td style={{ padding: '0.85rem 0.5rem', color: 'var(--text-primary)' }}>{c.downloads?.toLocaleString()}</td>
+                      <td style={{ padding: '0.85rem 0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${c.sharePercentage}%`, height: '100%', background: '#3b82f6' }}></div>
+                          </div>
+                          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#3b82f6' }}>{c.sharePercentage}%</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.85rem 0.5rem', textAlign: 'right', fontWeight: 700, color: '#22c55e', fontSize: '1rem' }}>
+                        ${c.deservedPayout?.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
