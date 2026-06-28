@@ -1,6 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { Settings, Check, Trash2, MoreVertical } from 'lucide-react';
 
+const getProxiedImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.includes('drive.google.com')) {
+    const match = url.match(/[?&]id=([^&]+)/);
+    if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;
+  }
+  return url;
+};
+
 export default function NotificationDropdown({
   notifications = [],
   unreadCount = 0,
@@ -71,7 +81,7 @@ export default function NotificationDropdown({
 
               {/* Channel / Author Avatar */}
               <img
-                src={item.authorAvatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
+                src={getProxiedImageUrl(item.authorAvatar) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
                 alt={item.authorName}
                 className="yt-notification-avatar"
                 onError={(e) => {
@@ -91,7 +101,7 @@ export default function NotificationDropdown({
               {/* Wallpaper Thumbnail Preview */}
               {item.thumbnailUrl && (
                 <img
-                  src={item.thumbnailUrl}
+                  src={getProxiedImageUrl(item.thumbnailUrl)}
                   alt="Wallpaper Preview"
                   className="yt-notification-thumb"
                   onError={(e) => { e.target.style.display = 'none'; }}

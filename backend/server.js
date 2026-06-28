@@ -1068,7 +1068,26 @@ app.get('/api/notifications', async (req, res) => {
       }));
     }
 
-    return res.status(200).json(notifications);
+    // Populate live author profile photos from User collection
+    const userUids = [...new Set(notifications.map(n => n.authorUid).filter(Boolean))];
+    const users = await User.find({ uid: { $in: userUids } });
+    const userMap = {};
+    users.forEach(u => { userMap[u.uid] = u; });
+
+    const enrichedNotifications = notifications.map(n => {
+      const notifObj = n.toObject ? n.toObject() : { ...n };
+      if (notifObj.authorUid && userMap[notifObj.authorUid]) {
+        if (userMap[notifObj.authorUid].photoURL) {
+          notifObj.authorAvatar = userMap[notifObj.authorUid].photoURL;
+        }
+        if (userMap[notifObj.authorUid].displayName) {
+          notifObj.authorName = userMap[notifObj.authorUid].displayName;
+        }
+      }
+      return notifObj;
+    });
+
+    return res.status(200).json(enrichedNotifications);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return res.status(500).json({ error: 'Failed to fetch notifications' });
