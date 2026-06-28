@@ -1420,18 +1420,39 @@ app.post('/api/authors/:authorUid/subscribe', async (req, res) => {
   }
 });
 
-// Endpoint: Get author status and subscription state for a user
 app.get('/api/authors/:authorUid/status', async (req, res) => {
   const { authorUid } = req.params;
-  const { uid } = req.query; // Logged in user UID
+  const { uid, userUid } = req.query; // Logged in user UID
+  const currentUid = uid || userUid;
 
   try {
-    const author = await User.findOne({ uid: authorUid });
+    const author = await User.findOne({
+      $or: [
+        { uid: authorUid },
+        { displayName: { $regex: new RegExp('^' + authorUid.replace(/[^a-zA-Z0-9]/g, '') + '$', 'i') } },
+        { displayName: authorUid }
+      ]
+    });
+
     if (!author) {
+      // Fallback: search Bundle collection for author details
+      const bundle = await Bundle.findOne({ $or: [{ 'author.uid': authorUid }, { 'author.name': authorUid }] });
+      if (bundle && bundle.author) {
+        return res.status(200).json({
+          subscribers: bundle.author.subscribers || 0,
+          isSubscribed: false,
+          profile: {
+            uid: bundle.author.uid,
+            displayName: bundle.author.name,
+            photoURL: bundle.author.avatar,
+            subscribers: bundle.author.subscribers || 0
+          }
+        });
+      }
       return res.status(200).json({ subscribers: 0, isSubscribed: false, profile: null });
     }
 
-    const isSubscribed = uid ? author.subscriberUids.includes(uid) : false;
+    const isSubscribed = currentUid && author.subscriberUids ? author.subscriberUids.includes(currentUid) : false;
     return res.status(200).json({ 
       subscribers: author.subscribers, 
       isSubscribed,
