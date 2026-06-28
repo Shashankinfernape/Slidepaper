@@ -569,7 +569,7 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Process images sequentially through RAM streaming (1 image stream at a time)
+    // Process images sequentially through RAM streaming (direct driveStream -> IM spawn stdin -> archiver)
     for (let i = 0; i < imagesToProcess.length; i++) {
       const imgObj = imagesToProcess[i];
       const imgUrl = typeof imgObj === 'string' ? imgObj : imgObj.url;
@@ -592,60 +592,16 @@ app.post('/api/custom-ratio', async (req, res) => {
         }
 
         if (driveStream) {
-          if (isOriginal) {
-            archive.append(driveStream, { name: imgName });
-          } else {
-            // Buffer stream in RAM to guarantee valid content before feeding to ImageMagick or Sharp fallback
-            const chunks = [];
-            for await (const chunk of driveStream) {
-              chunks.push(chunk);
-            }
-            const inputBuffer = Buffer.concat(chunks);
+          const outputStream = isOriginal
+            ? driveStream
+            : cropImageStream(driveStream, ratioStr);
 
-            if (inputBuffer.length > 0) {
-              let croppedBuffer = null;
-              try {
-                // Try ImageMagick spawn via Buffer stdin
-                const passThrough = new PassThrough();
-                const croppedStream = cropImageStream(passThrough, ratioStr);
-                passThrough.end(inputBuffer);
-
-                const cropChunks = [];
-                for await (const cChunk of croppedStream) {
-                  cropChunks.push(cChunk);
-                }
-                croppedBuffer = Buffer.concat(cropChunks);
-              } catch (mErr) {
-                console.warn('[ImageMagick spawn buffer warning]', mErr.message);
-              }
-
-              // Fallback to Sharp if ImageMagick returned 0 bytes or errored
-              if (!croppedBuffer || croppedBuffer.length === 0) {
-                try {
-                  const targetAspect = wRatio / hRatio;
-                  const sharpImg = sharp(inputBuffer);
-                  const metadata = await sharpImg.metadata();
-                  const currentAspect = metadata.width / metadata.height;
-                  let cropWidth = metadata.width;
-                  let cropHeight = metadata.height;
-                  if (currentAspect > targetAspect) {
-                    cropWidth = Math.round(metadata.height * targetAspect);
-                  } else {
-                    cropHeight = Math.round(metadata.width / targetAspect);
-                  }
-                  const left = Math.max(0, Math.round((metadata.width - cropWidth) / 2));
-                  const top = Math.max(0, Math.round((metadata.height - cropHeight) / 2));
-                  croppedBuffer = await sharp(inputBuffer)
-                    .extract({ left, top, width: cropWidth, height: cropHeight })
-                    .toBuffer();
-                } catch (sharpErr) {
-                  croppedBuffer = inputBuffer;
-                }
-              }
-
-              archive.append(croppedBuffer, { name: imgName });
-            }
-          }
+          await new Promise((resolve) => {
+            archive.append(outputStream, { name: imgName });
+            outputStream.on('end', resolve);
+            outputStream.on('close', resolve);
+            outputStream.on('error', resolve);
+          });
         }
       } catch (imgErr) {
         console.warn(`[RAM Pipeline Warning] Image ${i} processing error:`, imgErr.message);

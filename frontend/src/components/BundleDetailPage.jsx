@@ -644,14 +644,17 @@ export default function BundleDetailPage({
           const bytesDelta = receivedBytes - lastLoaded;
           const speedBps = bytesDelta / timeDelta;
           const speedMbps = (speedBps * 8) / (1024 * 1024);
-          const pct = contentLength > 0 ? Math.min(99, (receivedBytes / contentLength) * 100) : 50;
+          const estimatedTotal = contentLength > 0 ? contentLength : (60 * 1024 * 1024);
+          const pct = Math.min(99, Math.max(10, (receivedBytes / estimatedTotal) * 100));
+          const remainingBytes = Math.max(0, estimatedTotal - receivedBytes);
+          const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0.5;
 
           setHudMetrics({
             progress: pct,
             speedMbps: Math.max(4.2, speedMbps),
             transferredMB: receivedBytes / (1024 * 1024),
-            totalMB: contentLength > 0 ? contentLength / (1024 * 1024) : 0,
-            etaSeconds: speedBps > 0 && contentLength > 0 ? Math.max(0, (contentLength - receivedBytes) / speedBps) : 0,
+            totalMB: estimatedTotal / (1024 * 1024),
+            etaSeconds: eta,
             stage: 'Streaming pure RAM payload...',
             steps: [
               { label: 'Drive image stream fetch', status: 'done', duration: '0.2s' },
