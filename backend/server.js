@@ -322,13 +322,7 @@ function initializeDriveClient() {
 
 initializeDriveClient();
 
-// Map of bundle IDs to source image filenames in src/assets
-const BUNDLE_IMAGES = {
-  'aetherial-peak': ['peak_left.png', 'peak_center.png', 'peak_right.png'],
-  'spectral-drift': ['drift_cyan.png', 'drift_magenta.png', 'drift_gold.png'],
-  'cyber-drift': ['drift_magenta.png', 'drift_gold.png', 'drift_cyan.png'],
-  'solar-flare': ['drift_gold.png', 'drift_magenta.png', 'peak_right.png'],
-};
+const BUNDLE_IMAGES = {};
 
 // Helper: Ensure a target folder exists on the user's Drive, otherwise create it
 async function getOrCreateFolder() {
@@ -398,101 +392,7 @@ const upload = multer({ dest: uploadsDir });
 
 const BUNDLES_PATH = path.join(__dirname, 'bundles.json');
 
-const INITIAL_BUNDLES = [
-  {
-    id: 'aetherial-peak',
-    name: 'Aetherial Peak',
-    description: 'A majestic three-screen panorama featuring ethereal neon mountain trails winding through deep canyons under a starry violet sky. Perfect for side-by-side multi-monitor setups or panoramic phone locks.',
-    type: 'Panoramic Landscape Split',
-    orientation: 'landscape',
-    ratio: '16:9',
-    ratioOptions: [
-      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '1.95 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'ultrawide-21-9', label: '21:9 Ultrawide', subtitle: 'Centered cinematic crop', resolution: '5120 x 2160', size: '1.29 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Single-screen hero crop', resolution: '3840 x 2160', size: '1.61 MB ZIP', formats: ['PNG', 'JPG'] }
-    ],
-    coverIndex: 1,
-    images: [
-      { url: 'http://localhost:5001/assets/peak_left.png', label: 'Screen 1: Western Ridgeline' },
-      { url: 'http://localhost:5001/assets/peak_center.png', label: 'Screen 2: Lunar Ascent (Face)' },
-      { url: 'http://localhost:5001/assets/peak_right.png', label: 'Screen 3: Horizon Drift' }
-    ],
-    tags: ['Nature', 'Space', 'Minimalist'],
-    includes: ['Triple-monitor synchronized sequence', 'Ultrawide and desktop crops', 'Clean and subtle vignette variants'],
-    stats: { views: 0, likes: 0, downloads: 0 },
-    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
-  },
-  {
-    id: 'spectral-drift',
-    name: 'Spectral Drift',
-    description: 'An abstract, fluid-dynamic liquid wave bundle displaying dynamic glass-like shapes that transition smoothly from cool electric cyan, through royal magenta, into elegant luxury gold.',
-    type: 'Fluid Gradient Flow',
-    orientation: 'landscape',
-    ratio: '16:9',
-    ratioOptions: [
-      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '2.40 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core wallpaper set', resolution: '3840 x 2160', size: '1.97 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Lockscreen vertical pack', resolution: '1290 x 2796', size: '511 KB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'ultrawide-21-9', label: '21:9 Ultrawide', subtitle: 'Panoramic flow crop', resolution: '5120 x 2160', size: '1.50 MB ZIP', formats: ['PNG', 'JPG'] }
-    ],
-    coverIndex: 0,
-    images: [
-      { url: 'http://localhost:5001/assets/drift_cyan.png', label: 'Fluid Phase A: Electric Cyan (Face)' },
-      { url: 'http://localhost:5001/assets/drift_magenta.png', label: 'Fluid Phase B: Royal Magenta' },
-      { url: 'http://localhost:5001/assets/drift_gold.png', label: 'Fluid Phase C: Luxury Gold' }
-    ],
-    tags: ['Gradient', 'Abstract', 'Minimalist'],
-    includes: ['Desktop and mobile-friendly exports', 'Ultrawide panoramic crop set', 'Color-matched alternate brightness passes'],
-    stats: { views: 0, likes: 0, downloads: 0 },
-    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
-  },
-  {
-    id: 'cyber-drift',
-    name: 'Cyber Drift',
-    description: 'A neon-drenched retro-futuristic city sequence featuring glowing grid lanes, rain-slicked asphalt reflections, and distant holographic skyscrapers.',
-    type: 'Synthwave Panoramic',
-    orientation: 'landscape',
-    ratio: '16:9',
-    ratioOptions: [
-      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '2.20 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core city crop', resolution: '3840 x 2160', size: '1.97 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Tall lockscreen pack', resolution: '1290 x 2796', size: '511 KB ZIP', formats: ['PNG', 'JPG'] }
-    ],
-    coverIndex: 1,
-    images: [
-      { url: 'http://localhost:5001/assets/drift_magenta.png', label: 'Neon Rain Ridgeline' },
-      { url: 'http://localhost:5001/assets/drift_gold.png', label: 'Holographic Horizon' },
-      { url: 'http://localhost:5001/assets/drift_cyan.png', label: 'Electric Grid Flow' }
-    ],
-    tags: ['Space', 'Minimalist', 'Gradient'],
-    includes: ['Synchronized multi-screen sequence', 'High-contrast lockscreen layouts', 'Synthwave color-grading variants'],
-    stats: { views: 0, likes: 0, downloads: 0 },
-    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
-  },
-  {
-    id: 'solar-flare',
-    name: 'Solar Flare',
-    description: 'A dramatic solar landscape featuring fiery corona arches, magnetic plasma loops, and cosmic dust trails in deep space gold and amber tones.',
-    type: 'Cinematic Space Split',
-    orientation: 'landscape',
-    ratio: '16:9',
-    ratioOptions: [
-      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: '2.10 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core solar crop', resolution: '3840 x 2160', size: '1.80 MB ZIP', formats: ['PNG', 'JPG'] },
-      { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Corona vertical lockscreen', resolution: '1290 x 2796', size: '466 KB ZIP', formats: ['PNG', 'JPG'] }
-    ],
-    coverIndex: 0,
-    images: [
-      { url: 'http://localhost:5001/assets/drift_gold.png', label: 'Fiery Corona Arch' },
-      { url: 'http://localhost:5001/assets/drift_magenta.png', label: 'Magnetic Plasma Loop' },
-      { url: 'http://localhost:5001/assets/peak_right.png', label: 'Cosmic Amber Dust' }
-    ],
-    tags: ['Space', 'Nature', 'Gradient'],
-    includes: ['Cinematic solar flares flow', 'Ultra high definition space maps', 'Synchronized multi-monitor sequence'],
-    stats: { views: 0, likes: 0, downloads: 0 },
-    author: { name: 'Infernape', subscribers: 68400, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80' }
-  }
-];
+const INITIAL_BUNDLES = [];
 
 if (!fs.existsSync(BUNDLES_PATH)) {
   fs.writeFileSync(BUNDLES_PATH, JSON.stringify(INITIAL_BUNDLES, null, 2));
