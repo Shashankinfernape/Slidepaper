@@ -699,7 +699,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       const updatedBundle = await Bundle.findOneAndUpdate(
         { id: bundleId },
         { $inc: { 'stats.downloads': 1 } },
-        { new: true }
+        { returnDocument: 'after' }
       );
       if (updatedBundle && updatedBundle.stats) {
         currentDownloads = updatedBundle.stats.downloads;
@@ -725,25 +725,6 @@ app.post('/api/custom-ratio', async (req, res) => {
   }
 });
 
-  } catch (error) {
-    console.error('Custom ratio processing/upload error:', error);
-
-    // Attempt cleanups
-    try {
-      if (fs.existsSync(jobDirPath)) {
-        fs.rmSync(jobDirPath, { recursive: true, force: true });
-      }
-    } catch (_) {}
-
-    try {
-      if (zipPath && fs.existsSync(zipPath)) {
-        fs.unlinkSync(zipPath);
-      }
-    } catch (_) {}
-
-    return res.status(500).json({ error: 'Failed to process and upload custom wallpaper bundle', details: error.message });
-  }
-});
 
 // Endpoint: Redirect user to Google OAuth consent screen
 app.get('/api/auth', (req, res) => {
@@ -924,7 +905,7 @@ app.post('/api/set-hero-bundle', async (req, res) => {
 
   try {
     await Bundle.updateMany({}, { isHero: false });
-    const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { isHero: true }, { new: true });
+    const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { isHero: true }, { returnDocument: 'after' });
     
     if (!updatedBundle) {
       return res.status(404).json({ error: `Bundle ${bundleId} not found` });
@@ -1220,7 +1201,7 @@ app.post('/api/bundles/:bundleId/view', async (req, res) => {
     const bundle = await Bundle.findOneAndUpdate(
       { id: bundleId },
       { $inc: { 'stats.views': 1 } },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!bundle) {
       return res.status(404).json({ error: 'Bundle not found' });
@@ -1410,7 +1391,7 @@ app.post('/api/users/update-profile', async (req, res) => {
         accentGradient,
         bannerURL
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     // Also update any bundles uploaded by this author so that name/avatar updates everywhere!
