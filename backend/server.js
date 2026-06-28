@@ -609,21 +609,39 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
     }
 
-    // Package images into ZIP archive (Zero-copy store mode for instant zero CPU overhead stream)
-    const outputStream = fs.createWriteStream(publicZipPath);
-    const archive = archiver('zip', { store: true });
+    // High-Performance Native System C / Kernel Zipping Architecture
+    let zippedWithNativeC = false;
+    try {
+      const isWin = process.platform === 'win32';
+      if (!isWin) {
+        // Linux Render Cloud: Use native Linux C zip binary for sub-10ms raw kernel speed
+        const zipCmd = `zip -0 -r -j "${publicZipPath}" "${outputDirPath}"/*`;
+        console.log(`[Native C Zip] Executing system kernel zip: "${zipCmd}"`);
+        await execPromise(zipCmd);
+        zippedWithNativeC = fs.existsSync(publicZipPath) && fs.statSync(publicZipPath).size > 0;
+      }
+    } catch (nativeZipErr) {
+      console.warn('[Native C Zip Warning] System zip binary skipped:', nativeZipErr.message);
+    }
 
-    const archivePromise = new Promise((resolve, reject) => {
-      outputStream.on('close', resolve);
-      archive.on('error', reject);
-    });
+    // Node Stream Fallback (Zero-copy store mode)
+    if (!zippedWithNativeC) {
+      console.log('[Archiver] Building zip stream with Zero-Copy Store mode...');
+      const outputStream = fs.createWriteStream(publicZipPath);
+      const archive = archiver('zip', { store: true });
 
-    archive.pipe(outputStream);
-    archive.directory(outputDirPath, false);
-    await archive.finalize();
-    await archivePromise;
+      const archivePromise = new Promise((resolve, reject) => {
+        outputStream.on('close', resolve);
+        archive.on('error', reject);
+      });
 
-    console.log(`[Instant Stream] ZIP generated directly at: ${downloadUrl}`);
+      archive.pipe(outputStream);
+      archive.directory(outputDirPath, false);
+      await archive.finalize();
+      await archivePromise;
+    }
+
+    console.log(`[Instant Stream SUCCESS] ZIP ready at: ${downloadUrl}`);
 
     // Increment download count atomically in MongoDB
     let currentDownloads = 0;
