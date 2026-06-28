@@ -553,21 +553,10 @@ app.post('/api/custom-ratio', async (req, res) => {
         if (fs.existsSync(srcPath)) {
           let croppedWithMagick = false;
           try {
-            // Get image dimensions using sharp/metadata
-            const metadata = await sharp(srcPath).metadata();
-            const currentAspect = metadata.width / metadata.height;
-
-            let cropWidth = metadata.width;
-            let cropHeight = metadata.height;
-
-            if (currentAspect > targetAspect) {
-              cropWidth = Math.round(metadata.height * targetAspect);
-            } else {
-              cropHeight = Math.round(metadata.width / targetAspect);
-            }
-
-            // Execute ImageMagick convert command for exact center crop
-            const cmd = `${convertCmd} "${srcPath}" -gravity center -crop ${cropWidth}x${cropHeight}+0+0 +repage "${destPath}"`;
+            // Execute ImageMagick convert command using exact aspect ratio syntax (e.g. 16:10, 21:9)
+            const ratioParam = `${widthRatio}:${heightRatio}`;
+            const cmd = `${convertCmd} "${srcPath}" -gravity center -crop ${ratioParam} +repage "${destPath}"`;
+            console.log(`[ImageMagick CLI] Executing: "${cmd}"`);
             await Promise.race([
               execPromise(cmd),
               new Promise((_, reject) => setTimeout(() => reject(new Error('ImageMagick CLI timeout')), 2500))
