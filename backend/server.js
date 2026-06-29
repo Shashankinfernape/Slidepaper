@@ -788,11 +788,12 @@ app.post('/api/custom-ratio', async (req, res) => {
         continue;
       }
 
-      // Crop with sharp (in-process, no spawn, no ImageMagick buffering issues)
+      // Crop with sharp (in-process, low RAM usage)
       let finalBuffer = imgBuffer;
       if (!isOriginal) {
         try {
-          const meta = await sharp(imgBuffer).metadata();
+          const s = sharp(imgBuffer, { failOnError: false });
+          const meta = await s.metadata();
           const targetAspect = wRatio / hRatio;
           const currentAspect = meta.width / meta.height;
           let cropW = meta.width, cropH = meta.height;
@@ -803,7 +804,7 @@ app.post('/api/custom-ratio', async (req, res) => {
           }
           const left = Math.max(0, Math.round((meta.width - cropW) / 2));
           const top  = Math.max(0, Math.round((meta.height - cropH) / 2));
-          finalBuffer = await sharp(imgBuffer)
+          finalBuffer = await s
             .extract({ left, top, width: cropW, height: cropH })
             .toBuffer();
         } catch (cropErr) {
@@ -815,6 +816,9 @@ app.post('/api/custom-ratio', async (req, res) => {
       console.log(`[Build] Image ${i + 1}/${imagesToProcess.length} appended (${(finalBuffer.length / 1024).toFixed(0)} KB)`);
       imgBuffer = null;   // free RAM immediately
       finalBuffer = null;
+      if (global.gc && (i % 3 === 0)) {
+        try { global.gc(); } catch (_) {}
+      }
     }
 
     await archive.finalize();
