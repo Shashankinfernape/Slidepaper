@@ -616,18 +616,19 @@ app.post('/api/custom-ratio', async (req, res) => {
   }
 
   const ratioKey = isOriginal ? 'original' : `${widthRatio}:${heightRatio}`;
-  const jobKey = `${bundleId}_${ratioKey}`;
+  const dbKey = ratioKey.replace(/\./g, '_');
+  const jobKey = `${bundleId}_${dbKey}`;
 
-  // 1. Check MongoDB ratioCaches for this bundleId + ratioKey (Cache Hit)
+  // 1. Check MongoDB ratioCaches for this bundleId + dbKey (Cache Hit)
   try {
     const dbBundle = await Bundle.findOne({ id: bundleId });
-    if (dbBundle && dbBundle.ratioCaches && dbBundle.ratioCaches.get(ratioKey)) {
-      const cachedUri = dbBundle.ratioCaches.get(ratioKey);
+    if (dbBundle && dbBundle.ratioCaches && (dbBundle.ratioCaches.get(dbKey) || dbBundle.ratioCaches.get(ratioKey))) {
+      const cachedUri = dbBundle.ratioCaches.get(dbKey) || dbBundle.ratioCaches.get(ratioKey);
       if (cachedUri && cachedUri.startsWith('gs://')) {
         const signedUrl = await getGcsSignedUrl(cachedUri);
         if (signedUrl) {
           console.log(`[Cache HIT] Found cached signed URL for "${jobKey}"`);
-          const zipSizeBytes = dbBundle.ratioCacheSizes?.get(ratioKey) || 0;
+          const zipSizeBytes = dbBundle.ratioCacheSizes?.get(dbKey) || dbBundle.ratioCacheSizes?.get(ratioKey) || 0;
           const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
           return res.status(200).json({ success: true, downloadUrl: signedUrl, zipSizeBytes, downloads: updatedBundle?.stats?.downloads || 0 });
         }
@@ -698,7 +699,7 @@ app.post('/api/custom-ratio', async (req, res) => {
         const cfData = await cfRes.json();
         if (cfData && cfData.success && cfData.gcsUri) {
           const signedUrl = await getGcsSignedUrl(cfData.gcsUri);
-          await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${ratioKey}`]: cfData.gcsUri }, $inc: { 'stats.downloads': 1 } });
+          await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${dbKey}`]: cfData.gcsUri }, $inc: { 'stats.downloads': 1 } });
           cropSemaphore.release();
           processingJobs.delete(jobKey);
           resolveJob(cfData.gcsUri);
@@ -833,8 +834,8 @@ app.post('/api/custom-ratio', async (req, res) => {
             { id: bundleId },
             {
               $set: {
-                [`ratioCaches.${ratioKey}`]: gcsUri,
-                [`ratioCacheSizes.${ratioKey}`]: zipSizeBytes
+                [`ratioCaches.${dbKey}`]: gcsUri,
+                [`ratioCacheSizes.${dbKey}`]: zipSizeBytes
               },
               $inc: { 'stats.downloads': 1 }
             },
