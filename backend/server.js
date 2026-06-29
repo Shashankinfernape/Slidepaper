@@ -15,6 +15,10 @@ import { Storage } from '@google-cloud/storage';
 import { PassThrough } from 'stream';
 import { fetchAdSenseReport } from './services/adsense.service.js';
 
+// Optimize sharp for 512MB RAM server instances (Render free tier)
+sharp.cache(false); // Disable sharp internal image cache to keep memory footprint minimal
+sharp.concurrency(1); // Restrict libvips threads to 1 to prevent memory spikes during batch crops
+
 dotenv.config();
 
 // Connect to MongoDB
@@ -208,13 +212,13 @@ if (gcsEnabled) {
   }
 }
 
-// Semaphore: max 2 simultaneous crop jobs on Render to protect RAM
+// Semaphore: max 1 crop job on Render free tier to stay strictly under 512MB RAM limit
 class Semaphore {
   constructor(max) { this.max = max; this.count = 0; this.queue = []; }
   acquire() { return new Promise(r => this.count < this.max ? (this.count++, r()) : this.queue.push(r)); }
   release() { this.count--; if (this.queue.length) { this.count++; this.queue.shift()(); } }
 }
-const cropSemaphore = new Semaphore(2);
+const cropSemaphore = new Semaphore(1);
 
 // Deduplication: if multiple users request same bundle+ratio simultaneously, only 1 job runs
 const processingJobs = new Map(); // `${bundleId}_${ratioKey}` -> Promise<string>
