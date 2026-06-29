@@ -199,8 +199,8 @@ if (gcsEnabled) {
       gcs = new Storage({ keyFilename: SERVICE_ACCOUNT_PATH });
       console.log('[GCS] Client initialized successfully from service account file.');
     } else {
-      gcs = new Storage(); // Fallback to ADC / Application Default Credentials
-      console.log('[GCS] Client initialized using Application Default Credentials.');
+      console.warn('[GCS Warning] GCS_BUCKET_NAME is set, but no credentials JSON or service account file found. Disabling GCS upload fallback to direct stream.');
+      gcs = null;
     }
   } catch (err) {
     console.error('[GCS Init Error]', err.message);
@@ -724,11 +724,12 @@ app.post('/api/custom-ratio', async (req, res) => {
         contentType: 'application/zip',
         metadata: { contentDisposition: `attachment; filename="${safeFilename}"` }
       });
+      gcsWriteStream.on('error', (err) => console.warn('[GCS WriteStream Error caught]', err.message));
       // SINGLE pipe to GCS
       archive.pipe(gcsWriteStream);
-      uploadDone = new Promise((resolve, reject) => {
+      uploadDone = new Promise((resolve) => {
         gcsWriteStream.on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`));
-        gcsWriteStream.on('error', reject);
+        gcsWriteStream.on('error', () => resolve(null));
       });
     } else {
       // Fallback: SINGLE pipe directly to client response
