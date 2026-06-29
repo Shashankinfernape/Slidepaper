@@ -684,36 +684,36 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
     }
 
-    // Set streaming ZIP response headers for direct download
+    // BUILD ZIP → GCS ONLY (single pipe, no dual-pipe corruption)
     const safeFilename = `${dbBundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${ratioKey.replace(':', 'x')}.zip`;
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+    const destGcsPath = `bundles/${bundleId}_${ratioKey.replace(':', 'x')}.zip`;
 
-    res.setHeader('X-Prep-Ms', (Date.now() - reqStartTime).toString());
-    const archive = archiver('zip', { store: true });
-    const gcsPassThrough = new PassThrough();
-
-    // Pipe archiver directly to client response (real-time stream) AND to GCS upload stream
-    archive.pipe(res);
-
-    let gcsUploadPromise = Promise.resolve(null);
-    if (gcsEnabled && GCS_BUCKET) {
-      archive.pipe(gcsPassThrough);
-      const destGcsPath = `bundles/${bundleId}_${ratioKey.replace(':', 'x')}.zip`;
-      const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
-      const gcsWriteStream = gcsFile.createWriteStream({ resumable: false, contentType: 'application/zip' });
-      gcsUploadPromise = new Promise((resolve) => {
-        gcsPassThrough.pipe(gcsWriteStream)
-          .on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`))
-          .on('error', (err) => { console.warn('[GCS Upload Stream Error]', err.message); resolve(null); });
-      });
+    if (!gcsEnabled || !GCS_BUCKET) {
+      cropSemaphore.release();
+      processingJobs.delete(jobKey);
+      rejectJob(new Error('GCS not configured'));
+      return res.status(503).json({ error: 'Storage not configured. Please set GCS_BUCKET_NAME.' });
     }
 
-    const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
-    const ratioStr = `${widthRatio}:${heightRatio}`;
+    console.log(`[Build Pipeline] Building ZIP for "${jobKey}"...`);
+    const archive = archiver('zip', { store: true });
+    const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
+    const gcsWriteStream = gcsFile.createWriteStream({
+      resumable: true,
+      contentType: 'application/zip',
+      metadata: { contentDisposition: `attachment; filename="${safeFilename}"` }
+    });
 
-    // TRUE STREAMING: process one image at a time — no full buffer required
-    console.log(`[Stream Pipeline] Processing ${imagesToProcess.length} images for "${jobKey}"...`);
+    // SINGLE pipe — no backpressure conflict, no corruption possible
+    archive.pipe(gcsWriteStream);
+
+    const uploadDone = new Promise((resolve, reject) => {
+      gcsWriteStream.on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`));
+      gcsWriteStream.on('error', reject);
+    });
+
+    // Process images one at a time (controls RAM, no OOM)
+    const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     for (let i = 0; i < imagesToProcess.length; i++) {
       const imgObj = imagesToProcess[i];
       let imgName = `wallpaper_${i + 1}.png`;
@@ -723,29 +723,22 @@ app.post('/api/custom-ratio', async (req, res) => {
         const cleanLabel = imgObj.label.split(':').pop().trim();
         imgName = cleanLabel.includes('.') ? cleanLabel : `${cleanLabel}.png`;
       }
-      let sourceStream = null;
-      // Try GCS source first (fast — same Google network as Render)
-      if (gcsEnabled && GCS_BUCKET) {
+
+      let imgBuffer = null;
+
+      // Source 1: GCS (fast — same Google network as Render)
+      if (gcsEnabled) {
         try {
           const gcsSourcePath = typeof imgObj === 'object' && imgObj.gcsPath
             ? imgObj.gcsPath
             : `sources/${bundleId}/${imgName}`;
-          const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
-          const gcsReadStream = gcsFile.createReadStream();
-          sourceStream = await new Promise((resolve, reject) => {
-            gcsReadStream.once('data', () => {
-              gcsReadStream.pause();
-              resolve(gcsReadStream);
-            });
-            gcsReadStream.once('error', reject);
-            gcsReadStream.resume();
-          });
-        } catch (gErr) {
-          sourceStream = null;
-        }
+          const [buf] = await gcs.bucket(GCS_BUCKET).file(gcsSourcePath).download();
+          imgBuffer = buf;
+        } catch (_) { /* not in GCS yet, fall through to Drive */ }
       }
-      // Fallback to Drive stream
-      if (!sourceStream) {
+
+      // Source 2: Google Drive (fallback for older bundles without GCS sources)
+      if (!imgBuffer) {
         const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
         const match = imgUrl?.match(/[?&]id=([^&]+)/);
         const fileId = match ? match[1] : null;
@@ -753,62 +746,76 @@ app.post('/api/custom-ratio', async (req, res) => {
           try {
             const driveRes = await drive.files.get(
               { fileId, alt: 'media' },
-              { responseType: 'stream' }
+              { responseType: 'arraybuffer' }
             );
-            sourceStream = driveRes.data;
+            if (driveRes?.data) imgBuffer = Buffer.from(driveRes.data);
           } catch (dErr) {
-            console.warn(`[Drive Stream Warning] Image ${i}:`, dErr.message);
+            console.warn(`[Build] Drive fallback failed for image ${i}:`, dErr.message);
           }
         }
       }
-      if (!sourceStream) {
-        console.warn(`[Stream Pipeline] Skipping image ${i} — no source found`);
+
+      if (!imgBuffer || imgBuffer.length === 0) {
+        console.warn(`[Build] Skipping image ${i} — no source found`);
         continue;
       }
-      try {
-        const outputStream = isOriginal
-          ? sourceStream
-          : cropWithSharp(sourceStream, wRatio, hRatio);
-        // Append stream as archiver entry — archiver pushes bytes to res immediately
-        await new Promise((resolve) => {
-          archive.append(outputStream, { name: imgName });
-          outputStream.on('end', resolve);
-          outputStream.on('close', resolve);
-          outputStream.on('error', (e) => {
-            console.warn(`[Stream error on image ${i}]`, e.message);
-            resolve();
-          });
-        });
-        console.log(`[Stream Pipeline] Image ${i + 1}/${imagesToProcess.length} done`);
-      } catch (imgErr) {
-        console.warn(`[Stream Pipeline Warning] Image ${i}:`, imgErr.message);
+
+      // Crop with sharp (in-process, no spawn, no ImageMagick buffering issues)
+      let finalBuffer = imgBuffer;
+      if (!isOriginal) {
+        try {
+          const meta = await sharp(imgBuffer).metadata();
+          const targetAspect = wRatio / hRatio;
+          const currentAspect = meta.width / meta.height;
+          let cropW = meta.width, cropH = meta.height;
+          if (currentAspect > targetAspect) {
+            cropW = Math.round(meta.height * targetAspect);
+          } else {
+            cropH = Math.round(meta.width / targetAspect);
+          }
+          const left = Math.max(0, Math.round((meta.width - cropW) / 2));
+          const top  = Math.max(0, Math.round((meta.height - cropH) / 2));
+          finalBuffer = await sharp(imgBuffer)
+            .extract({ left, top, width: cropW, height: cropH })
+            .toBuffer();
+        } catch (cropErr) {
+          console.warn(`[Build] Crop failed for image ${i}, using original:`, cropErr.message);
+        }
       }
+
+      archive.append(finalBuffer, { name: imgName });
+      console.log(`[Build] Image ${i + 1}/${imagesToProcess.length} appended (${(finalBuffer.length / 1024).toFixed(0)} KB)`);
+      imgBuffer = null;   // free RAM immediately
+      finalBuffer = null;
     }
 
     await archive.finalize();
-    console.log(`[Pure RAM Pipeline SUCCESS] Streamed ZIP payload directly for "${jobKey}"`);
+    const gcsUri = await uploadDone;
+    console.log(`[Build] ZIP uploaded to GCS: ${gcsUri}`);
 
+    // Save to MongoDB ratioCaches & update download count
+    const updatedBundle = await Bundle.findOneAndUpdate(
+      { id: bundleId },
+      { $set: { [`ratioCaches.${ratioKey}`]: gcsUri }, $inc: { 'stats.downloads': 1 } },
+      { returnDocument: 'after' }
+    );
+
+    resolveJob(gcsUri);
     cropSemaphore.release();
+    processingJobs.delete(jobKey);
 
-    // Fire and forget MongoDB download count update & GCS ratioCaches persistence
-    (async () => {
-      try {
-        await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } });
-        const gcsUri = await gcsUploadPromise;
-        if (gcsUri) {
-          await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${ratioKey}`]: gcsUri } });
-          console.log(`[GCS Cache Saved] Ratio "${ratioKey}" stored to GCS and DB: ${gcsUri}`);
-          resolveJob(gcsUri);
-        } else {
-          resolveJob(null);
-        }
-      } catch (bgErr) {
-        console.warn('[Background Worker Error]', bgErr.message);
-        resolveJob(null);
-      } finally {
-        processingJobs.delete(jobKey);
-      }
-    })();
+    // Return signed URL to client — they download from GCS CDN at full speed
+    const signedUrl = await getGcsSignedUrl(gcsUri);
+    if (!signedUrl) {
+      return res.status(500).json({ error: 'Failed to generate signed download URL' });
+    }
+
+    console.log(`[Build Pipeline SUCCESS] Signed URL returned for "${jobKey}"`);
+    return res.status(200).json({
+      success: true,
+      downloadUrl: signedUrl,
+      downloads: updatedBundle?.stats?.downloads || 0
+    });
 
   } catch (error) {
     console.error('Custom ratio streaming error:', error);

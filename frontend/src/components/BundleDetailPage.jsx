@@ -466,24 +466,25 @@ export default function BundleDetailPage({
     setShowTransferHud(true);
     const stepStart = Date.now();
 
-    // Replace the fake 3-step prep animation with honest elapsed counter
+    // Honest prep timer — shows real elapsed time while server builds ZIP
     const prepTimer = setInterval(() => {
       const elapsedMs = Date.now() - stepStart;
       const elapsedSec = (elapsedMs / 1000).toFixed(1);
-      const prepProgress = Math.min(24, Math.max(5, Math.floor(5 + (elapsedMs / 200))));
+      const prepProgress = Math.min(40, 5 + Math.floor(elapsedMs / 300));
       setHudMetrics(prev => {
-        if (prev.stage.includes('Streaming')) return prev; // stop once delivery starts
+        if (prev.stage.includes('Downloading') || prev.stage.includes('Complete')) return prev;
         return {
           ...prev,
           progress: prepProgress,
-          stage: `Server processing... (${elapsedSec}s)`,
+          stage: `Building ZIP on server... (${elapsedSec}s)`,
           steps: [
-            { label: 'GCS source fetch + crop', status: 'active', duration: `${elapsedSec}s` },
-            { label: 'ZIP stream delivery', status: 'pending', duration: '' }
+            { label: 'Fetching sources & cropping', status: 'active', duration: `${elapsedSec}s` },
+            { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
+            { label: 'Download from GCS CDN', status: 'pending', duration: '' }
           ]
         };
       });
-    }, 100);
+    }, 200);
 
     try {
       let wStr, hStr;
@@ -497,9 +498,7 @@ export default function BundleDetailPage({
 
       const response = await fetch(`${API_URL}/api/custom-ratio`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bundleId: bundle.id,
           widthRatio: wStr,
@@ -508,6 +507,7 @@ export default function BundleDetailPage({
       });
 
       clearInterval(prepTimer);
+      const prepSec = ((Date.now() - stepStart) / 1000).toFixed(1);
 
       if (!response.ok) {
         let errorMessage = 'Failed to process wallpaper bundle';
@@ -518,169 +518,107 @@ export default function BundleDetailPage({
         throw new Error(errorMessage);
       }
 
-      const contentType = response.headers.get('content-type') || '';
+      // Backend ALWAYS returns JSON with a GCS signed URL
+      const data = await response.json();
+
+      if (data.downloads !== undefined) {
+        setDownloadsCount(data.downloads);
+        if (bundle.stats) bundle.stats.downloads = data.downloads;
+      }
+
+      const downloadUrl = data.downloadUrl.startsWith('http')
+        ? data.downloadUrl
+        : `${API_URL}${data.downloadUrl}`;
+
       const finishDownload = () => {
         setShowTransferHud(false);
         setDownloadState('completed');
         setTimeout(() => setDownloadState('idle'), 2500);
       };
 
-      // Case A: Cache Hit or Signed URL (JSON response)
-      if (contentType.includes('application/json')) {
-        const data = await response.json();
+      // Transition: ZIP ready in GCS, starting CDN download
+      setHudMetrics(prev => ({
+        ...prev,
+        progress: 42,
+        stage: 'Downloading from GCS CDN...',
+        steps: [
+          { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
+          { label: 'GCS CDN download', status: 'active', duration: '0.0s' },
+        ]
+      }));
 
-        if (data.downloads !== undefined) {
-          setDownloadsCount(data.downloads);
-          if (bundle.stats) bundle.stats.downloads = data.downloads;
-        }
-
-        const downloadUrl = data.downloadUrl.startsWith('http') ? data.downloadUrl : `${API_URL}${data.downloadUrl}`;
-        const startTime = Date.now();
-        let lastLoaded = 0;
-        let lastTime = startTime;
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', downloadUrl, true);
-        xhr.responseType = 'blob';
-
-        xhr.onprogress = (e) => {
-          const totalBytes = e.lengthComputable && e.total > 0 ? e.total : (18 * 1024 * 1024);
-          const loadedBytes = e.loaded;
-          const pct = Math.min(99, Math.max(25, (loadedBytes / totalBytes) * 100));
-
-          const currentTime = Date.now();
-          const timeDelta = (currentTime - lastTime) / 1000;
-
-          if (timeDelta >= 0.1) {
-            const bytesDelta = loadedBytes - lastLoaded;
-            const speedBps = bytesDelta / timeDelta;
-            const speedMbps = (speedBps * 8) / (1024 * 1024);
-            const remainingBytes = Math.max(0, totalBytes - loadedBytes);
-            const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0.5;
-
-            setHudMetrics({
-              progress: pct,
-              speedMbps: Math.max(4.2, speedMbps),
-              transferredMB: loadedBytes / (1024 * 1024),
-              totalMB: totalBytes / (1024 * 1024),
-              etaSeconds: eta,
-              stage: 'Downloading payload stream...',
-              steps: [
-                { label: 'Cloud asset restore', status: 'done', duration: '0.1s' },
-                { label: 'GCS cache signed URL', status: 'done', duration: '0.0s' },
-                { label: 'Direct GCS stream delivery', status: 'active', duration: `${((Date.now() - startTime)/1000).toFixed(1)}s` }
-              ]
-            });
-
-            lastLoaded = loadedBytes;
-            lastTime = currentTime;
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            const blob = xhr.response;
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(blobUrl);
-
-            setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
-            setTimeout(finishDownload, 1000);
-          } else {
-            window.location.href = downloadUrl;
-            finishDownload();
-          }
-        };
-
-        xhr.onerror = () => {
-          window.location.href = downloadUrl;
-          finishDownload();
-        };
-
-        xhr.send();
-        return;
-      }
-
-      // Case B: Direct Pure RAM Stream (Binary ZIP response)
-      const prepMs = parseInt(response.headers.get('x-prep-ms') || '0', 10);
-      const prepSec = prepMs > 0 ? (prepMs / 1000).toFixed(1) : null;
-      const reader = response.body.getReader();
-      const contentLength = +(response.headers.get('content-length') || response.headers.get('x-content-length') || 0);
-      const chunks = [];
-      let receivedBytes = 0;
-      let firstByteTime = null;
-      const requestSentTime = Date.now();
+      // XHR to GCS signed URL — GCS sends real Content-Length → accurate progress
+      const xhrStart = Date.now();
       let lastLoaded = 0;
-      let lastTime = requestSentTime;
+      let lastTime = xhrStart;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!firstByteTime) firstByteTime = Date.now();
-        chunks.push(value);
-        receivedBytes += value.length;
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', downloadUrl, true);
+      xhr.responseType = 'blob';
+
+      xhr.onprogress = (e) => {
+        const totalBytes = e.lengthComputable && e.total > 0 ? e.total : (60 * 1024 * 1024);
+        const loadedBytes = e.loaded;
+        const pct = Math.min(99, Math.max(43, 42 + (loadedBytes / totalBytes) * 57));
 
         const currentTime = Date.now();
         const timeDelta = (currentTime - lastTime) / 1000;
 
-        if (timeDelta >= 0.1) {
-          const bytesDelta = receivedBytes - lastLoaded;
+        if (timeDelta >= 0.15) {
+          const bytesDelta = loadedBytes - lastLoaded;
           const speedBps = bytesDelta / timeDelta;
           const speedMbps = (speedBps * 8) / (1024 * 1024);
-          const estimatedTotal = contentLength > 0 ? contentLength : (60 * 1024 * 1024);
-          const pct = Math.min(99, Math.max(10, (receivedBytes / estimatedTotal) * 100));
-          const remainingBytes = Math.max(0, estimatedTotal - receivedBytes);
-          const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0;
-          const deliverySec = firstByteTime ? ((currentTime - firstByteTime) / 1000).toFixed(1) : '...';
+          const remainingBytes = Math.max(0, totalBytes - loadedBytes);
+          const eta = speedBps > 0 ? remainingBytes / speedBps : 0;
+          const dlSec = ((currentTime - xhrStart) / 1000).toFixed(1);
 
           setHudMetrics({
             progress: pct,
-            speedMbps: Math.max(0, speedMbps),
-            transferredMB: receivedBytes / (1024 * 1024),
-            totalMB: estimatedTotal / (1024 * 1024),
+            speedMbps,
+            transferredMB: loadedBytes / (1024 * 1024),
+            totalMB: totalBytes / (1024 * 1024),
             etaSeconds: eta,
-            stage: 'Streaming pure RAM payload...',
+            stage: 'Downloading from GCS CDN...',
             steps: [
-              {
-                label: 'Server prep & crop',
-                status: 'done',
-                duration: prepSec ? `${prepSec}s` : '...'
-              },
-              {
-                label: 'Stream delivery',
-                status: 'active',
-                duration: `${deliverySec}s`
-              }
+              { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
+              { label: 'GCS CDN download', status: 'active', duration: `${dlSec}s` },
             ]
           });
 
-          lastLoaded = receivedBytes;
+          lastLoaded = loadedBytes;
           lastTime = currentTime;
         }
-      }
+      };
 
-      const blob = new Blob(chunks, { type: 'application/zip' });
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(blobUrl);
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const blob = xhr.response;
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(blobUrl);
+          setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
+          setTimeout(finishDownload, 1200);
+        } else {
+          window.location.href = downloadUrl;
+          finishDownload();
+        }
+      };
 
-      setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
-      setTimeout(finishDownload, 1000);
+      xhr.onerror = () => {
+        window.location.href = downloadUrl;
+        finishDownload();
+      };
+
+      xhr.send();
 
     } catch (error) {
       clearInterval(prepTimer);
-      console.warn('Custom ratio stream error:', error.message);
-      
+      console.warn('Download error:', error.message);
       if (bundle.driveUrl) {
         const a = document.createElement('a');
         a.href = bundle.driveUrl;
@@ -689,12 +627,15 @@ export default function BundleDetailPage({
         a.click();
         a.remove();
       } else {
-        alert('Server is currently compiling this high-res pack. Please try downloading again in a few seconds.');
+        alert('Failed to prepare download. Please try again.');
       }
       setShowTransferHud(false);
       setDownloadState('idle');
     }
   };
+
+
+
 
   const handleLoginFromPrompt = async () => {
     try {
