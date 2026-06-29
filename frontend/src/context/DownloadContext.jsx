@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -8,8 +8,8 @@ export function DownloadProvider({ children }) {
   const [downloads, setDownloads] = useState([]);
   const [isMinimized, setIsMinimized] = useState(false);
   
-  // Keep active controllers and timers in ref so closures always access latest
   const activeControllersRef = useRef({}); // id -> { abortController, xhr, prepTimer }
+  const isProcessingQueueRef = useRef(false);
 
   const updateDownloadMetrics = useCallback((id, updates) => {
     setDownloads((prev) =>
@@ -28,7 +28,6 @@ export function DownloadProvider({ children }) {
   }, []);
 
   const removeDownload = useCallback((id) => {
-    // Clean up any active timers or network requests
     if (activeControllersRef.current[id]) {
       const { prepTimer, xhr, abortController } = activeControllersRef.current[id];
       if (prepTimer) clearInterval(prepTimer);
@@ -43,79 +42,25 @@ export function DownloadProvider({ children }) {
     removeDownload(id);
   }, [removeDownload]);
 
-  const startDownload = useCallback(async (bundle, selectedDownloadId, customWidth, customHeight, presets) => {
-    const downloadId = `${bundle.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    
-    // Calculate ratio tag
-    let ratioTag = '16:9';
-    let wStr = '16', hStr = '9';
-    if (selectedDownloadId === 'original') {
-      ratioTag = 'Original';
-      wStr = 'original';
-      hStr = 'original';
-    } else if (selectedDownloadId === 'custom') {
-      wStr = customWidth || '16';
-      hStr = customHeight || '9';
-      ratioTag = `${wStr}:${hStr}`;
-    } else {
-      const matched = presets?.find((p) => p.id === selectedDownloadId);
-      if (matched) {
-        ratioTag = matched.label.split(' ')[0];
-        [wStr, hStr] = ratioTag.split(':');
-      }
-    }
-
-    // Predict size for benchmarks
-    const sumBytes = bundle.images.reduce((sum, img) => sum + (img.size || 1500000), 0);
-    let factor = 1.0;
-    if (selectedDownloadId !== 'original') {
-      const w = parseFloat(wStr) || 16;
-      const h = parseFloat(hStr) || 9;
-      const targetRatio = w / h;
-      let sourceW = 16, sourceH = 9;
-      if (bundle.ratio && bundle.ratio.includes(':')) {
-        const parts = bundle.ratio.split(':');
-        sourceW = parseFloat(parts[0]) || 16;
-        sourceH = parseFloat(parts[1]) || 9;
-      }
-      const sourceRatio = sourceW / sourceH;
-      factor = targetRatio > sourceRatio ? sourceRatio / targetRatio : targetRatio / sourceRatio;
-      factor = Math.max(0.05, Math.min(1.0, factor));
-    }
-    const predictedZipBytes = sumBytes * factor * 0.95;
-    const predictedTotalMB = predictedZipBytes / (1024 * 1024);
+  const executeDownloadTask = useCallback(async (item) => {
+    const { id: downloadId, bundle, wStr, hStr, ratioTag, predictedTotalMB, predictedZipBytes } = item;
     const totalImgs = bundle.images?.length || 1;
 
-    const newItem = {
-      id: downloadId,
-      bundle,
-      ratioTag,
-      status: 'downloading', // 'downloading' | 'complete' | 'cancelled'
-      metrics: {
-        progress: 5,
-        speedMbps: 0,
-        transferredMB: 0,
-        totalMB: predictedTotalMB,
-        etaSeconds: 0,
-        stage: `Cropping wallpaper 1/${totalImgs} (0.0s)...`,
-        steps: [
-          { label: `Cropping 1/${totalImgs} wallpapers`, status: 'active', duration: '0.0s' },
-          { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
-          { label: 'Download pack ZIP', status: 'pending', duration: '' }
-        ]
-      }
-    };
-
-    // Add new download at the top of the queue stack
-    setDownloads((prev) => [newItem, ...prev]);
-    setIsMinimized(false); // Auto-expand when a new download starts
+    updateDownloadStatus(downloadId, 'downloading');
+    updateDownloadMetrics(downloadId, {
+      stage: `Cropping wallpaper 1/${totalImgs} (0.0s)...`,
+      steps: [
+        { label: `Cropping 1/${totalImgs} wallpapers`, status: 'active', duration: '0.0s' },
+        { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
+        { label: 'Download pack ZIP', status: 'pending', duration: '' }
+      ]
+    });
 
     const abortController = new AbortController();
     activeControllersRef.current[downloadId] = { abortController };
 
     const stepStart = Date.now();
 
-    // Live wallpaper progress prep timer
     const prepTimer = setInterval(() => {
       const elapsedMs = Date.now() - stepStart;
       const elapsedSec = (elapsedMs / 1000).toFixed(1);
@@ -352,6 +297,87 @@ export function DownloadProvider({ children }) {
       removeDownload(downloadId);
     }
   }, [updateDownloadMetrics, updateDownloadStatus, removeDownload]);
+
+  // Sequential Queue Processor Worker Loop
+  useEffect(() => {
+    const activeDownloading = downloads.find((item) => item.status === 'downloading');
+    const nextQueued = downloads.find((item) => item.status === 'queued');
+
+    if (!activeDownloading && nextQueued && !isProcessingQueueRef.current) {
+      isProcessingQueueRef.current = true;
+      executeDownloadTask(nextQueued).finally(() => {
+        isProcessingQueueRef.current = false;
+      });
+    }
+  }, [downloads, executeDownloadTask]);
+
+  const startDownload = useCallback((bundle, selectedDownloadId, customWidth, customHeight, presets) => {
+    const downloadId = `${bundle.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    
+    let ratioTag = '16:9';
+    let wStr = '16', hStr = '9';
+    if (selectedDownloadId === 'original') {
+      ratioTag = 'Original';
+      wStr = 'original';
+      hStr = 'original';
+    } else if (selectedDownloadId === 'custom') {
+      wStr = customWidth || '16';
+      hStr = customHeight || '9';
+      ratioTag = `${wStr}:${hStr}`;
+    } else {
+      const matched = presets?.find((p) => p.id === selectedDownloadId);
+      if (matched) {
+        ratioTag = matched.label.split(' ')[0];
+        [wStr, hStr] = ratioTag.split(':');
+      }
+    }
+
+    const sumBytes = bundle.images.reduce((sum, img) => sum + (img.size || 1500000), 0);
+    let factor = 1.0;
+    if (selectedDownloadId !== 'original') {
+      const w = parseFloat(wStr) || 16;
+      const h = parseFloat(hStr) || 9;
+      const targetRatio = w / h;
+      let sourceW = 16, sourceH = 9;
+      if (bundle.ratio && bundle.ratio.includes(':')) {
+        const parts = bundle.ratio.split(':');
+        sourceW = parseFloat(parts[0]) || 16;
+        sourceH = parseFloat(parts[1]) || 9;
+      }
+      const sourceRatio = sourceW / sourceH;
+      factor = targetRatio > sourceRatio ? sourceRatio / targetRatio : targetRatio / sourceRatio;
+      factor = Math.max(0.05, Math.min(1.0, factor));
+    }
+    const predictedZipBytes = sumBytes * factor * 0.95;
+    const predictedTotalMB = predictedZipBytes / (1024 * 1024);
+
+    const newItem = {
+      id: downloadId,
+      bundle,
+      ratioTag,
+      wStr,
+      hStr,
+      predictedZipBytes,
+      predictedTotalMB,
+      status: 'queued', // Starts as queued! Worker loop picks it up sequentially
+      metrics: {
+        progress: 0,
+        speedMbps: 0,
+        transferredMB: 0,
+        totalMB: predictedTotalMB,
+        etaSeconds: 0,
+        stage: 'Queued in line...',
+        steps: [
+          { label: 'Queued in line...', status: 'pending', duration: '' },
+          { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
+          { label: 'Download pack ZIP', status: 'pending', duration: '' }
+        ]
+      }
+    };
+
+    setDownloads((prev) => [...prev, newItem]);
+    setIsMinimized(false);
+  }, []);
 
   return (
     <DownloadContext.Provider

@@ -191,9 +191,10 @@ export default function TransferHUD() {
           const { id, bundle, ratioTag, status, metrics } = item;
           const { progress, speedMbps, transferredMB, totalMB, etaSeconds, stage, steps } = metrics;
           const isDone = status === 'complete';
+          const isQueued = status === 'queued';
           const isProcessing = stage?.includes('Cropping') || stage?.includes('Building');
           const isDownloading = stage?.includes('Downloading');
-          const color = '#3b82f6';
+          const color = isQueued ? '#eab308' : '#3b82f6';
           const eta = formatEta(etaSeconds);
 
           return (

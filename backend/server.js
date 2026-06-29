@@ -720,6 +720,18 @@ app.post('/api/custom-ratio', async (req, res) => {
     const archive = archiver('zip', { store: true });
     let uploadDone = Promise.resolve(null);
 
+    let isClientDisconnected = false;
+    req.on('close', () => {
+      if (!res.writableEnded) {
+        isClientDisconnected = true;
+        console.log(`[Client Disconnected] Aborting job "${jobKey}"...`);
+        try { archive.destroy(); } catch (_) {}
+        try { cropSemaphore.release(); } catch (_) {}
+        processingJobs.delete(jobKey);
+        try { rejectJob(new Error('Client disconnected')); } catch (_) {}
+      }
+    });
+
     if (useGcs) {
       const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
       const gcsWriteStream = gcsFile.createWriteStream({
@@ -744,6 +756,10 @@ app.post('/api/custom-ratio', async (req, res) => {
     // Process images one at a time (controls RAM, no OOM)
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     for (let i = 0; i < imagesToProcess.length; i++) {
+      if (isClientDisconnected) {
+        console.log(`[Build Aborted] Skipping remaining images for disconnected job "${jobKey}"`);
+        break;
+      }
       const imgObj = imagesToProcess[i];
       let imgName = `wallpaper_${i + 1}.png`;
       if (typeof imgObj === 'object' && imgObj.name) {
