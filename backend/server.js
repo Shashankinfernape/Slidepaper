@@ -183,10 +183,30 @@ let oauth2Client = null;
 let drive = null;
 let isServiceAccount = false;
 
-// GCS client — reuses existing service account JSON
+// GCS client — reuses service account JSON or environment variable GCS_CREDENTIALS
 const gcsEnabled = !!process.env.GCS_BUCKET_NAME;
-const gcs = gcsEnabled ? new Storage({ keyFilename: SERVICE_ACCOUNT_PATH }) : null;
 const GCS_BUCKET = process.env.GCS_BUCKET_NAME || '';
+let gcs = null;
+
+if (gcsEnabled) {
+  try {
+    const credsJson = process.env.GCS_CREDENTIALS_JSON || process.env.GCS_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    if (credsJson) {
+      const credentials = JSON.parse(credsJson);
+      gcs = new Storage({ credentials });
+      console.log('[GCS] Client initialized successfully from environment credentials JSON.');
+    } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+      gcs = new Storage({ keyFilename: SERVICE_ACCOUNT_PATH });
+      console.log('[GCS] Client initialized successfully from service account file.');
+    } else {
+      gcs = new Storage(); // Fallback to ADC / Application Default Credentials
+      console.log('[GCS] Client initialized using Application Default Credentials.');
+    }
+  } catch (err) {
+    console.error('[GCS Init Error]', err.message);
+    gcs = null;
+  }
+}
 
 // Semaphore: max 2 simultaneous crop jobs on Render to protect RAM
 class Semaphore {
@@ -688,33 +708,34 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
     }
 
-    // BUILD ZIP → GCS ONLY (single pipe, no dual-pipe corruption)
+    // BUILD ZIP → GCS OR DIRECT STREAM FALLBACK (single pipe only)
     const safeFilename = `${dbBundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${ratioKey.replace(':', 'x')}.zip`;
     const destGcsPath = `bundles/${bundleId}_${ratioKey.replace(':', 'x')}.zip`;
+    const useGcs = !!(gcsEnabled && GCS_BUCKET && gcs);
 
-    if (!gcsEnabled || !GCS_BUCKET) {
-      cropSemaphore.release();
-      processingJobs.delete(jobKey);
-      resolveJob(null); // resolve cleanly — rejectJob() causes unhandled rejection crash in Node 20
-      return res.status(503).json({ error: 'GCS storage not configured. Please set GCS_BUCKET_NAME environment variable on Render.' });
-    }
-
-    console.log(`[Build Pipeline] Building ZIP for "${jobKey}"...`);
+    console.log(`[Build Pipeline] Building ZIP for "${jobKey}" (useGcs=${useGcs})...`);
     const archive = archiver('zip', { store: true });
-    const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
-    const gcsWriteStream = gcsFile.createWriteStream({
-      resumable: true,
-      contentType: 'application/zip',
-      metadata: { contentDisposition: `attachment; filename="${safeFilename}"` }
-    });
+    let uploadDone = Promise.resolve(null);
 
-    // SINGLE pipe — no backpressure conflict, no corruption possible
-    archive.pipe(gcsWriteStream);
-
-    const uploadDone = new Promise((resolve, reject) => {
-      gcsWriteStream.on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`));
-      gcsWriteStream.on('error', reject);
-    });
+    if (useGcs) {
+      const gcsFile = gcs.bucket(GCS_BUCKET).file(destGcsPath);
+      const gcsWriteStream = gcsFile.createWriteStream({
+        resumable: true,
+        contentType: 'application/zip',
+        metadata: { contentDisposition: `attachment; filename="${safeFilename}"` }
+      });
+      // SINGLE pipe to GCS
+      archive.pipe(gcsWriteStream);
+      uploadDone = new Promise((resolve, reject) => {
+        gcsWriteStream.on('finish', () => resolve(`gs://${GCS_BUCKET}/${destGcsPath}`));
+        gcsWriteStream.on('error', reject);
+      });
+    } else {
+      // Fallback: SINGLE pipe directly to client response
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+      archive.pipe(res);
+    }
 
     // Process images one at a time (controls RAM, no OOM)
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
@@ -731,7 +752,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       let imgBuffer = null;
 
       // Source 1: GCS (fast — same Google network as Render)
-      if (gcsEnabled) {
+      if (useGcs) {
         try {
           const gcsSourcePath = typeof imgObj === 'object' && imgObj.gcsPath
             ? imgObj.gcsPath
@@ -794,40 +815,50 @@ app.post('/api/custom-ratio', async (req, res) => {
     }
 
     await archive.finalize();
-    const zipSizeBytes = archive.pointer(); // exact ZIP size in bytes — no GCS query needed
-    const gcsUri = await uploadDone;
-    console.log(`[Build] ZIP uploaded to GCS: ${gcsUri} (${(zipSizeBytes / 1024 / 1024).toFixed(2)} MB)`);
+    const zipSizeBytes = archive.pointer(); // exact ZIP size in bytes
 
-    // Save GCS URI + exact ZIP size to MongoDB
-    const updatedBundle = await Bundle.findOneAndUpdate(
-      { id: bundleId },
-      {
-        $set: {
-          [`ratioCaches.${ratioKey}`]: gcsUri,
-          [`ratioCacheSizes.${ratioKey}`]: zipSizeBytes
-        },
-        $inc: { 'stats.downloads': 1 }
-      },
-      { returnDocument: 'after' }
-    );
+    if (useGcs) {
+      try {
+        const gcsUri = await uploadDone;
+        console.log(`[Build] ZIP uploaded to GCS: ${gcsUri} (${(zipSizeBytes / 1024 / 1024).toFixed(2)} MB)`);
+        if (gcsUri) {
+          const updatedBundle = await Bundle.findOneAndUpdate(
+            { id: bundleId },
+            {
+              $set: {
+                [`ratioCaches.${ratioKey}`]: gcsUri,
+                [`ratioCacheSizes.${ratioKey}`]: zipSizeBytes
+              },
+              $inc: { 'stats.downloads': 1 }
+            },
+            { returnDocument: 'after' }
+          );
 
-    resolveJob(gcsUri);
-    cropSemaphore.release();
-    processingJobs.delete(jobKey);
+          resolveJob(gcsUri);
+          cropSemaphore.release();
+          processingJobs.delete(jobKey);
 
-    // Return signed URL + exact size to client
-    const signedUrl = await getGcsSignedUrl(gcsUri);
-    if (!signedUrl) {
-      return res.status(500).json({ error: 'Failed to generate signed download URL' });
+          const signedUrl = await getGcsSignedUrl(gcsUri);
+          if (signedUrl) {
+            console.log(`[Build Pipeline SUCCESS] Signed URL returned for "${jobKey}" — ${(zipSizeBytes / 1024 / 1024).toFixed(2)} MB`);
+            return res.status(200).json({
+              success: true,
+              downloadUrl: signedUrl,
+              zipSizeBytes,
+              downloads: updatedBundle?.stats?.downloads || 0
+            });
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('[Build GCS Upload Warning]', uploadErr.message);
+      }
     }
 
-    console.log(`[Build Pipeline SUCCESS] Signed URL returned for "${jobKey}" — ${(zipSizeBytes / 1024 / 1024).toFixed(2)} MB`);
-    return res.status(200).json({
-      success: true,
-      downloadUrl: signedUrl,
-      zipSizeBytes,
-      downloads: updatedBundle?.stats?.downloads || 0
-    });
+    // Direct streaming complete
+    await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } });
+    cropSemaphore.release();
+    processingJobs.delete(jobKey);
+    resolveJob(null);
 
   } catch (error) {
     console.error('Custom ratio streaming error:', error);

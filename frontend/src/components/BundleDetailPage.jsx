@@ -518,113 +518,127 @@ export default function BundleDetailPage({
         throw new Error(errorMessage);
       }
 
-      // Backend ALWAYS returns JSON with a GCS signed URL
-      const data = await response.json();
-
-      if (data.downloads !== undefined) {
-        setDownloadsCount(data.downloads);
-        if (bundle.stats) bundle.stats.downloads = data.downloads;
-      }
-
-      const downloadUrl = data.downloadUrl.startsWith('http')
-        ? data.downloadUrl
-        : `${API_URL}${data.downloadUrl}`;
-
+      const contentType = response.headers.get('content-type') || '';
       const finishDownload = () => {
         setShowTransferHud(false);
         setDownloadState('completed');
         setTimeout(() => setDownloadState('idle'), 2500);
       };
 
-      // Exact ZIP size from backend (archive.pointer() — always accurate)
-      const zipSizeBytes = data.zipSizeBytes || 0;
-      const knownTotalMB = zipSizeBytes > 0 ? zipSizeBytes / (1024 * 1024) : 0;
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
 
-      // Transition: ZIP ready in GCS, starting CDN download
-      setHudMetrics(prev => ({
-        ...prev,
-        progress: 42,
-        stage: 'Downloading from GCS CDN...',
-        totalMB: knownTotalMB || prev.totalMB,
-        steps: [
-          { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
-          { label: 'GCS CDN download', status: 'active', duration: '0.0s' },
-        ]
-      }));
-
-      // XHR to GCS signed URL — GCS sends real Content-Length → accurate progress
-      const xhrStart = Date.now();
-      let lastLoaded = 0;
-      let lastTime = xhrStart;
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', downloadUrl, true);
-      xhr.responseType = 'blob';
-
-      xhr.onprogress = (e) => {
-        // Priority: 1) GCS Content-Length (e.total), 2) backend zipSizeBytes, 3) 0 (unknown)
-        const totalBytes = (e.lengthComputable && e.total > 0)
-          ? e.total
-          : (zipSizeBytes > 0 ? zipSizeBytes : 0);
-        const loadedBytes = e.loaded;
-        const pct = totalBytes > 0
-          ? Math.min(99, Math.max(43, 42 + (loadedBytes / totalBytes) * 57))
-          : Math.min(99, 43 + Math.floor(loadedBytes / (1024 * 1024)));
-
-        const currentTime = Date.now();
-        const timeDelta = (currentTime - lastTime) / 1000;
-
-        if (timeDelta >= 0.15) {
-          const bytesDelta = loadedBytes - lastLoaded;
-          const speedBps = bytesDelta / timeDelta;
-          const speedMbps = (speedBps * 8) / (1024 * 1024);
-          const remainingBytes = totalBytes > 0 ? Math.max(0, totalBytes - loadedBytes) : 0;
-          const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
-          const dlSec = ((currentTime - xhrStart) / 1000).toFixed(1);
-
-          setHudMetrics({
-            progress: pct,
-            speedMbps,
-            transferredMB: loadedBytes / (1024 * 1024),
-            totalMB: totalBytes > 0 ? totalBytes / (1024 * 1024) : knownTotalMB,
-            etaSeconds: eta,
-            stage: 'Downloading from GCS CDN...',
-            steps: [
-              { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
-              { label: 'GCS CDN download', status: 'active', duration: `${dlSec}s` },
-            ]
-          });
-
-          lastLoaded = loadedBytes;
-          lastTime = currentTime;
+        if (data.downloads !== undefined) {
+          setDownloadsCount(data.downloads);
+          if (bundle.stats) bundle.stats.downloads = data.downloads;
         }
-      };
 
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          const blob = xhr.response;
-          const blobUrl = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(blobUrl);
-          setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
-          setTimeout(finishDownload, 1200);
-        } else {
+        const downloadUrl = data.downloadUrl.startsWith('http')
+          ? data.downloadUrl
+          : `${API_URL}${data.downloadUrl}`;
+
+        // Exact ZIP size from backend (archive.pointer() — always accurate)
+        const zipSizeBytes = data.zipSizeBytes || 0;
+        const knownTotalMB = zipSizeBytes > 0 ? zipSizeBytes / (1024 * 1024) : 0;
+
+        // Transition: ZIP ready in GCS, starting CDN download
+        setHudMetrics(prev => ({
+          ...prev,
+          progress: 42,
+          stage: 'Downloading from GCS CDN...',
+          totalMB: knownTotalMB || prev.totalMB,
+          steps: [
+            { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
+            { label: 'GCS CDN download', status: 'active', duration: '0.0s' },
+          ]
+        }));
+
+        // XHR to GCS signed URL — GCS sends real Content-Length → accurate progress
+        const xhrStart = Date.now();
+        let lastLoaded = 0;
+        let lastTime = xhrStart;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', downloadUrl, true);
+        xhr.responseType = 'blob';
+
+        xhr.onprogress = (e) => {
+          const totalBytes = (e.lengthComputable && e.total > 0)
+            ? e.total
+            : (zipSizeBytes > 0 ? zipSizeBytes : 0);
+          const loadedBytes = e.loaded;
+          const pct = totalBytes > 0
+            ? Math.min(99, Math.max(43, 42 + (loadedBytes / totalBytes) * 57))
+            : Math.min(99, 43 + Math.floor(loadedBytes / (1024 * 1024)));
+
+          const currentTime = Date.now();
+          const timeDelta = (currentTime - lastTime) / 1000;
+
+          if (timeDelta >= 0.15) {
+            const bytesDelta = loadedBytes - lastLoaded;
+            const speedBps = bytesDelta / timeDelta;
+            const speedMbps = (speedBps * 8) / (1024 * 1024);
+            const remainingBytes = totalBytes > 0 ? Math.max(0, totalBytes - loadedBytes) : 0;
+            const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
+            const dlSec = ((currentTime - xhrStart) / 1000).toFixed(1);
+
+            setHudMetrics({
+              progress: pct,
+              speedMbps,
+              transferredMB: loadedBytes / (1024 * 1024),
+              totalMB: totalBytes > 0 ? totalBytes / (1024 * 1024) : knownTotalMB,
+              etaSeconds: eta,
+              stage: 'Downloading from GCS CDN...',
+              steps: [
+                { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
+                { label: 'GCS CDN download', status: 'active', duration: `${dlSec}s` },
+              ]
+            });
+
+            lastLoaded = loadedBytes;
+            lastTime = currentTime;
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const blob = xhr.response;
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(blobUrl);
+            setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
+            setTimeout(finishDownload, 1200);
+          } else {
+            window.location.href = downloadUrl;
+            finishDownload();
+          }
+        };
+
+        xhr.onerror = () => {
           window.location.href = downloadUrl;
           finishDownload();
-        }
-      };
+        };
 
-      xhr.onerror = () => {
-        window.location.href = downloadUrl;
-        finishDownload();
-      };
-
-      xhr.send();
+        xhr.send();
+      } else {
+        // Fallback: Direct binary ZIP stream response
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
+        setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
+        setTimeout(finishDownload, 1200);
+      }
 
     } catch (error) {
       clearInterval(prepTimer);
