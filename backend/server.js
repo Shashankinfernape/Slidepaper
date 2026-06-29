@@ -816,17 +816,21 @@ app.post('/api/custom-ratio', async (req, res) => {
           const meta = await s.metadata();
           const targetAspect = wRatio / hRatio;
           const currentAspect = meta.width / meta.height;
-          let cropW = meta.width, cropH = meta.height;
-          if (currentAspect > targetAspect) {
-            cropW = Math.round(meta.height * targetAspect);
-          } else {
-            cropH = Math.round(meta.width / targetAspect);
+          
+          // Only crop if target aspect ratio differs from source image (1% tolerance)
+          if (Math.abs(currentAspect - targetAspect) > 0.01) {
+            let cropW = meta.width, cropH = meta.height;
+            if (currentAspect > targetAspect) {
+              cropW = Math.round(meta.height * targetAspect);
+            } else {
+              cropH = Math.round(meta.width / targetAspect);
+            }
+            const left = Math.max(0, Math.round((meta.width - cropW) / 2));
+            const top  = Math.max(0, Math.round((meta.height - cropH) / 2));
+            finalBuffer = await s
+              .extract({ left, top, width: cropW, height: cropH })
+              .toBuffer();
           }
-          const left = Math.max(0, Math.round((meta.width - cropW) / 2));
-          const top  = Math.max(0, Math.round((meta.height - cropH) / 2));
-          finalBuffer = await s
-            .extract({ left, top, width: cropW, height: cropH })
-            .toBuffer();
         } catch (cropErr) {
           console.warn(`[Build] Crop failed for image ${i}, using original:`, cropErr.message);
         }
