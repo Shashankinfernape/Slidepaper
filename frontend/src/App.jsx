@@ -7,6 +7,8 @@ import WallpaperGrid from './components/WallpaperGrid';
 import BundleDetailPage from './components/BundleDetailPage';
 import ChannelPage from './components/ChannelPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DownloadProvider } from './context/DownloadContext';
+import TransferHUD from './components/TransferHUD';
 import AdminDashboard from './components/AdminDashboard';
 import LegalModal from './components/LegalModal';
 import NotificationDropdown from './components/NotificationDropdown';
@@ -986,6 +988,7 @@ function AppContent() {
           </div>
         </div>
       )}
+      <TransferHUD />
     </div>
   );
 }
@@ -993,7 +996,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <DownloadProvider>
+        <AppContent />
+      </DownloadProvider>
     </AuthProvider>
   );
 }

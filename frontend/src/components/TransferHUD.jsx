@@ -1,14 +1,15 @@
-import { Download, Zap, Clock, X, CheckCircle2 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { Download, Zap, Clock, X, CheckCircle2, Minus, Maximize2 } from 'lucide-react';
+import { useDownload } from '../context/DownloadContext';
 
-// ─── Keyframe injection (once) ───────────────────────────────────────────────
-const STYLE_ID = 'transfer-hud-styles';
+// ─── Keyframe injection ───────────────────────────────────────────────────────
+const STYLE_ID = 'transfer-hud-multi-styles';
 if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
   const s = document.createElement('style');
   s.id = STYLE_ID;
   s.textContent = `
     @keyframes hudSlideUp {
-      from { opacity: 0; transform: translateY(18px) scale(0.97); }
+      from { opacity: 0; transform: translateY(24px) scale(0.96); }
       to   { opacity: 1; transform: translateY(0)   scale(1);    }
     }
     @keyframes hudSpin {
@@ -19,27 +20,18 @@ if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
       0%, 100% { opacity: 1;   transform: scale(1);    }
       50%      { opacity: 0.6; transform: scale(0.92); }
     }
-    @keyframes hudShimmer {
-      0%   { background-position: -400px 0; }
-      100% { background-position:  400px 0; }
-    }
-    @keyframes hudGlow {
-      0%, 100% { box-shadow: 0 0 0px 0px rgba(129,201,149,0); }
-      50%      { box-shadow: 0 0 18px 4px rgba(129,201,149,0.18); }
-    }
-    @keyframes hudBarPop {
-      0%   { transform: scaleY(0.4); opacity: 0; }
-      100% { transform: scaleY(1);   opacity: 1; }
-    }
     @keyframes hudFadeIn {
       from { opacity: 0; }
       to   { opacity: 1; }
+    }
+    @keyframes hudMinMorph {
+      from { opacity: 0; transform: scale(0.8) translateY(-10px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0);     }
     }
   `;
   document.head.appendChild(s);
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 const formatEta = (sec) => {
   if (!sec || sec <= 0 || !isFinite(sec)) return null;
   if (sec < 60) return `${Math.ceil(sec)}s left`;
@@ -50,25 +42,16 @@ const formatEta = (sec) => {
 
 const fmt = (n, d = 1) => (isFinite(n) && n > 0 ? n.toFixed(d) : '0');
 
-// ─── Orbital ring SVG ────────────────────────────────────────────────────────
 function OrbitalIcon({ isProcessing, isDone, color }) {
-  const size = 38;
-  const r = 15;
+  const size = 34;
+  const r = 13;
   const cx = size / 2;
   const circumference = 2 * Math.PI * r;
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      {/* SVG ring */}
       <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0 }}>
-        {/* Track */}
-        <circle
-          cx={cx} cy={cx} r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth="2"
-        />
-        {/* Progress arc or spinning arc */}
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
         <circle
           cx={cx} cy={cx} r={r}
           fill="none"
@@ -79,313 +62,252 @@ function OrbitalIcon({ isProcessing, isDone, color }) {
           strokeDashoffset={isDone ? 0 : isProcessing ? circumference * 0.72 : circumference * 0.3}
           style={{
             transformOrigin: `${cx}px ${cx}px`,
-            animation: isDone ? 'none' : isProcessing
-              ? 'hudSpin 1.1s linear infinite'
-              : 'hudSpin 2s linear infinite',
+            animation: isDone ? 'none' : isProcessing ? 'hudSpin 1.1s linear infinite' : 'hudSpin 2s linear infinite',
             transition: 'stroke-dashoffset 0.5s ease',
           }}
           transform={`rotate(-90 ${cx} ${cx})`}
         />
       </svg>
-      {/* Center icon */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        animation: isDone ? 'none' : isProcessing ? 'hudPulse 1.8s ease-in-out infinite' : 'none'
-      }}>
-        {isDone
-          ? <CheckCircle2 size={15} color="#81c995" />
-          : <Download size={14} color={color} />
-        }
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {isDone ? <CheckCircle2 size={14} color="#81c995" /> : <Download size={13} color={color} />}
       </div>
     </div>
   );
 }
 
-// ─── Progress bar ─────────────────────────────────────────────────────────────
-function ProgressBar({ progress, isProcessing, isDone, color }) {
-  const shimmerBg = `linear-gradient(90deg,
-    transparent 0%,
-    rgba(255,255,255,0.08) 40%,
-    rgba(255,255,255,0.15) 50%,
-    rgba(255,255,255,0.08) 60%,
-    transparent 100%
-  )`;
+export default function TransferHUD() {
+  const { downloads, isMinimized, setIsMinimized, cancelDownload } = useDownload();
 
-  return (
-    <div style={{
-      height: '4px',
-      width: '100%',
-      background: 'rgba(255,255,255,0.07)',
-      borderRadius: '99px',
-      overflow: 'hidden',
-      position: 'relative',
-      animation: 'hudBarPop 0.35s cubic-bezier(0.34,1.56,0.64,1)',
-    }}>
-      {/* Fill */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        width: `${Math.min(100, Math.max(isDone ? 100 : 0, progress))}%`,
-        background: isDone ? '#81c995' : `linear-gradient(90deg, ${color}aa, ${color})`,
-        borderRadius: '99px',
-        transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)',
-      }} />
-      {/* Shimmer overlay when processing */}
-      {isProcessing && !isDone && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: shimmerBg,
-          backgroundSize: '400px 100%',
-          animation: 'hudShimmer 1.6s linear infinite',
-        }} />
-      )}
-    </div>
-  );
-}
+  if (!downloads || downloads.length === 0) return null;
 
-// ─── Main HUD ────────────────────────────────────────────────────────────────
-export default function TransferHUD({
-  type = 'download',
-  fileName,
-  progress = 0,
-  speedMbps = 0,
-  transferredMB = 0,
-  totalMB = 0,
-  etaSeconds = 0,
-  stage = '',
-  steps = [],
-  onClose,
-}) {
-  const isDone = progress >= 100;
-  const isProcessing = !isDone && (stage.toLowerCase().includes('build') || stage.toLowerCase().includes('processing') || stage.toLowerCase().includes('preparing'));
-  const isDownloading = !isDone && !isProcessing;
+  // Render minimized notification bar pill
+  if (isMinimized) {
+    const activeCount = downloads.filter(d => d.status === 'downloading').length;
+    const topDownload = downloads[0];
+    const topPct = topDownload?.metrics?.progress || 0;
 
-  // Subtle entrance
-  const [visible, setVisible] = useState(false);
-  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
-
-  // Phase color
-  const color = isDone ? '#81c995' : isProcessing ? '#8ab4f8' : '#81c995';
-
-  // Active step
-  const activeStep = steps.find(s => s.status === 'active');
-  const doneSteps = steps.filter(s => s.status === 'done');
-
-  const eta = formatEta(etaSeconds);
-  const pct = Math.round(Math.min(100, Math.max(0, progress)));
-
-  return (
-    <div style={{
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: 999999,
-      width: 'min(calc(100vw - 32px), 348px)',
-
-      // Card
-      background: 'rgba(10, 10, 12, 0.97)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,0.07)',
-      borderRadius: '16px',
-      padding: '14px 16px 14px',
-      boxShadow: `0 20px 60px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.04), ${isProcessing ? '0 0 30px rgba(138,180,248,0.08)' : isDone ? '0 0 30px rgba(129,201,149,0.12)' : '0 0 24px rgba(129,201,149,0.08)'}`,
-      color: 'var(--text-primary, #f3f4f6)',
-      fontFamily: 'var(--font-body, Inter, sans-serif)',
-
-      // Entrance
-      opacity: visible ? 1 : 0,
-      transform: visible ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.97)',
-      transition: 'opacity 0.28s cubic-bezier(0.16,1,0.3,1), transform 0.28s cubic-bezier(0.16,1,0.3,1), box-shadow 0.6s ease',
-    }}>
-
-      {/* ── Header row ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '11px' }}>
-        {/* Orbital ring icon */}
-        <OrbitalIcon isProcessing={isProcessing} isDone={isDone} color={color} />
-
-        {/* Title + stage */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: '0.83rem',
-            fontWeight: 700,
-            fontFamily: 'var(--font-heading, Outfit, sans-serif)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            letterSpacing: '-0.01em',
-            marginBottom: '2px',
-          }}>
-            {fileName || 'Downloading Pack'}
-          </div>
-          <div style={{
-            fontSize: '0.71rem',
-            color: isDone ? '#81c995' : color,
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-            transition: 'color 0.4s ease',
-          }}>
-            {/* Phase indicator dot */}
-            <span style={{
-              width: '5px', height: '5px',
-              borderRadius: '50%',
-              background: isDone ? '#81c995' : color,
-              display: 'inline-block',
-              animation: isDone ? 'none' : 'hudPulse 1.4s ease-in-out infinite',
-              flexShrink: 0,
-            }} />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {isDone
-                ? 'Download complete'
-                : stage || (isProcessing ? 'Building ZIP...' : 'Downloading from GCS...')}
-            </span>
-          </div>
-        </div>
-
-        {/* Right: pct + close */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            color: isDone ? '#81c995' : color,
-            fontFamily: 'var(--font-heading, Outfit, sans-serif)',
-            letterSpacing: '-0.01em',
-            transition: 'color 0.4s ease',
-          }}>
-            {pct}%
-          </div>
-          {onClose && (
-            <button onClick={onClose} style={{
-              background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.3)',
-              cursor: 'pointer', padding: '0',
-              display: 'flex', alignItems: 'center',
-              lineHeight: 1,
-              transition: 'color 0.2s',
-            }}
-              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Step pills (only when steps exist and not done) ── */}
-      {steps.length > 0 && !isDone && (
-        <div style={{
+    return (
+      <div
+        onClick={() => setIsMinimized(false)}
+        title="Click to expand Download Manager"
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          background: 'rgba(13, 14, 18, 0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '99px',
+          padding: '8px 16px',
           display: 'flex',
-          gap: '5px',
-          marginBottom: '10px',
-          flexWrap: 'wrap',
-          animation: 'hudFadeIn 0.3s ease',
-        }}>
-          {steps.map((s, i) => {
-            const isActive = s.status === 'active';
-            const isDoneStep = s.status === 'done';
-            return (
-              <div key={i} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 8px',
-                borderRadius: '99px',
-                fontSize: '0.67rem',
-                fontWeight: 600,
-                letterSpacing: '0.01em',
-                background: isDoneStep
-                  ? 'rgba(129,201,149,0.1)'
-                  : isActive
-                    ? `rgba(138,180,248,0.12)`
-                    : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isDoneStep
-                  ? 'rgba(129,201,149,0.25)'
-                  : isActive
-                    ? 'rgba(138,180,248,0.25)'
-                    : 'rgba(255,255,255,0.06)'}`,
-                color: isDoneStep ? '#81c995' : isActive ? '#8ab4f8' : 'rgba(255,255,255,0.3)',
-                transition: 'all 0.3s ease',
-                whiteSpace: 'nowrap',
-              }}>
-                <span style={{ fontSize: '0.6rem' }}>
-                  {isDoneStep ? '✓' : isActive ? '⚡' : '○'}
-                </span>
-                {s.label}
-                {s.duration && isActive && (
-                  <span style={{ opacity: 0.7, fontFamily: 'monospace', fontSize: '0.63rem' }}>
-                    {s.duration}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          alignItems: 'center',
+          gap: '10px',
+          cursor: 'pointer',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+          animation: 'hudMinMorph 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        <OrbitalIcon isProcessing={topDownload?.metrics?.stage?.includes('Cropping')} isDone={topDownload?.status === 'complete'} color="#3b82f6" />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f3f4f6', fontFamily: 'Outfit, sans-serif' }}>
+            Downloading {activeCount} Pack{activeCount > 1 ? 's' : ''} ({topPct}%)
+          </div>
+          <div style={{ fontSize: '0.67rem', color: 'rgba(255,255,255,0.5)' }}>
+            Click to view queue stack
+          </div>
         </div>
-      )}
+        <Maximize2 size={14} color="rgba(255,255,255,0.5)" style={{ marginLeft: '4px' }} />
+      </div>
+    );
+  }
 
-      {/* ── Stats row ── */}
-      {(isDownloading || isDone || transferredMB > 0) && (
-        <div style={{
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 9999,
+        width: '380px',
+        maxWidth: 'calc(100vw - 32px)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        animation: 'hudSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+      }}
+    >
+      {/* HUD Header Bar */}
+      <div
+        style={{
+          background: 'rgba(13, 14, 18, 0.94)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '16px 16px 6px 6px',
+          padding: '10px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          fontSize: '0.72rem',
-          marginBottom: '9px',
-          animation: 'hudFadeIn 0.4s ease',
-        }}>
-          {/* Speed */}
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: '4px',
-            color: '#f3f4f6', fontWeight: 600,
-          }}>
-            <Zap size={11} color={color} fill={color} />
-            {fmt(speedMbps)} Mbps
+          boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Download size={15} color="#3b82f6" />
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f3f4f6', fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.01em' }}>
+            Download Manager Queue ({downloads.length})
           </span>
-
-          {/* Bytes */}
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums' }}>
-            {fmt(transferredMB)} <span style={{ opacity: 0.4 }}>/ {fmt(totalMB)} MB</span>
-          </span>
-
-          {/* ETA */}
-          {eta && (
-            <span style={{
-              display: 'flex', alignItems: 'center', gap: '3px',
-              color: 'rgba(255,255,255,0.45)',
-            }}>
-              <Clock size={10} />
-              {eta}
-            </span>
-          )}
         </div>
-      )}
-
-      {/* ── Processing stats (no speed yet) ── */}
-      {isProcessing && (
-        <div style={{
-          fontSize: '0.72rem',
-          color: 'rgba(255,255,255,0.6)',
-          marginBottom: '9px',
-          fontWeight: 500,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}>
-          <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: color, animation: 'hudPulse 1.2s infinite' }}></span>
-          {activeStep?.label || stage || 'Render is cropping wallpapers...'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={() => setIsMinimized(true)}
+            title="Minimize to Notification Bar"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: 'none',
+              borderRadius: '6px',
+              color: 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              padding: '4px 6px',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+          >
+            <Minus size={13} />
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* ── Progress bar ── */}
-      <ProgressBar
-        progress={progress}
-        isProcessing={isProcessing}
-        isDone={isDone}
-        color={color}
-      />
+      {/* Stacked Cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto', paddingRight: '2px' }}>
+        {downloads.map((item) => {
+          const { id, bundle, ratioTag, status, metrics } = item;
+          const { progress, speedMbps, transferredMB, totalMB, etaSeconds, stage, steps } = metrics;
+          const isDone = status === 'complete';
+          const isProcessing = stage?.includes('Cropping') || stage?.includes('Building');
+          const isDownloading = stage?.includes('Downloading');
+          const color = '#3b82f6';
+          const eta = formatEta(etaSeconds);
 
+          return (
+            <div
+              key={id}
+              style={{
+                background: 'rgba(13, 14, 18, 0.92)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: isDone ? '1px solid rgba(129,201,149,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
+                padding: '14px 16px 12px 16px',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              {/* Top Row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                  <OrbitalIcon isProcessing={isProcessing} isDone={isDone} color={color} />
+                  <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f3f4f6', fontFamily: 'Outfit, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {bundle?.name || 'Wallpaper Pack'}{' '}
+                      <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>({ratioTag})</span>
+                    </div>
+                    <span style={{ fontSize: '0.69rem', color: isDone ? '#81c995' : 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {isDone ? 'Download complete' : stage}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: 700, color: isDone ? '#81c995' : color, fontFamily: 'Outfit, sans-serif' }}>
+                    {progress}%
+                  </span>
+                  <button
+                    onClick={() => cancelDownload(id)}
+                    title="Cancel Download"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(255,255,255,0.3)',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      transition: 'color 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Step Pills */}
+              {steps && steps.length > 0 && !isDone && (
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                  {steps.map((s, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '99px',
+                        fontSize: '0.66rem',
+                        fontWeight: 600,
+                        background: s.status === 'done' ? 'rgba(129,201,149,0.1)' : s.status === 'active' ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.04)',
+                        color: s.status === 'done' ? '#81c995' : s.status === 'active' ? '#60a5fa' : 'rgba(255,255,255,0.3)',
+                        border: s.status === 'done' ? '1px solid rgba(129,201,149,0.2)' : s.status === 'active' ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
+                      }}
+                    >
+                      {s.status === 'active' ? '⚡ ' : s.status === 'done' ? '✓ ' : '○ '}
+                      {s.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Bytes and Speed stats */}
+              {(isDownloading || isDone || transferredMB > 0) && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', marginBottom: '8px', color: 'rgba(255,255,255,0.5)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f3f4f6', fontWeight: 600 }}>
+                    <Zap size={11} color={color} fill={color} />
+                    {fmt(speedMbps)} Mbps
+                  </span>
+                  <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {fmt(transferredMB)} <span style={{ opacity: 0.4 }}>/ {fmt(totalMB)} MB</span>
+                  </span>
+                  {eta && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', color: 'rgba(255,255,255,0.45)' }}>
+                      <Clock size={10} />
+                      {eta}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Progress bar */}
+              <div style={{ height: '4px', width: '100%', borderRadius: '99px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${progress}%`,
+                    borderRadius: '99px',
+                    background: isDone ? '#81c995' : 'linear-gradient(90deg, #3b82f6, #60a5fa)',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

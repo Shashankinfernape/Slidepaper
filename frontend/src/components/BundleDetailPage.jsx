@@ -10,8 +10,8 @@ import {
 import { WALLPAPER_BUNDLES } from '../data';
 import BundleCard from './BundleCard';
 import GoogleAd from './GoogleAd';
-import TransferHUD from './TransferHUD';
 import { useAuth } from '../context/AuthContext';
+import { useDownload } from '../context/DownloadContext';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -93,6 +93,7 @@ export default function BundleDetailPage({
   bundles = []
 }) {
   const { userProfile } = useAuth();
+  const { startDownload } = useDownload();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -451,281 +452,8 @@ export default function BundleDetailPage({
   };
 
   const handleDownload = async () => {
-    if (downloadState !== 'idle') return;
     if (selectedDownloadId === 'custom' && !customIsValid) return;
-
-    setDownloadState('downloading');
-    setShowTransferHud(true);
-    const totalImgs = bundle?.images?.length || 1;
-    setHudMetrics({
-      progress: 5,
-      speedMbps: 0,
-      transferredMB: 0,
-      totalMB: predictedTotalMB,
-      etaSeconds: 0,
-      stage: `Cropping wallpaper 1/${totalImgs} (0.0s)...`,
-      steps: [
-        { label: `Cropping 1/${totalImgs} wallpapers`, status: 'active', duration: '0.0s' },
-        { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
-        { label: 'Download pack ZIP', status: 'pending', duration: '' }
-      ]
-    });
-    const stepStart = Date.now();
-
-    // Live wallpaper progress timer based on total bundle wallpapers
-    const prepTimer = setInterval(() => {
-      const elapsedMs = Date.now() - stepStart;
-      const elapsedSec = (elapsedMs / 1000).toFixed(1);
-      // Realistic cloud fetch + crop speed (~1.4s per wallpaper for Drive bundles)
-      const currImg = Math.min(totalImgs, Math.max(1, Math.floor((elapsedMs / 1000) / 1.4) + 1));
-      const prepProgress = Math.min(40, Math.max(5, Math.floor((currImg / totalImgs) * 38)));
-
-      setHudMetrics(prev => {
-        if (prev.stage.includes('Downloading') || prev.stage.includes('Complete')) return prev;
-        return {
-          ...prev,
-          progress: prepProgress,
-          stage: `Cropping wallpaper ${currImg}/${totalImgs} (${elapsedSec}s)...`,
-          steps: [
-            { label: `Cropping wallpaper ${currImg}/${totalImgs}`, status: 'active', duration: `${elapsedSec}s` },
-            { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
-            { label: 'Download pack ZIP', status: 'pending', duration: '' }
-          ]
-        };
-      });
-    }, 200);
-
-    try {
-      let wStr, hStr;
-      if (selectedDownloadId === 'original') {
-        wStr = 'original';
-        hStr = 'original';
-      } else {
-        const ratioStr = selectedDownloadId === 'custom' ? customRatio : (selectedDownload.ratio || '16:9');
-        [wStr, hStr] = ratioStr.split(':');
-      }
-
-      const response = await fetch(`${API_URL}/api/custom-ratio`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bundleId: bundle.id,
-          widthRatio: wStr,
-          heightRatio: hStr,
-        }),
-      });
-
-      clearInterval(prepTimer);
-      const prepSec = ((Date.now() - stepStart) / 1000).toFixed(1);
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to process wallpaper bundle';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (_) {}
-        throw new Error(errorMessage);
-      }
-
-      const contentType = response.headers.get('content-type') || '';
-      const finishDownload = () => {
-        setShowTransferHud(false);
-        setDownloadState('completed');
-        setTimeout(() => setDownloadState('idle'), 2500);
-      };
-
-      if (contentType.includes('application/json')) {
-        const data = await response.json();
-
-        if (data.downloads !== undefined) {
-          setDownloadsCount(data.downloads);
-          if (bundle.stats) bundle.stats.downloads = data.downloads;
-        }
-
-        if (!data || !data.downloadUrl) {
-          throw new Error('Server returned an invalid download URL');
-        }
-
-        const downloadUrl = data.downloadUrl.startsWith('http')
-          ? data.downloadUrl
-          : `${API_URL}${data.downloadUrl}`;
-
-        // Exact ZIP size from backend (archive.pointer() — always accurate)
-        const zipSizeBytes = data.zipSizeBytes || 0;
-        const knownTotalMB = zipSizeBytes > 0 ? zipSizeBytes / (1024 * 1024) : 0;
-
-        // Transition: ZIP ready in GCS, starting CDN download
-        setHudMetrics(prev => ({
-          ...prev,
-          progress: 42,
-          stage: 'Downloading from GCS CDN...',
-          totalMB: knownTotalMB || prev.totalMB,
-          steps: [
-            { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
-            { label: 'GCS CDN download', status: 'active', duration: '0.0s' },
-          ]
-        }));
-
-        // XHR to GCS signed URL — GCS sends real Content-Length → accurate progress
-        const xhrStart = Date.now();
-        let lastLoaded = 0;
-        let lastTime = xhrStart;
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', downloadUrl, true);
-        xhr.responseType = 'blob';
-
-        xhr.onprogress = (e) => {
-          const totalBytes = (e.lengthComputable && e.total > 0)
-            ? e.total
-            : (zipSizeBytes > 0 ? zipSizeBytes : 0);
-          const loadedBytes = e.loaded;
-          const pct = totalBytes > 0
-            ? Math.min(99, Math.floor((loadedBytes / totalBytes) * 100))
-            : Math.min(99, Math.floor(loadedBytes / (1024 * 1024)));
-
-          const currentTime = Date.now();
-          const timeDelta = (currentTime - lastTime) / 1000;
-
-          if (timeDelta >= 0.15) {
-            const bytesDelta = loadedBytes - lastLoaded;
-            const speedBps = bytesDelta / timeDelta;
-            const speedMbps = (speedBps * 8) / (1024 * 1024);
-            const remainingBytes = totalBytes > 0 ? Math.max(0, totalBytes - loadedBytes) : 0;
-            const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
-            const dlSec = ((currentTime - xhrStart) / 1000).toFixed(1);
-
-            setHudMetrics({
-              progress: pct,
-              speedMbps,
-              transferredMB: loadedBytes / (1024 * 1024),
-              totalMB: totalBytes > 0 ? totalBytes / (1024 * 1024) : knownTotalMB,
-              etaSeconds: eta,
-              stage: 'Downloading from GCS CDN...',
-              steps: [
-                { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
-                { label: 'GCS CDN download', status: 'active', duration: `${dlSec}s` },
-              ]
-            });
-
-            lastLoaded = loadedBytes;
-            lastTime = currentTime;
-          }
-        };
-
-        const ratioTag = selectedDownloadId === 'custom' ? customRatio : (selectedDownload?.ratio || '16:9');
-        const cleanRatio = ratioTag.replace(/[^a-zA-Z0-9_-]/g, 'x');
-        const outFilename = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${cleanRatio}.zip`;
-
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            const blob = xhr.response;
-            const blobUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = outFilename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-              try { a.remove(); window.URL.revokeObjectURL(blobUrl); } catch (_) {}
-            }, 10000);
-            setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
-            setTimeout(finishDownload, 1200);
-          } else {
-            window.location.href = downloadUrl;
-            finishDownload();
-          }
-        };
-
-        xhr.onerror = () => {
-          window.location.href = downloadUrl;
-          finishDownload();
-        };
-
-        xhr.send();
-      } else {
-        // Fallback: Direct binary ZIP stream response — read byte chunks live
-        const ratioTag = selectedDownloadId === 'custom' ? customRatio : (selectedDownload?.ratio || '16:9');
-        const cleanRatio = ratioTag.replace(/[^a-zA-Z0-9_-]/g, 'x');
-        const outFilename = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${cleanRatio}.zip`;
-
-        const reader = response.body.getReader();
-        const contentLength = +(response.headers.get('content-length') || response.headers.get('x-content-length') || 0);
-        const chunks = [];
-        let receivedBytes = 0;
-        const streamStart = Date.now();
-        let lastLoaded = 0;
-        let lastTime = streamStart;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          receivedBytes += value.length;
-
-          const currentTime = Date.now();
-          const timeDelta = (currentTime - lastTime) / 1000;
-
-          if (timeDelta >= 0.15) {
-            const bytesDelta = receivedBytes - lastLoaded;
-            const speedBps = bytesDelta / timeDelta;
-            const speedMbps = (speedBps * 8) / (1024 * 1024);
-            const targetBytes = contentLength > 0 ? contentLength : predictedZipBytes;
-            const pct = targetBytes > 0
-              ? Math.min(99, Math.floor((receivedBytes / targetBytes) * 100))
-              : Math.min(99, Math.floor(receivedBytes / (1024 * 1024)));
-            const remainingBytes = targetBytes > 0 ? Math.max(0, targetBytes - receivedBytes) : 0;
-            const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
-            const streamSec = ((currentTime - streamStart) / 1000).toFixed(1);
-
-            setHudMetrics({
-              progress: pct,
-              speedMbps,
-              transferredMB: receivedBytes / (1024 * 1024),
-              totalMB: targetBytes / (1024 * 1024),
-              etaSeconds: eta,
-              stage: 'Downloading pack stream...',
-              steps: [
-                { label: 'Cropped & packaged', status: 'done', duration: `${prepSec}s` },
-                { label: 'Downloading payload stream', status: 'active', duration: `${streamSec}s` },
-              ]
-            });
-
-            lastLoaded = receivedBytes;
-            lastTime = currentTime;
-          }
-        }
-
-        const blob = new Blob(chunks, { type: 'application/zip' });
-        const blobUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = outFilename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          try { a.remove(); window.URL.revokeObjectURL(blobUrl); } catch (_) {}
-        }, 10000);
-        setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
-        setTimeout(finishDownload, 1200);
-      }
-
-    } catch (error) {
-      clearInterval(prepTimer);
-      console.warn('Download error:', error.message);
-      if (bundle.driveUrl) {
-        const a = document.createElement('a');
-        a.href = bundle.driveUrl;
-        a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } else {
-        alert('Failed to prepare download. Please try again.');
-      }
-      setShowTransferHud(false);
-      setDownloadState('idle');
-    }
+    startDownload(bundle, selectedDownloadId, customRatioWidth, customRatioHeight, presets);
   };
 
 
@@ -1044,23 +772,6 @@ export default function BundleDetailPage({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Floating Transfer HUD Indicator - Root Level */}
-      {showTransferHud && (
-        <TransferHUD
-          type="download"
-          title="Downloading Wallpaper Pack"
-          fileName={`${bundle.name} (${selectedDownloadId === 'custom' ? customRatio : selectedDownload?.ratio || '16:9'})`}
-          progress={hudMetrics.progress}
-          speedMbps={hudMetrics.speedMbps}
-          transferredMB={hudMetrics.transferredMB}
-          totalMB={hudMetrics.totalMB}
-          etaSeconds={hudMetrics.etaSeconds}
-          stage={hudMetrics.stage}
-          steps={hudMetrics.steps}
-          onClose={() => setShowTransferHud(false)}
-        />
       )}
     </div>
   );
