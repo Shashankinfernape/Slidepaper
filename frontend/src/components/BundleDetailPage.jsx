@@ -464,40 +464,43 @@ export default function BundleDetailPage({
 
     setDownloadState('downloading');
     setShowTransferHud(true);
+    const totalImgs = bundle?.images?.length || 1;
     setHudMetrics({
       progress: 5,
       speedMbps: 0,
       transferredMB: 0,
       totalMB: 0,
       etaSeconds: 0,
-      stage: 'Building ZIP on server... (0.0s)',
+      stage: `Cropping wallpaper 1/${totalImgs} (0.0s)...`,
       steps: [
-        { label: 'Fetching sources & cropping', status: 'active', duration: '0.0s' },
+        { label: `Cropping 1/${totalImgs} wallpapers`, status: 'active', duration: '0.0s' },
         { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
-        { label: 'Download from GCS CDN', status: 'pending', duration: '' }
+        { label: 'Download pack ZIP', status: 'pending', duration: '' }
       ]
     });
     const stepStart = Date.now();
 
-    // Honest prep timer — shows real elapsed time while server builds ZIP
+    // Live wallpaper progress timer based on total bundle wallpapers
     const prepTimer = setInterval(() => {
       const elapsedMs = Date.now() - stepStart;
       const elapsedSec = (elapsedMs / 1000).toFixed(1);
-      const prepProgress = Math.min(40, 5 + Math.floor(elapsedMs / 300));
+      const currImg = Math.min(totalImgs, Math.max(1, Math.floor((elapsedMs / 1000) / 0.3) + 1));
+      const prepProgress = Math.min(40, Math.max(5, Math.floor((currImg / totalImgs) * 38)));
+
       setHudMetrics(prev => {
         if (prev.stage.includes('Downloading') || prev.stage.includes('Complete')) return prev;
         return {
           ...prev,
           progress: prepProgress,
-          stage: `Building ZIP on server... (${elapsedSec}s)`,
+          stage: `Cropping wallpaper ${currImg}/${totalImgs} (${elapsedSec}s)...`,
           steps: [
-            { label: 'Fetching sources & cropping', status: 'active', duration: `${elapsedSec}s` },
+            { label: `Cropping wallpaper ${currImg}/${totalImgs}`, status: 'active', duration: `${elapsedSec}s` },
             { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
-            { label: 'Download from GCS CDN', status: 'pending', duration: '' }
+            { label: 'Download pack ZIP', status: 'pending', duration: '' }
           ]
         };
       });
-    }, 200);
+    }, 150);
 
     try {
       let wStr, hStr;

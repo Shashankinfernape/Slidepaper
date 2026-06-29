@@ -365,12 +365,16 @@ export default function TransferHUD({
       {/* ── Processing stats (no speed yet) ── */}
       {isProcessing && (
         <div style={{
-          fontSize: '0.7rem',
-          color: 'rgba(255,255,255,0.35)',
+          fontSize: '0.72rem',
+          color: 'rgba(255,255,255,0.6)',
           marginBottom: '9px',
-          fontStyle: 'italic',
+          fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
         }}>
-          Render is cropping &amp; packaging your wallpapers...
+          <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: color, animation: 'hudPulse 1.2s infinite' }}></span>
+          {activeStep?.label || stage || 'Render is cropping wallpapers...'}
         </div>
       )}
 
