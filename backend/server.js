@@ -70,7 +70,8 @@ const bundleSchema = new mongoose.Schema({
     subscribers: { type: Number, default: 0 }
   },
   isHero: { type: Boolean, default: false },
-  ratioCaches: { type: Map, of: String, default: {} }
+  ratioCaches: { type: Map, of: String, default: {} },
+  ratioCacheSizes: { type: Map, of: Number, default: {} }
 });
 
 const Bundle = mongoose.model('Bundle', bundleSchema);
@@ -606,8 +607,9 @@ app.post('/api/custom-ratio', async (req, res) => {
         if (signedUrl) downloadUrl = signedUrl;
       }
 
+      const zipSizeBytes = dbBundle.ratioCacheSizes?.get(ratioKey) || 0;
       const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
-      return res.status(200).json({ success: true, downloadUrl: downloadUrl, downloads: updatedBundle?.stats?.downloads || 0 });
+      return res.status(200).json({ success: true, downloadUrl, zipSizeBytes, downloads: updatedBundle?.stats?.downloads || 0 });
     }
   } catch (dbErr) {
     console.warn('[Cache Check Error]', dbErr.message);
@@ -623,8 +625,10 @@ app.post('/api/custom-ratio', async (req, res) => {
         const signedUrl = await getGcsSignedUrl(gcsUri);
         if (signedUrl) downloadUrl = signedUrl;
       }
-      const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
-      return res.status(200).json({ success: true, downloadUrl, downloads: updatedBundle?.stats?.downloads || 0 });
+      // Fetch fresh bundle to get stored size
+      const dedupBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
+      const zipSizeBytes = dedupBundle?.ratioCacheSizes?.get(ratioKey) || 0;
+      return res.status(200).json({ success: true, downloadUrl, zipSizeBytes, downloads: dedupBundle?.stats?.downloads || 0 });
     } catch (dedupErr) {
       console.warn('[Job Dedup Failed, restarting job]', dedupErr.message);
     }
@@ -790,13 +794,20 @@ app.post('/api/custom-ratio', async (req, res) => {
     }
 
     await archive.finalize();
+    const zipSizeBytes = archive.pointer(); // exact ZIP size in bytes — no GCS query needed
     const gcsUri = await uploadDone;
-    console.log(`[Build] ZIP uploaded to GCS: ${gcsUri}`);
+    console.log(`[Build] ZIP uploaded to GCS: ${gcsUri} (${(zipSizeBytes / 1024 / 1024).toFixed(2)} MB)`);
 
-    // Save to MongoDB ratioCaches & update download count
+    // Save GCS URI + exact ZIP size to MongoDB
     const updatedBundle = await Bundle.findOneAndUpdate(
       { id: bundleId },
-      { $set: { [`ratioCaches.${ratioKey}`]: gcsUri }, $inc: { 'stats.downloads': 1 } },
+      {
+        $set: {
+          [`ratioCaches.${ratioKey}`]: gcsUri,
+          [`ratioCacheSizes.${ratioKey}`]: zipSizeBytes
+        },
+        $inc: { 'stats.downloads': 1 }
+      },
       { returnDocument: 'after' }
     );
 
@@ -804,16 +815,17 @@ app.post('/api/custom-ratio', async (req, res) => {
     cropSemaphore.release();
     processingJobs.delete(jobKey);
 
-    // Return signed URL to client — they download from GCS CDN at full speed
+    // Return signed URL + exact size to client
     const signedUrl = await getGcsSignedUrl(gcsUri);
     if (!signedUrl) {
       return res.status(500).json({ error: 'Failed to generate signed download URL' });
     }
 
-    console.log(`[Build Pipeline SUCCESS] Signed URL returned for "${jobKey}"`);
+    console.log(`[Build Pipeline SUCCESS] Signed URL returned for "${jobKey}" — ${(zipSizeBytes / 1024 / 1024).toFixed(2)} MB`);
     return res.status(200).json({
       success: true,
       downloadUrl: signedUrl,
+      zipSizeBytes,
       downloads: updatedBundle?.stats?.downloads || 0
     });
 

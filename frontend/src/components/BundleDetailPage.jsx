@@ -536,11 +536,16 @@ export default function BundleDetailPage({
         setTimeout(() => setDownloadState('idle'), 2500);
       };
 
+      // Exact ZIP size from backend (archive.pointer() — always accurate)
+      const zipSizeBytes = data.zipSizeBytes || 0;
+      const knownTotalMB = zipSizeBytes > 0 ? zipSizeBytes / (1024 * 1024) : 0;
+
       // Transition: ZIP ready in GCS, starting CDN download
       setHudMetrics(prev => ({
         ...prev,
         progress: 42,
         stage: 'Downloading from GCS CDN...',
+        totalMB: knownTotalMB || prev.totalMB,
         steps: [
           { label: 'Built & uploaded to GCS', status: 'done', duration: `${prepSec}s` },
           { label: 'GCS CDN download', status: 'active', duration: '0.0s' },
@@ -557,9 +562,14 @@ export default function BundleDetailPage({
       xhr.responseType = 'blob';
 
       xhr.onprogress = (e) => {
-        const totalBytes = e.lengthComputable && e.total > 0 ? e.total : (60 * 1024 * 1024);
+        // Priority: 1) GCS Content-Length (e.total), 2) backend zipSizeBytes, 3) 0 (unknown)
+        const totalBytes = (e.lengthComputable && e.total > 0)
+          ? e.total
+          : (zipSizeBytes > 0 ? zipSizeBytes : 0);
         const loadedBytes = e.loaded;
-        const pct = Math.min(99, Math.max(43, 42 + (loadedBytes / totalBytes) * 57));
+        const pct = totalBytes > 0
+          ? Math.min(99, Math.max(43, 42 + (loadedBytes / totalBytes) * 57))
+          : Math.min(99, 43 + Math.floor(loadedBytes / (1024 * 1024)));
 
         const currentTime = Date.now();
         const timeDelta = (currentTime - lastTime) / 1000;
@@ -568,15 +578,15 @@ export default function BundleDetailPage({
           const bytesDelta = loadedBytes - lastLoaded;
           const speedBps = bytesDelta / timeDelta;
           const speedMbps = (speedBps * 8) / (1024 * 1024);
-          const remainingBytes = Math.max(0, totalBytes - loadedBytes);
-          const eta = speedBps > 0 ? remainingBytes / speedBps : 0;
+          const remainingBytes = totalBytes > 0 ? Math.max(0, totalBytes - loadedBytes) : 0;
+          const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
           const dlSec = ((currentTime - xhrStart) / 1000).toFixed(1);
 
           setHudMetrics({
             progress: pct,
             speedMbps,
             transferredMB: loadedBytes / (1024 * 1024),
-            totalMB: totalBytes / (1024 * 1024),
+            totalMB: totalBytes > 0 ? totalBytes / (1024 * 1024) : knownTotalMB,
             etaSeconds: eta,
             stage: 'Downloading from GCS CDN...',
             steps: [
