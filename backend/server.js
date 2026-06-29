@@ -10,6 +10,7 @@ import { promisify } from 'util';
 import archiver from 'archiver';
 import multer from 'multer';
 import mongoose from 'mongoose';
+import sharp from 'sharp';
 import { Storage } from '@google-cloud/storage';
 import { PassThrough } from 'stream';
 import { fetchAdSenseReport } from './services/adsense.service.js';
@@ -214,21 +215,34 @@ async function getGcsSignedUrl(gcsUri) {
   }
 }
 
-function cropImageStreamPure(inputStream, ratioStr) {
-  const isWin = process.platform === 'win32';
-  const convertCmd = isWin ? 'magick' : 'convert';
-  const convertArgs = isWin 
-    ? ['convert', '-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-']
-    : ['-', '-gravity', 'center', '-crop', ratioStr, '+repage', 'png:-'];
-
-  const proc = spawn(convertCmd, convertArgs);
-  inputStream.pipe(proc.stdin);
-  proc.stderr.on('data', d => console.warn('[ImageMagick spawn]', d.toString().trim()));
-  proc.on('error', err => {
-    console.error('[ImageMagick spawn error]', err.message);
-    proc.stdout.destroy(err);
+function cropWithSharp(inputStream, wRatio, hRatio) {
+  const pt = new PassThrough();
+  const chunks = [];
+  inputStream.on('data', c => chunks.push(c));
+  inputStream.on('end', async () => {
+    try {
+      const buf = Buffer.concat(chunks);
+      const meta = await sharp(buf).metadata();
+      const targetAspect = wRatio / hRatio;
+      const currentAspect = meta.width / meta.height;
+      let cropWidth = meta.width, cropHeight = meta.height;
+      if (currentAspect > targetAspect) {
+        cropWidth = Math.round(meta.height * targetAspect);
+      } else {
+        cropHeight = Math.round(meta.width / targetAspect);
+      }
+      const left = Math.max(0, Math.round((meta.width - cropWidth) / 2));
+      const top  = Math.max(0, Math.round((meta.height - cropHeight) / 2));
+      const cropped = await sharp(buf)
+        .extract({ left, top, width: cropWidth, height: cropHeight })
+        .toBuffer();
+      pt.end(cropped);
+    } catch (e) {
+      pt.end(Buffer.concat(chunks));
+    }
   });
-  return proc.stdout;
+  inputStream.on('error', () => pt.end());
+  return pt;
 }
 
 async function cropImageBufferPure(inputBuffer, ratioStr) {
@@ -717,12 +731,17 @@ app.post('/api/custom-ratio', async (req, res) => {
             ? imgObj.gcsPath
             : `sources/${bundleId}/${imgName}`;
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
-          const [exists] = await gcsFile.exists();
-          if (exists) {
-            sourceStream = gcsFile.createReadStream(); // ← stream, NOT .download()
-          }
+          const gcsReadStream = gcsFile.createReadStream();
+          sourceStream = await new Promise((resolve, reject) => {
+            gcsReadStream.once('data', () => {
+              gcsReadStream.pause();
+              resolve(gcsReadStream);
+            });
+            gcsReadStream.once('error', reject);
+            gcsReadStream.resume();
+          });
         } catch (gErr) {
-          console.warn(`[GCS Stream Warning] Image ${i}:`, gErr.message);
+          sourceStream = null;
         }
       }
       // Fallback to Drive stream
@@ -749,7 +768,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       try {
         const outputStream = isOriginal
           ? sourceStream
-          : cropImageStreamPure(sourceStream, ratioStr); // ImageMagick spawn stdin→stdout
+          : cropWithSharp(sourceStream, wRatio, hRatio);
         // Append stream as archiver entry — archiver pushes bytes to res immediately
         await new Promise((resolve) => {
           archive.append(outputStream, { name: imgName });
@@ -757,7 +776,7 @@ app.post('/api/custom-ratio', async (req, res) => {
           outputStream.on('close', resolve);
           outputStream.on('error', (e) => {
             console.warn(`[Stream error on image ${i}]`, e.message);
-            resolve(); // don't abort whole ZIP on one bad image
+            resolve();
           });
         });
         console.log(`[Stream Pipeline] Image ${i + 1}/${imagesToProcess.length} done`);
