@@ -326,7 +326,7 @@ export default function TransferHUD({
       )}
 
       {/* ── Stats row ── */}
-      {(isDownloading || isDone) && speedMbps > 0 && (
+      {(isDownloading || isDone || transferredMB > 0) && (
         <div style={{
           display: 'flex',
           alignItems: 'center',

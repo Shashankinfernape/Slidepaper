@@ -589,8 +589,8 @@ export default function BundleDetailPage({
             : (zipSizeBytes > 0 ? zipSizeBytes : 0);
           const loadedBytes = e.loaded;
           const pct = totalBytes > 0
-            ? Math.min(99, Math.max(43, 42 + (loadedBytes / totalBytes) * 57))
-            : Math.min(99, 43 + Math.floor(loadedBytes / (1024 * 1024)));
+            ? Math.min(99, Math.floor((loadedBytes / totalBytes) * 100))
+            : Math.min(99, Math.floor(loadedBytes / (1024 * 1024)));
 
           const currentTime = Date.now();
           const timeDelta = (currentTime - lastTime) / 1000;
@@ -652,12 +652,59 @@ export default function BundleDetailPage({
 
         xhr.send();
       } else {
-        // Fallback: Direct binary ZIP stream response
+        // Fallback: Direct binary ZIP stream response — read byte chunks live
         const ratioTag = selectedDownloadId === 'custom' ? customRatio : (selectedDownload?.ratio || '16:9');
         const cleanRatio = ratioTag.replace(/[^a-zA-Z0-9_-]/g, 'x');
         const outFilename = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${cleanRatio}.zip`;
 
-        const blob = await response.blob();
+        const reader = response.body.getReader();
+        const contentLength = +(response.headers.get('content-length') || response.headers.get('x-content-length') || 0);
+        const chunks = [];
+        let receivedBytes = 0;
+        const streamStart = Date.now();
+        let lastLoaded = 0;
+        let lastTime = streamStart;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          receivedBytes += value.length;
+
+          const currentTime = Date.now();
+          const timeDelta = (currentTime - lastTime) / 1000;
+
+          if (timeDelta >= 0.15) {
+            const bytesDelta = receivedBytes - lastLoaded;
+            const speedBps = bytesDelta / timeDelta;
+            const speedMbps = (speedBps * 8) / (1024 * 1024);
+            const totalBytes = contentLength > 0 ? contentLength : 0;
+            const pct = totalBytes > 0
+              ? Math.min(99, Math.floor((receivedBytes / totalBytes) * 100))
+              : Math.min(99, Math.floor(receivedBytes / (1024 * 1024)));
+            const remainingBytes = totalBytes > 0 ? Math.max(0, totalBytes - receivedBytes) : 0;
+            const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
+            const streamSec = ((currentTime - streamStart) / 1000).toFixed(1);
+
+            setHudMetrics({
+              progress: pct,
+              speedMbps,
+              transferredMB: receivedBytes / (1024 * 1024),
+              totalMB: totalBytes > 0 ? totalBytes / (1024 * 1024) : (receivedBytes / (1024 * 1024)),
+              etaSeconds: eta,
+              stage: 'Downloading pack stream...',
+              steps: [
+                { label: 'Cropped & packaged', status: 'done', duration: `${prepSec}s` },
+                { label: 'Downloading payload stream', status: 'active', duration: `${streamSec}s` },
+              ]
+            });
+
+            lastLoaded = receivedBytes;
+            lastTime = currentTime;
+          }
+        }
+
+        const blob = new Blob(chunks, { type: 'application/zip' });
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
