@@ -695,8 +695,8 @@ app.post('/api/custom-ratio', async (req, res) => {
     if (!gcsEnabled || !GCS_BUCKET) {
       cropSemaphore.release();
       processingJobs.delete(jobKey);
-      rejectJob(new Error('GCS not configured'));
-      return res.status(503).json({ error: 'Storage not configured. Please set GCS_BUCKET_NAME.' });
+      resolveJob(null); // resolve cleanly — rejectJob() causes unhandled rejection crash in Node 20
+      return res.status(503).json({ error: 'GCS storage not configured. Please set GCS_BUCKET_NAME environment variable on Render.' });
     }
 
     console.log(`[Build Pipeline] Building ZIP for "${jobKey}"...`);
