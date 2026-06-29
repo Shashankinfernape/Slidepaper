@@ -756,6 +756,9 @@ app.post('/api/custom-ratio', async (req, res) => {
       archive.pipe(res);
     }
 
+    // Check if requested ratio matches bundle native ratio or original
+    const isNativeMatch = isOriginal || (dbBundle.ratio && (ratioKey === dbBundle.ratio || ratioKey.replace(':', 'x') === dbBundle.ratio.replace(':', 'x')));
+
     // Process images one at a time (controls RAM, no OOM)
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     for (let i = 0; i < imagesToProcess.length; i++) {
@@ -810,7 +813,7 @@ app.post('/api/custom-ratio', async (req, res) => {
 
       // Crop with sharp (in-process, low RAM usage)
       let finalBuffer = imgBuffer;
-      if (!isOriginal) {
+      if (!isNativeMatch) {
         try {
           const s = sharp(imgBuffer, { failOnError: false });
           const meta = await s.metadata();

@@ -47,10 +47,13 @@ export function DownloadProvider({ children }) {
     const totalImgs = bundle.images?.length || 1;
 
     updateDownloadStatus(downloadId, 'downloading');
+    const isNative = ratioTag === 'Original' || (bundle.ratio && (ratioTag === bundle.ratio || ratioTag.replace(':', 'x') === bundle.ratio.replace(':', 'x')));
+    const actionWord = isNative ? 'Packaging native' : 'Cropping';
+
     updateDownloadMetrics(downloadId, {
-      stage: `Cropping wallpaper 1/${totalImgs} (0.0s)...`,
+      stage: `${actionWord} wallpaper 1/${totalImgs} (0.0s)...`,
       steps: [
-        { label: `Cropping 1/${totalImgs} wallpapers`, status: 'active', duration: '0.0s' },
+        { label: `${actionWord} 1/${totalImgs} wallpapers`, status: 'active', duration: '0.0s' },
         { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
         { label: 'Download pack ZIP', status: 'pending', duration: '' }
       ]
@@ -72,9 +75,9 @@ export function DownloadProvider({ children }) {
         return {
           ...prev,
           progress: prepProgress,
-          stage: `Cropping wallpaper ${currImg}/${totalImgs} (${elapsedSec}s)...`,
+          stage: `${actionWord} wallpaper ${currImg}/${totalImgs} (${elapsedSec}s)...`,
           steps: [
-            { label: `Cropping wallpaper ${currImg}/${totalImgs}`, status: 'active', duration: `${elapsedSec}s` },
+            { label: `${actionWord} wallpaper ${currImg}/${totalImgs}`, status: 'active', duration: `${elapsedSec}s` },
             { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
             { label: 'Download pack ZIP', status: 'pending', duration: '' }
           ]
