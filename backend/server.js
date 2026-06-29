@@ -698,8 +698,10 @@ app.post('/api/custom-ratio', async (req, res) => {
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     const ratioStr = `${widthRatio}:${heightRatio}`;
 
-    // Option 2: Parallel In-Memory Buffer Chunking Engine (Parallel Downloads & Concurrency-Controlled Cropping)
-    const bufferFetchers = imagesToProcess.map((imgObj, i) => async () => {
+    // TRUE STREAMING: process one image at a time — no full buffer required
+    console.log(`[Stream Pipeline] Processing ${imagesToProcess.length} images for "${jobKey}"...`);
+    for (let i = 0; i < imagesToProcess.length; i++) {
+      const imgObj = imagesToProcess[i];
       let imgName = `wallpaper_${i + 1}.png`;
       if (typeof imgObj === 'object' && imgObj.name) {
         imgName = imgObj.name;
@@ -707,65 +709,61 @@ app.post('/api/custom-ratio', async (req, res) => {
         const cleanLabel = imgObj.label.split(':').pop().trim();
         imgName = cleanLabel.includes('.') ? cleanLabel : `${cleanLabel}.png`;
       }
-
-      const gcsSourcePath = typeof imgObj === 'object' && imgObj.gcsPath ? imgObj.gcsPath : `sources/${bundleId}/${imgName}`;
+      let sourceStream = null;
+      // Try GCS source first (fast — same Google network as Render)
       if (gcsEnabled && GCS_BUCKET) {
         try {
+          const gcsSourcePath = typeof imgObj === 'object' && imgObj.gcsPath
+            ? imgObj.gcsPath
+            : `sources/${bundleId}/${imgName}`;
           const gcsFile = gcs.bucket(GCS_BUCKET).file(gcsSourcePath);
           const [exists] = await gcsFile.exists();
           if (exists) {
-            const [buf] = await gcsFile.download();
-            return { buffer: buf, name: imgName };
+            sourceStream = gcsFile.createReadStream(); // ← stream, NOT .download()
           }
         } catch (gErr) {
-          console.warn(`[GCS Parallel Download Warning] File ${i}:`, gErr.message);
+          console.warn(`[GCS Stream Warning] Image ${i}:`, gErr.message);
         }
       }
-      // Fallback to Drive if GCS source not available in bucket yet (concurrency-protected)
-      const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
-      const match = imgUrl?.match(/[?&]id=([^&]+)/);
-      const fileId = match ? match[1] : null;
-      if (fileId && drive) {
-        try {
-          // Retry logic and stream buffer conversion for Drive API
-          const driveRes = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
-          if (driveRes && driveRes.data) {
-            return { buffer: Buffer.from(driveRes.data), name: imgName };
+      // Fallback to Drive stream
+      if (!sourceStream) {
+        const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
+        const match = imgUrl?.match(/[?&]id=([^&]+)/);
+        const fileId = match ? match[1] : null;
+        if (fileId && drive) {
+          try {
+            const driveRes = await drive.files.get(
+              { fileId, alt: 'media' },
+              { responseType: 'stream' }
+            );
+            sourceStream = driveRes.data;
+          } catch (dErr) {
+            console.warn(`[Drive Stream Warning] Image ${i}:`, dErr.message);
           }
-        } catch (dErr) {
-          console.warn(`[Drive Parallel Download Warning] File ${i}:`, dErr.message);
         }
       }
-      const localPath = path.join(__dirname, '../frontend/src/assets', imgName);
-      if (fs.existsSync(localPath)) return { buffer: fs.readFileSync(localPath), name: imgName };
-      return null;
-    });
-
-    // Step 1: Concurrently download all source image buffers
-    console.log(`[Parallel Engine] Downloading ${imagesToProcess.length} source images...`);
-    const fetchedResults = [];
-    for (let i = 0; i < bufferFetchers.length; i += 3) {
-      const batch = bufferFetchers.slice(i, i + 3);
-      const batchRes = await Promise.all(batch.map(fn => fn()));
-      fetchedResults.push(...batchRes);
-    }
-
-    // Step 2: Crop images in parallel chunks of 3 for optimal multi-threading
-    const CHUNK_SIZE = 3;
-    for (let i = 0; i < fetchedResults.length; i += CHUNK_SIZE) {
-      const chunk = fetchedResults.slice(i, i + CHUNK_SIZE);
-      await Promise.all(chunk.map(async (item) => {
-        if (!item || !item.buffer || item.buffer.length === 0) return;
-        try {
-          let finalBuffer = item.buffer;
-          if (!isOriginal) {
-            finalBuffer = await cropImageBufferPure(item.buffer, ratioStr);
-          }
-          archive.append(finalBuffer, { name: item.name });
-        } catch (cropErr) {
-          console.warn(`[Parallel Crop Warning] Image ${item.name}:`, cropErr.message);
-        }
-      }));
+      if (!sourceStream) {
+        console.warn(`[Stream Pipeline] Skipping image ${i} — no source found`);
+        continue;
+      }
+      try {
+        const outputStream = isOriginal
+          ? sourceStream
+          : cropImageStreamPure(sourceStream, ratioStr); // ImageMagick spawn stdin→stdout
+        // Append stream as archiver entry — archiver pushes bytes to res immediately
+        await new Promise((resolve) => {
+          archive.append(outputStream, { name: imgName });
+          outputStream.on('end', resolve);
+          outputStream.on('close', resolve);
+          outputStream.on('error', (e) => {
+            console.warn(`[Stream error on image ${i}]`, e.message);
+            resolve(); // don't abort whole ZIP on one bad image
+          });
+        });
+        console.log(`[Stream Pipeline] Image ${i + 1}/${imagesToProcess.length} done`);
+      } catch (imgErr) {
+        console.warn(`[Stream Pipeline Warning] Image ${i}:`, imgErr.message);
+      }
     }
 
     await archive.finalize();
