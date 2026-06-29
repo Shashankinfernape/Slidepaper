@@ -387,23 +387,13 @@ export default function BundleDetailPage({
     return matchedPreset ? { id: matchedPreset.id, device: matchedPreset.label, ratio: matchedPreset.label.split(' ')[0], size: matchedPreset.size } : { id: 'unknown', device: 'Preset', ratio: isLandscape ? '16:9' : '9:16', size: '15.4 MB' };
   }, [customRatio, selectedDownloadId, presets, isLandscape]);
 
-  // Size label inside the download button
-  const bundleSizeLabel = useMemo(() => {
-    // Sum up the sizes of all images in the bundle (with fallback of 1.5MB per image if not defined yet)
+  // Memoized predicted ZIP size in bytes for the selected aspect ratio
+  const predictedZipBytes = useMemo(() => {
     const sumBytes = bundle.images.reduce((sum, img) => sum + (img.size || 1500000), 0);
-
-    if (selectedDownloadId === 'original') {
-      const originalZipBytes = sumBytes * 0.95;
-      if (originalZipBytes >= 1024 * 1024) {
-        return `${(originalZipBytes / (1024 * 1024)).toFixed(2)} MB ZIP`;
-      } else {
-        return `${(originalZipBytes / 1024).toFixed(0)} KB ZIP`;
-      }
-    }
+    if (selectedDownloadId === 'original') return sumBytes * 0.95;
 
     let w = 16;
     let h = 9;
-
     if (selectedDownloadId === 'custom') {
       w = parseFloat(customRatioWidth) || 16;
       h = parseFloat(customRatioHeight) || 9;
@@ -432,19 +422,21 @@ export default function BundleDetailPage({
     } else {
       factor = targetRatio / sourceRatio;
     }
-
-    // Clamp factor to avoid division by zero or extreme crops
     factor = Math.max(0.05, Math.min(1.0, factor));
 
-    // 0.95 factor represents ZIP compression on PNG files
-    const totalBytes = sumBytes * factor * 0.95;
-
-    if (totalBytes >= 1024 * 1024) {
-      return `${(totalBytes / (1024 * 1024)).toFixed(2)} MB ZIP`;
-    } else {
-      return `${(totalBytes / 1024).toFixed(0)} KB ZIP`;
-    }
+    return sumBytes * factor * 0.95;
   }, [selectedDownloadId, customRatioWidth, customRatioHeight, bundle.images, bundle.ratio, presets]);
+
+  const predictedTotalMB = useMemo(() => predictedZipBytes / (1024 * 1024), [predictedZipBytes]);
+
+  // Size label inside the download button
+  const bundleSizeLabel = useMemo(() => {
+    if (predictedZipBytes >= 1024 * 1024) {
+      return `${(predictedZipBytes / (1024 * 1024)).toFixed(2)} MB ZIP`;
+    } else {
+      return `${(predictedZipBytes / 1024).toFixed(0)} KB ZIP`;
+    }
+  }, [predictedZipBytes]);
 
 
 
@@ -469,7 +461,7 @@ export default function BundleDetailPage({
       progress: 5,
       speedMbps: 0,
       transferredMB: 0,
-      totalMB: 0,
+      totalMB: predictedTotalMB,
       etaSeconds: 0,
       stage: `Cropping wallpaper 1/${totalImgs} (0.0s)...`,
       steps: [
@@ -678,11 +670,11 @@ export default function BundleDetailPage({
             const bytesDelta = receivedBytes - lastLoaded;
             const speedBps = bytesDelta / timeDelta;
             const speedMbps = (speedBps * 8) / (1024 * 1024);
-            const totalBytes = contentLength > 0 ? contentLength : 0;
-            const pct = totalBytes > 0
-              ? Math.min(99, Math.floor((receivedBytes / totalBytes) * 100))
+            const targetBytes = contentLength > 0 ? contentLength : predictedZipBytes;
+            const pct = targetBytes > 0
+              ? Math.min(99, Math.floor((receivedBytes / targetBytes) * 100))
               : Math.min(99, Math.floor(receivedBytes / (1024 * 1024)));
-            const remainingBytes = totalBytes > 0 ? Math.max(0, totalBytes - receivedBytes) : 0;
+            const remainingBytes = targetBytes > 0 ? Math.max(0, targetBytes - receivedBytes) : 0;
             const eta = speedBps > 0 && remainingBytes > 0 ? remainingBytes / speedBps : 0;
             const streamSec = ((currentTime - streamStart) / 1000).toFixed(1);
 
@@ -690,7 +682,7 @@ export default function BundleDetailPage({
               progress: pct,
               speedMbps,
               transferredMB: receivedBytes / (1024 * 1024),
-              totalMB: totalBytes > 0 ? totalBytes / (1024 * 1024) : (receivedBytes / (1024 * 1024)),
+              totalMB: targetBytes / (1024 * 1024),
               etaSeconds: eta,
               stage: 'Downloading pack stream...',
               steps: [
