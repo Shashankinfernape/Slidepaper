@@ -484,7 +484,8 @@ export default function BundleDetailPage({
     const prepTimer = setInterval(() => {
       const elapsedMs = Date.now() - stepStart;
       const elapsedSec = (elapsedMs / 1000).toFixed(1);
-      const currImg = Math.min(totalImgs, Math.max(1, Math.floor((elapsedMs / 1000) / 0.3) + 1));
+      // Realistic cloud fetch + crop speed (~1.4s per wallpaper for Drive bundles)
+      const currImg = Math.min(totalImgs, Math.max(1, Math.floor((elapsedMs / 1000) / 1.4) + 1));
       const prepProgress = Math.min(40, Math.max(5, Math.floor((currImg / totalImgs) * 38)));
 
       setHudMetrics(prev => {
@@ -500,7 +501,7 @@ export default function BundleDetailPage({
           ]
         };
       });
-    }, 150);
+    }, 200);
 
     try {
       let wStr, hStr;
