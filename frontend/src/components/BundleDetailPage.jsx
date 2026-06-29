@@ -464,6 +464,19 @@ export default function BundleDetailPage({
 
     setDownloadState('downloading');
     setShowTransferHud(true);
+    setHudMetrics({
+      progress: 5,
+      speedMbps: 0,
+      transferredMB: 0,
+      totalMB: 0,
+      etaSeconds: 0,
+      stage: 'Building ZIP on server... (0.0s)',
+      steps: [
+        { label: 'Fetching sources & cropping', status: 'active', duration: '0.0s' },
+        { label: 'GCS upload & sign URL', status: 'pending', duration: '' },
+        { label: 'Download from GCS CDN', status: 'pending', duration: '' }
+      ]
+    });
     const stepStart = Date.now();
 
     // Honest prep timer — shows real elapsed time while server builds ZIP
