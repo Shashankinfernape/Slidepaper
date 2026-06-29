@@ -533,6 +533,10 @@ export default function BundleDetailPage({
           if (bundle.stats) bundle.stats.downloads = data.downloads;
         }
 
+        if (!data || !data.downloadUrl) {
+          throw new Error('Server returned an invalid download URL');
+        }
+
         const downloadUrl = data.downloadUrl.startsWith('http')
           ? data.downloadUrl
           : `${API_URL}${data.downloadUrl}`;
@@ -844,7 +848,10 @@ export default function BundleDetailPage({
                     <button
                       key={option.id}
                       className={`apple-picker-option ${selectedDownloadId === option.id ? 'active' : ''}`}
-                      onClick={() => setSelectedDownloadId(option.id)}
+                      onClick={() => {
+                        setSelectedDownloadId(option.id);
+                        setDownloadState('idle');
+                      }}
                     >
                       {getOptionIcon(option.id)}
                       <span>{option.label}</span>
@@ -858,7 +865,10 @@ export default function BundleDetailPage({
                       type="text"
                       placeholder={activeSample.w}
                       value={customRatioWidth}
-                      onChange={(e) => setCustomRatioWidth(e.target.value)}
+                      onChange={(e) => {
+                        setCustomRatioWidth(e.target.value);
+                        setDownloadState('idle');
+                      }}
                       className="apple-custom-input"
                     />
                     <span className="apple-custom-divider">:</span>
@@ -866,7 +876,10 @@ export default function BundleDetailPage({
                       type="text"
                       placeholder={activeSample.h}
                       value={customRatioHeight}
-                      onChange={(e) => setCustomRatioHeight(e.target.value)}
+                      onChange={(e) => {
+                        setCustomRatioHeight(e.target.value);
+                        setDownloadState('idle');
+                      }}
                       className="apple-custom-input"
                     />
                     {!customIsValid && (

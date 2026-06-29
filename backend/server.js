@@ -619,17 +619,16 @@ app.post('/api/custom-ratio', async (req, res) => {
     const dbBundle = await Bundle.findOne({ id: bundleId });
     if (dbBundle && dbBundle.ratioCaches && dbBundle.ratioCaches.get(ratioKey)) {
       const cachedUri = dbBundle.ratioCaches.get(ratioKey);
-      console.log(`[Cache HIT] Found cached ratio "${ratioKey}" for bundle "${bundleId}": ${cachedUri}`);
-
-      let downloadUrl = cachedUri;
-      if (cachedUri.startsWith('gs://')) {
+      if (cachedUri && cachedUri.startsWith('gs://')) {
         const signedUrl = await getGcsSignedUrl(cachedUri);
-        if (signedUrl) downloadUrl = signedUrl;
+        if (signedUrl) {
+          console.log(`[Cache HIT] Found cached signed URL for "${jobKey}"`);
+          const zipSizeBytes = dbBundle.ratioCacheSizes?.get(ratioKey) || 0;
+          const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
+          return res.status(200).json({ success: true, downloadUrl: signedUrl, zipSizeBytes, downloads: updatedBundle?.stats?.downloads || 0 });
+        }
+        console.log(`[Cache Bypass] Signed URL generation failed for "${cachedUri}", regenerating stream...`);
       }
-
-      const zipSizeBytes = dbBundle.ratioCacheSizes?.get(ratioKey) || 0;
-      const updatedBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
-      return res.status(200).json({ success: true, downloadUrl, zipSizeBytes, downloads: updatedBundle?.stats?.downloads || 0 });
     }
   } catch (dbErr) {
     console.warn('[Cache Check Error]', dbErr.message);
@@ -640,17 +639,16 @@ app.post('/api/custom-ratio', async (req, res) => {
     console.log(`[Job Dedup] Awaiting active processing job for "${jobKey}"...`);
     try {
       const gcsUri = await processingJobs.get(jobKey);
-      let downloadUrl = gcsUri;
       if (gcsUri && gcsUri.startsWith('gs://')) {
         const signedUrl = await getGcsSignedUrl(gcsUri);
-        if (signedUrl) downloadUrl = signedUrl;
+        if (signedUrl) {
+          const dedupBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
+          const zipSizeBytes = dedupBundle?.ratioCacheSizes?.get(ratioKey) || 0;
+          return res.status(200).json({ success: true, downloadUrl: signedUrl, zipSizeBytes, downloads: dedupBundle?.stats?.downloads || 0 });
+        }
       }
-      // Fetch fresh bundle to get stored size
-      const dedupBundle = await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } }, { returnDocument: 'after' });
-      const zipSizeBytes = dedupBundle?.ratioCacheSizes?.get(ratioKey) || 0;
-      return res.status(200).json({ success: true, downloadUrl, zipSizeBytes, downloads: dedupBundle?.stats?.downloads || 0 });
     } catch (dedupErr) {
-      console.warn('[Job Dedup Failed, restarting job]', dedupErr.message);
+      console.warn('[Job Dedup Failed]', dedupErr.message);
     }
   }
 
