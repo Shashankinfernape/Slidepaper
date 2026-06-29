@@ -198,13 +198,14 @@ export function DownloadProvider({ children }) {
             const blob = xhr.response;
             const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = blobUrl;
-            a.download = outFilename;
+            a.setAttribute('download', outFilename);
             document.body.appendChild(a);
             a.click();
             setTimeout(() => {
               try { a.remove(); window.URL.revokeObjectURL(blobUrl); } catch (_) {}
-            }, 10000);
+            }, 20000);
 
             updateDownloadMetrics(downloadId, { progress: 100, stage: 'Complete' });
             updateDownloadStatus(downloadId, 'complete');
@@ -278,13 +279,14 @@ export function DownloadProvider({ children }) {
         const blob = new Blob(chunks, { type: 'application/zip' });
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
+        a.style.display = 'none';
         a.href = blobUrl;
-        a.download = outFilename;
+        a.setAttribute('download', outFilename);
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
           try { a.remove(); window.URL.revokeObjectURL(blobUrl); } catch (_) {}
-        }, 10000);
+        }, 20000);
 
         updateDownloadMetrics(downloadId, { progress: 100, stage: 'Complete' });
         updateDownloadStatus(downloadId, 'complete');

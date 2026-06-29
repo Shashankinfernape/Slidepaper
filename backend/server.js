@@ -720,15 +720,18 @@ app.post('/api/custom-ratio', async (req, res) => {
     const archive = archiver('zip', { store: true });
     let uploadDone = Promise.resolve(null);
 
+    let isFinished = false;
     let isClientDisconnected = false;
+    archive.on('end', () => { isFinished = true; });
+    res.on('finish', () => { isFinished = true; });
+
     req.on('close', () => {
-      if (!res.writableEnded) {
+      if (!isFinished && !res.writableEnded) {
         isClientDisconnected = true;
-        console.log(`[Client Disconnected] Aborting job "${jobKey}"...`);
+        console.log(`[Client Disconnected Early] Aborting job "${jobKey}"...`);
         try { archive.destroy(); } catch (_) {}
         try { cropSemaphore.release(); } catch (_) {}
         processingJobs.delete(jobKey);
-        try { rejectJob(new Error('Client disconnected')); } catch (_) {}
       }
     });
 
