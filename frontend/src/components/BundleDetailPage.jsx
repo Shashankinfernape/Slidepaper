@@ -604,17 +604,22 @@ export default function BundleDetailPage({
           }
         };
 
+        const ratioTag = selectedDownloadId === 'custom' ? customRatio : (selectedDownload?.ratio || '16:9');
+        const cleanRatio = ratioTag.replace(/[^a-zA-Z0-9_-]/g, 'x');
+        const outFilename = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${cleanRatio}.zip`;
+
         xhr.onload = () => {
           if (xhr.status === 200) {
             const blob = xhr.response;
             const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = blobUrl;
-            a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+            a.download = outFilename;
             document.body.appendChild(a);
             a.click();
-            a.remove();
-            window.URL.revokeObjectURL(blobUrl);
+            setTimeout(() => {
+              try { a.remove(); window.URL.revokeObjectURL(blobUrl); } catch (_) {}
+            }, 10000);
             setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
             setTimeout(finishDownload, 1200);
           } else {
@@ -631,15 +636,20 @@ export default function BundleDetailPage({
         xhr.send();
       } else {
         // Fallback: Direct binary ZIP stream response
+        const ratioTag = selectedDownloadId === 'custom' ? customRatio : (selectedDownload?.ratio || '16:9');
+        const cleanRatio = ratioTag.replace(/[^a-zA-Z0-9_-]/g, 'x');
+        const outFilename = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_${cleanRatio}.zip`;
+
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `${bundle.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_pack.zip`;
+        a.download = outFilename;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        window.URL.revokeObjectURL(blobUrl);
+        setTimeout(() => {
+          try { a.remove(); window.URL.revokeObjectURL(blobUrl); } catch (_) {}
+        }, 10000);
         setHudMetrics(prev => ({ ...prev, progress: 100, stage: 'Complete' }));
         setTimeout(finishDownload, 1200);
       }
