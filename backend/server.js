@@ -660,6 +660,7 @@ app.post('/api/custom-ratio', async (req, res) => {
   // Create Promise deferred holder for deduplication map
   let resolveJob, rejectJob;
   const jobPromise = new Promise((resFn, rejFn) => { resolveJob = resFn; rejectJob = rejFn; });
+  jobPromise.catch(() => {}); // prevent UnhandledPromiseRejection process crash when rejected
   processingJobs.set(jobKey, jobPromise);
 
   try {
