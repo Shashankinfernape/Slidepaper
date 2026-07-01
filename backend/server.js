@@ -761,6 +761,7 @@ app.post('/api/custom-ratio', async (req, res) => {
 
     // Process images one at a time (controls RAM, no OOM)
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
+    let appendedCount = 0;
     for (let i = 0; i < imagesToProcess.length; i++) {
       if (isClientDisconnected) {
         console.log(`[Build Aborted] Skipping remaining images for disconnected job "${jobKey}"`);
@@ -840,12 +841,25 @@ app.post('/api/custom-ratio', async (req, res) => {
       }
 
       archive.append(finalBuffer, { name: imgName });
+      appendedCount++;
       console.log(`[Build] Image ${i + 1}/${imagesToProcess.length} appended (${(finalBuffer.length / 1024).toFixed(0)} KB)`);
       imgBuffer = null;   // free RAM immediately
       finalBuffer = null;
       if (global.gc && (i % 3 === 0)) {
         try { global.gc(); } catch (_) {}
       }
+    }
+
+    if (appendedCount === 0) {
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to retrieve wallpapers from Google Drive or GCS. Please re-authenticate your Google Drive connection.' });
+      } else {
+        res.destroy();
+      }
+      cropSemaphore.release();
+      processingJobs.delete(jobKey);
+      rejectJob(new Error('No images could be successfully fetched from Google Drive or GCS'));
+      return;
     }
 
     await archive.finalize();
