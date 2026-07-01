@@ -853,7 +853,8 @@ app.post('/api/custom-ratio', async (req, res) => {
 
     if (appendedCount === 0) {
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Failed to retrieve wallpapers from Google Drive or GCS. Please re-authenticate your Google Drive connection.' });
+        const authUrl = `${req.protocol}://${req.get('host')}/api/auth`;
+        res.status(500).json({ error: `Failed to retrieve wallpapers from Google Drive or GCS. Please re-authenticate your Google Drive connection by visiting: ${authUrl}` });
       } else {
         res.destroy();
       }
