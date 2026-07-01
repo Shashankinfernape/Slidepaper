@@ -42,28 +42,33 @@ const formatEta = (sec) => {
 
 const fmt = (n, d = 1) => (isFinite(n) && n > 0 ? n.toFixed(d) : '0');
 
-function OrbitalIcon({ isProcessing, isDone, color }) {
+function OrbitalIcon({ progress = 0, isProcessing, isDone, color }) {
   const size = 34;
   const r = 13;
   const cx = size / 2;
   const circumference = 2 * Math.PI * r;
 
+  const pct = isDone ? 100 : Math.min(100, Math.max(0, progress));
+  // If progress is 0, give it a tiny dash (like Play Store's initial state) instead of empty outline
+  const activePct = pct === 0 && !isDone ? 4 : pct;
+  const offset = circumference - (activePct / 100) * circumference;
+
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0 }}>
-        <circle cx={cx} cy={cx} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2.5" />
         <circle
           cx={cx} cy={cx} r={r}
           fill="none"
           stroke={isDone ? '#81c995' : color}
-          strokeWidth="2"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={isDone ? 0 : isProcessing ? circumference * 0.72 : circumference * 0.3}
+          strokeDashoffset={offset}
           style={{
             transformOrigin: `${cx}px ${cx}px`,
-            animation: isDone ? 'none' : isProcessing ? 'hudSpin 1.1s linear infinite' : 'hudSpin 2s linear infinite',
-            transition: 'stroke-dashoffset 0.5s ease',
+            animation: isDone ? 'none' : isProcessing ? 'hudSpin 1.4s linear infinite' : 'none',
+            transition: 'stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
           transform={`rotate(-90 ${cx} ${cx})`}
         />
@@ -112,7 +117,12 @@ export default function TransferHUD() {
         onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
       >
-        <OrbitalIcon isProcessing={topDownload?.metrics?.stage?.includes('Cropping')} isDone={topDownload?.status === 'complete'} color="#3b82f6" />
+        <OrbitalIcon 
+          progress={topPct} 
+          isProcessing={topDownload?.status === 'downloading'} 
+          isDone={topDownload?.status === 'complete'} 
+          color="#3b82f6" 
+        />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f3f4f6', fontFamily: 'Outfit, sans-serif' }}>
             Downloading {activeCount} Pack{activeCount > 1 ? 's' : ''} ({topPct}%)
@@ -214,7 +224,12 @@ export default function TransferHUD() {
               {/* Top Row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                  <OrbitalIcon isProcessing={isProcessing} isDone={isDone} color={color} />
+                  <OrbitalIcon 
+                    progress={progress} 
+                    isProcessing={status === 'downloading' || isProcessing} 
+                    isDone={isDone} 
+                    color={color} 
+                  />
                   <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f3f4f6', fontFamily: 'Outfit, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {bundle?.name || 'Wallpaper Pack'}{' '}
