@@ -1336,23 +1336,21 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     saveBundlesToDrive().catch(e => console.warn('[Drive Sync Warning]', e.message));
 
     // Non-blocking background worker: Pre-generate preset ratio ZIPs in GCS (Fire and Forget)
-    Bundle.create(newBundle).then((createdBundle) => {
-      (async () => {
-        try {
-          const LANDSCAPE_PRESETS = ['original', '16:9', '21:9'];
-          const PORTRAIT_PRESETS  = ['original', '9:16', '9:19.5'];
-          const presets = orientation === 'portrait' ? PORTRAIT_PRESETS : LANDSCAPE_PRESETS;
-          console.log(`[Background Worker] Starting preset pre-gen for "${bundleId}" [${orientation}]:`, presets);
-          const gcsSources = imageUrls.map((img, idx) => ({ name: img.name || `wallpaper_${idx + 1}.png`, gcsPath: img.gcsPath }));
-          for (const ratioStr of presets) {
-            await generateAndCacheRatio(bundleId, ratioStr, gcsSources);
-          }
-          console.log(`[Background Worker COMPLETE] All preset ZIPs cached in GCS for "${bundleId}".`);
-        } catch (bgErr) {
-          console.warn('[Background Worker Error]', bgErr.message);
+    (async () => {
+      try {
+        const LANDSCAPE_PRESETS = ['original', '16:9', '21:9'];
+        const PORTRAIT_PRESETS  = ['original', '9:16', '9:19.5'];
+        const presets = orientation === 'portrait' ? PORTRAIT_PRESETS : LANDSCAPE_PRESETS;
+        console.log(`[Background Worker] Starting preset pre-gen for "${bundleId}" [${orientation}]:`, presets);
+        const gcsSources = imageUrls.map((img, idx) => ({ name: img.name || `wallpaper_${idx + 1}.png`, gcsPath: img.gcsPath }));
+        for (const ratioStr of presets) {
+          await generateAndCacheRatio(bundleId, ratioStr, gcsSources);
         }
-      })();
-    }).catch(e => console.error('[Bundle.create Error]', e.message));
+        console.log(`[Background Worker COMPLETE] All preset ZIPs cached in GCS for "${bundleId}".`);
+      } catch (bgErr) {
+        console.warn('[Background Worker Error]', bgErr.message);
+      }
+    })();
 
     return res.status(200).json({ success: true, message: 'Bundle uploaded and published successfully!', bundle: newBundle });
 
