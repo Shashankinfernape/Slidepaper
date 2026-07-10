@@ -191,7 +191,8 @@ export function AuthProvider({ children }) {
         'admin@slidepapers.com',
         'infernapeshashank@gmail.com',
         'jasondomnic@gmail.com',
-        'jasondomnii@gmail.com'
+        'jasondomnii@gmail.com',
+        'jasondomnic5@gmail.com'
       ];
       
       const isMockUser = googleUser.uid === 'google-mock-101';
