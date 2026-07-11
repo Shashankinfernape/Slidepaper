@@ -460,31 +460,7 @@ async function saveBundlesToDrive() {
 
 // Initialize Google OAuth2 client and Drive client
 function initializeDriveClient() {
-  // Check for Service Account first (permanent, no login/refresh tokens required)
-  const serviceAccountJson = process.env.SERVICE_ACCOUNT_JSON || process.env.GCS_CREDENTIALS_JSON || process.env.GCS_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-
-  if (serviceAccountJson || fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-    try {
-      let credentials;
-      if (serviceAccountJson) {
-        credentials = JSON.parse(serviceAccountJson);
-      }
-
-      const auth = new google.auth.GoogleAuth({
-        credentials,
-        keyFile: serviceAccountJson ? undefined : SERVICE_ACCOUNT_PATH,
-        scopes: SCOPES,
-      });
-
-      drive = google.drive({ version: 'v3', auth });
-      isServiceAccount = true;
-      console.log('[Google Drive] Client successfully initialized using Service Account.');
-      syncBundlesWithDrive();
-      return;
-    } catch (saErr) {
-      console.error('[Google Drive] Service Account initialization failed, falling back to OAuth:', saErr.message);
-    }
-  }
+  isServiceAccount = false;
 
   let client_id = process.env.GDRIVE_CLIENT_ID;
   let client_secret = process.env.GDRIVE_CLIENT_SECRET;
