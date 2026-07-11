@@ -735,7 +735,10 @@ export default function AdminDashboard({ onBack, logout }) {
             let errorMessage = 'Failed to publish wallpaper bundle.';
             try {
               const errorData = JSON.parse(xhr.responseText);
-              errorMessage = errorData.error || errorData.details || errorMessage;
+              errorMessage = errorData.error || errorMessage;
+              if (errorData.details) {
+                errorMessage += ` (${errorData.details})`;
+              }
             } catch (_) {}
             setShowUploadHud(false);
             reject(new Error(errorMessage));
