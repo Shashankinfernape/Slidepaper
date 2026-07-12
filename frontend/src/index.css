@@ -382,6 +382,7 @@ h1, h2, h3, h4, h5, h6 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 @media (max-width: 1200px) {
@@ -404,10 +405,7 @@ h1, h2, h3, h4, h5, h6 {
     gap: 1rem;
   }
 
-  /* Reduce bottom padding on stack container so cards don't add huge visual gap */
-  .stack-container {
-    padding-bottom: 0.6rem;
-  }
+  /* Mobile grid handled by uniform padding from global class */
 }
 
 /* 3D Slideshow Stack Card Styling */
@@ -424,12 +422,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-2px);
 }
 
 .stack-container {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9.5;
   background-color: transparent;
   position: relative;
   overflow: visible;
@@ -438,7 +436,8 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   perspective: 1200px;
   border-radius: var(--radius-lg);
-  padding: 0 0.25rem 0.75rem 0.75rem;
+  /* Top 0.5rem and Left 0.6rem padding to balance the top-left stack expansion without adding extra row gap */
+  padding: 0.5rem 0 0 0.6rem;
 }
 
 .stack-wrapper {
