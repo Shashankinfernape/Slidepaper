@@ -3706,11 +3706,6 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-card--watch-hero .stack-wrapper {
   width: 96%;
-  transform: none;
-}
-
-.bundle-card--watch-hero:hover .stack-wrapper {
-  transform: none;
 }
 
 /* Watch Hero Specific Stack Tweaks (organic tilt & lighter gradient overlay) */
@@ -3718,22 +3713,30 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(180deg, rgba(4, 6, 12, 0) 65%, rgba(4, 6, 12, 0.05) 80%, rgba(4, 6, 12, 0.4) 100%);
 }
 
-.bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
-  /* Percentage-based separation allows it to scale perfectly when screen shrinks */
-  transform: translate3d(
-    calc(var(--layer-factor) * -10%),
-    calc(var(--layer-factor) * -8%),
-    calc(20px - var(--layer-factor) * 40px)
-  ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
+.bundle-card--watch-hero .stack-image-wrapper.active {
+  transform: translate3d(0, 0, 10px) scale(1);
+}
+.bundle-card--watch-hero .stack-image-wrapper.next {
+  transform: translate3d(-4px, -3px, -4px) scale(0.98);
+}
+.bundle-card--watch-hero .stack-image-wrapper.prev {
+  transform: translate3d(-8px, -6px, -8px) scale(0.96);
+}
+.bundle-card--watch-hero .stack-image-wrapper.hidden {
+  transform: translate3d(-12px, -9px, -12px) scale(0.94);
 }
 
-.bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
-  /* 4x larger separation on PC (approx 12-14% of width) that shrinks naturally on mobile */
-  transform: translate3d(
-    calc(var(--layer-factor) * -13%),
-    calc(var(--layer-factor) * -10%),
-    calc(35px - var(--layer-factor) * 55px)
-  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -1.5deg));
+.bundle-card--watch-hero:hover {
+  transform: translateY(-3px);
+}
+.bundle-card--watch-hero:hover .stack-image-wrapper.active {
+  transform: translate3d(0, 0, 12px) scale(1.01) rotate(0deg);
+}
+.bundle-card--watch-hero:hover .stack-image-wrapper.next {
+  transform: translate3d(-5px, -3px, -2px) scale(0.99) rotate(-0.5deg);
+}
+.bundle-card--watch-hero:hover .stack-image-wrapper.prev {
+  transform: translate3d(-10px, -6px, -4px) scale(0.98) rotate(-1deg);
 }
 
 .bundle-card--sidebar-preview {
