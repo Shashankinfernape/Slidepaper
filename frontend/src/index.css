@@ -484,7 +484,7 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, rgba(4, 6, 12, 0) 65%, rgba(4, 6, 12, 0.05) 80%, rgba(4, 6, 12, 0.4) 100%);
+  background: linear-gradient(180deg, rgba(4, 6, 12, 0) 42%, rgba(4, 6, 12, 0.12) 62%, rgba(4, 6, 12, 0.78) 100%);
   opacity: 0;
   z-index: 1;
   transition: opacity 0.35s ease;
@@ -566,7 +566,7 @@ h1, h2, h3, h4, h5, h6 {
     calc(var(--layer-factor) * -28px),
     calc(var(--layer-factor) * -24px),
     calc(20px - var(--layer-factor) * 40px)
-  ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -2.5deg));
+  ) scale(calc(1.02 - var(--layer-factor) * 0.10));
 }
 
 .stack-image-wrapper.layer-active-stack.active .stack-image-bg {
@@ -592,7 +592,7 @@ h1, h2, h3, h4, h5, h6 {
     calc(var(--layer-factor) * -33px),
     calc(var(--layer-factor) * -27px),
     calc(35px - var(--layer-factor) * 55px)
-  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -3.5deg));
+  ) scale(calc(1.03 - var(--layer-factor) * 0.09));
 }
 
 .bundle-card:hover .stack-image-wrapper.layer-active-stack.active .stack-image-bg {
@@ -3722,6 +3722,27 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-card--watch-hero:hover .stack-image-wrapper.prev {
   transform: translate3d(-36px, -30px, -20px) scale(0.92) rotate(-1deg);
+}
+
+/* Watch Hero Specific Stack Tweaks (organic tilt & lighter gradient overlay) */
+.bundle-card--watch-hero .stack-image-wrapper::after {
+  background: linear-gradient(180deg, rgba(4, 6, 12, 0) 65%, rgba(4, 6, 12, 0.05) 80%, rgba(4, 6, 12, 0.4) 100%);
+}
+
+.bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
+  transform: translate3d(
+    calc(var(--layer-factor) * -28px),
+    calc(var(--layer-factor) * -24px),
+    calc(20px - var(--layer-factor) * 40px)
+  ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -2.5deg));
+}
+
+.bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
+  transform: translate3d(
+    calc(var(--layer-factor) * -33px),
+    calc(var(--layer-factor) * -27px),
+    calc(35px - var(--layer-factor) * 55px)
+  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -3.5deg));
 }
 
 .bundle-card--sidebar-preview {
