@@ -739,7 +739,8 @@ app.post('/api/custom-ratio', async (req, res) => {
         const cfRes = await fetch(process.env.CLOUD_FUNCTION_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bundleId, ratioStr: ratioKey, sourceFiles, gcsBucket: GCS_BUCKET })
+          body: JSON.stringify({ bundleId, ratioStr: ratioKey, sourceFiles, gcsBucket: GCS_BUCKET }),
+          signal: AbortSignal.timeout(45000) // 45s timeout for Cloud Function
         });
         const cfData = await cfRes.json();
         if (cfData && cfData.success && cfData.gcsUri) {
@@ -848,7 +849,7 @@ app.post('/api/custom-ratio', async (req, res) => {
             try {
               const driveRes = await drive.files.get(
                 { fileId, alt: 'media' },
-                { responseType: 'arraybuffer' }
+                { responseType: 'arraybuffer', timeout: 30000 } // 30 second timeout to prevent deadlocks
               );
               if (driveRes?.data) imgBuffer = Buffer.from(driveRes.data);
             } catch (dErr) {
