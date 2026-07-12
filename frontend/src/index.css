@@ -1308,6 +1308,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Header Search Bar Styling */
 .search-container-header {
+  position: relative;
   flex: 1;
   min-width: 0;
   max-width: 480px;
@@ -3704,12 +3705,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-card--watch-hero .stack-wrapper {
-  width: 98%;
-  transform: rotateX(3deg) rotateY(5deg) rotateZ(-0.25deg) scale(1.02);
+  width: 96%;
 }
 
 .bundle-card--watch-hero:hover .stack-wrapper {
-  transform: rotateX(3deg) rotateY(5deg) rotateZ(-0.25deg) scale(1.02);
+  transform: none;
 }
 
 .bundle-card--watch-hero:hover .stack-image-wrapper.active {
@@ -4758,7 +4758,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .bundle-card--watch-hero .stack-wrapper {
-    width: 98%;
+    width: 96%;
   }
 
   /* Tighten stack card separation heavily on mobile to prevent clipping search bar */
