@@ -427,7 +427,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .stack-container {
   width: 100%;
-  aspect-ratio: 16 / 9.5;
+  /* No aspect-ratio here; it wraps the stack-wrapper perfectly to avoid false row gaps */
   background-color: transparent;
   position: relative;
   overflow: visible;
@@ -436,8 +436,8 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   perspective: 1200px;
   border-radius: var(--radius-lg);
-  /* Top 0.5rem and Left 0.6rem padding to balance the top-left stack expansion without adding extra row gap */
-  padding: 0.5rem 0 0 0.6rem;
+  /* Exactly balances max stack protrusion (6px Top, 10px Left) so grid cells have zero empty internal space */
+  padding: 0.375rem 0 0 0.625rem;
 }
 
 .stack-wrapper {
