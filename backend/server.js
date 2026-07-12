@@ -1135,6 +1135,8 @@ app.get('/api/debug-auth', async (req, res) => {
     }
 
     res.json({
+      clientIdFirst15: envClientId ? envClientId.substring(0, 15) : 'missing',
+      clientSecretFirst15: envClientSecret ? envClientSecret.substring(0, 15) : 'missing',
       diffsId,
       diffsSecret,
       envClientIdLength: envClientId.length,
