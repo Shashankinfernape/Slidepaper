@@ -215,8 +215,7 @@ export default function BundleDetailPage({
   const [authorProfile, setAuthorProfile] = useState(null);
   const resolvedAuthorProfile = useMemo(() => {
     const targetUid = bundle.author?.uid || 'admin-mock-999';
-    const isOwnBundle = (userProfile && (userProfile.uid === targetUid || targetUid === 'admin-mock-999' || !bundle.author?.uid)) ||
-                        (user && (user.uid === targetUid || targetUid === 'admin-mock-999'));
+    const isOwnBundle = (userProfile && userProfile.uid === targetUid) || (user && user.uid === targetUid);
     const liveProfile = isOwnBundle ? userProfile : null;
     const remoteProfile = authorProfile || {};
 
