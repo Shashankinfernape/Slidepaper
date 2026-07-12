@@ -1068,6 +1068,51 @@ app.get('/api/proxy-image', async (req, res) => {
   return res.redirect(redirectUrl);
 });
 
+app.get('/api/debug-auth', async (req, res) => {
+  try {
+    const dbTokenObj = await Credential.findOne({ key: 'gdrive_tokens' });
+    const hasDbToken = !!dbTokenObj;
+    const dbTokenKeys = dbTokenObj ? Object.keys(JSON.parse(dbTokenObj.value)) : [];
+    
+    let driveOk = false;
+    let driveError = null;
+    let refreshed = false;
+    
+    if (oauth2Client) {
+      try {
+        const driveInstance = google.drive({ version: 'v3', auth: oauth2Client });
+        await driveInstance.files.list({ pageSize: 1 });
+        driveOk = true;
+      } catch (err) {
+        driveError = err.message;
+        // Try manual refresh
+        try {
+          await oauth2Client.getAccessToken();
+          const driveInstance = google.drive({ version: 'v3', auth: oauth2Client });
+          await driveInstance.files.list({ pageSize: 1 });
+          driveOk = true;
+          refreshed = true;
+        } catch (rErr) {
+          driveError += ` | Refresh failed: ${rErr.message}`;
+        }
+      }
+    }
+
+    res.json({
+      envClientId: process.env.GDRIVE_CLIENT_ID ? `${process.env.GDRIVE_CLIENT_ID.substring(0, 10)}...` : 'missing',
+      envClientSecret: process.env.GDRIVE_CLIENT_SECRET ? `${process.env.GDRIVE_CLIENT_SECRET.substring(0, 5)}...` : 'missing',
+      hasDbToken,
+      dbTokenKeys,
+      driveInitialized: !!drive,
+      driveOk,
+      refreshed,
+      driveError,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint: Check Google Drive status and list files in target folder
 app.get('/api/drive-status', async (req, res) => {
   if (!drive) {
