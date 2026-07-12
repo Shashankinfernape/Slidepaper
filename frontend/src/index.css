@@ -715,7 +715,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--bg-surface);
   border: none;
   border-radius: var(--radius-lg);
-  aspect-ratio: 16 / 11; /* Same ratio as main page stack container */
+  aspect-ratio: 16 / 9.5; /* Match bundle-card wrapper ratio to prevent stretching the grid row */
   height: auto; /* Scales dynamically based on grid column width */
   display: flex;
   flex-direction: column;
