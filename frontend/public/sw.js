@@ -1,9 +1,10 @@
-const CACHE_NAME = 'slidepapers-cache-v2';
+const CACHE_NAME = 'slidepapers-cache-v3';
 const ASSETS = [
   '/',
-  '/index.html',
   '/manifest.json',
-  '/favicon.svg'
+  '/favicon.svg',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
