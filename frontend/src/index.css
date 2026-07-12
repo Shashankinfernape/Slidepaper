@@ -4760,6 +4760,16 @@ h1, h2, h3, h4, h5, h6 {
       calc(35px - var(--layer-factor) * 55px)
     ) scale(calc(1.03 - var(--layer-factor) * 0.09));
   }
+  
+  .bundle-card--watch-hero:hover .stack-image-wrapper.next {
+    transform: translate3d(-4px, -3px, 0px) scale(0.98);
+  }
+  .bundle-card--watch-hero:hover .stack-image-wrapper.prev {
+    transform: translate3d(-8px, -6px, -20px) scale(0.94);
+  }
+  .bundle-card--watch-hero:hover .stack-image-wrapper.hidden {
+    transform: translate3d(-12px, -9px, -30px) scale(0.90);
+  }
 
   .bundle-youtube-info,
   .bundle-youtube-download-row,
