@@ -5418,7 +5418,7 @@ h1, h2, h3, h4, h5, h6 {
     grid-row: 3 !important;
     grid-column: 1 / 6 !important;
     width: 100% !important;
-    margin: 0.85rem 0 0.25rem 0 !important;
+    margin: 0.65rem 0 0 !important;
     justify-content: flex-start !important;
   }
 
