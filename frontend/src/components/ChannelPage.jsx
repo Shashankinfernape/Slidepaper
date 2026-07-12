@@ -44,11 +44,13 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
       .catch(() => {});
   }, [channel, user]);
 
+  // Extract isOwnChannel outside to conditionally show admin tabs
+  const targetUid = channel?.uid || channel?.author?.uid;
+  const isOwnChannel = (targetUid && (userProfile?.uid === targetUid || user?.uid === targetUid)) ||
+                       (!targetUid && (userProfile?.email === channel?.email || userProfile?.uid === 'admin-mock-999'));
+
   // Resolve live profile parity (matches userProfile when viewing own channel)
   const resolvedProfile = useMemo(() => {
-    const targetUid = channel?.uid || channel?.author?.uid;
-    const isOwnChannel = (targetUid && (userProfile?.uid === targetUid || user?.uid === targetUid)) ||
-                         (!targetUid && (userProfile?.email === channel?.email || userProfile?.uid === 'admin-mock-999'));
     const live = isOwnChannel ? userProfile : null;
     const remote = remoteAuthor || {};
 
@@ -318,25 +320,27 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           <span>Wallpapers ({displayBundles.length})</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab('monetization')}
-          style={{
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'monetization' ? '3px solid #22c55e' : '3px solid transparent',
-            color: activeTab === 'monetization' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontWeight: activeTab === 'monetization' ? 700 : 500,
-            fontSize: '0.95rem',
-            padding: '0.75rem 0.25rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <DollarSign size={16} style={{ color: '#22c55e' }} />
-          <span>Monetization & Revenue</span>
-        </button>
+        {isOwnChannel && (
+          <button
+            onClick={() => setActiveTab('monetization')}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'monetization' ? '3px solid #22c55e' : '3px solid transparent',
+              color: activeTab === 'monetization' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'monetization' ? 700 : 500,
+              fontSize: '0.95rem',
+              padding: '0.75rem 0.25rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <DollarSign size={16} style={{ color: '#22c55e' }} />
+            <span>Monetization & Revenue</span>
+          </button>
+        )}
       </div>
 
       {/* Tab Content Showcase */}
