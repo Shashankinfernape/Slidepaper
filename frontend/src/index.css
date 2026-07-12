@@ -451,8 +451,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-card:hover .stack-wrapper {
-  /* No scale on hover to prevent perspective twist */
-  transform: rotateX(3deg) rotateY(4deg) rotateZ(-0.2deg);
+  /* Dynamic 3D tilt adjustment on hover */
+  transform: rotateX(3deg) rotateY(4deg) rotateZ(-0.2deg) scale(1.02);
 }
 
 /* 3D Stack Image Positioning */
@@ -536,19 +536,19 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Hover state styling boost - dynamic stack expansion along the fanning axes */
 .bundle-card:hover .stack-image-wrapper.active {
-  transform: translate3d(0, 0, 25px) scale(1.03);
+  transform: translate3d(0, 0, 35px) scale(1.03);
 }
 .bundle-card:hover .stack-image-wrapper.active .stack-image-bg {
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
 }
 
 .bundle-card:hover .stack-image-wrapper.next {
-  transform: translate3d(-15px, -13px, -5px) scale(0.97);
+  transform: translate3d(-16.5px, -13.5px, 0px) scale(0.98);
   opacity: 1;
 }
 
 .bundle-card:hover .stack-image-wrapper.prev {
-  transform: translate3d(-30px, -25px, -20px) scale(0.93);
+  transform: translate3d(-33px, -27px, -20px) scale(0.94);
   opacity: 1;
 }
 
@@ -583,12 +583,15 @@ h1, h2, h3, h4, h5, h6 {
 /* Expanded stack view on hover (capped fan-out visual footprint) */
 .bundle-card:hover .stack-image-wrapper.layer-active-stack {
   /* Hover (expanded) state formula:
-     Low separating mode: X to -30px, Y to -25px
+     X: starts at 0, ends at -33px (reduced 25%)
+     Y: starts at 0, ends at -27px (reduced 25%)
+     Z: starts at 35px, ends at -20px
+     Scale: starts at 1.03, ends at 0.94
   */
   transform: translate3d(
-    calc(var(--layer-factor) * -30px),
-    calc(var(--layer-factor) * -25px),
-    calc(25px - var(--layer-factor) * 45px)
+    calc(var(--layer-factor) * -33px),
+    calc(var(--layer-factor) * -27px),
+    calc(35px - var(--layer-factor) * 55px)
   ) scale(calc(1.03 - var(--layer-factor) * 0.09));
 }
 
