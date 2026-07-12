@@ -1113,14 +1113,15 @@ app.get('/api/debug-auth', async (req, res) => {
       }
     }
 
-    const hasClientId = !!process.env.GDRIVE_CLIENT_ID;
-    const hasClientSecret = !!process.env.GDRIVE_CLIENT_SECRET;
-    const clientIdValidFormat = hasClientId && process.env.GDRIVE_CLIENT_ID.endsWith('.apps.googleusercontent.com');
-    const clientSecretValidFormat = hasClientSecret && process.env.GDRIVE_CLIENT_SECRET.startsWith('GOCSPX-') && process.env.GDRIVE_CLIENT_SECRET.length === 35;
+    const crypto = await import('crypto');
+    const idHash = crypto.createHash('md5').update((process.env.GDRIVE_CLIENT_ID || '').trim()).digest('hex');
+    const secretHash = crypto.createHash('md5').update((process.env.GDRIVE_CLIENT_SECRET || '').trim()).digest('hex');
+    const clientIdExactMatch = idHash === 'cabfc08d970c8d9b7e4498bc930600b7';
+    const clientSecretExactMatch = secretHash === '9c02276b8decd6e60a8d77ec0f2bf0a5';
 
     res.json({
-      clientIdValidFormat,
-      clientSecretValidFormat,
+      clientIdExactMatch,
+      clientSecretExactMatch,
       envClientIdLength: process.env.GDRIVE_CLIENT_ID ? process.env.GDRIVE_CLIENT_ID.length : 0,
       envClientSecretLength: process.env.GDRIVE_CLIENT_SECRET ? process.env.GDRIVE_CLIENT_SECRET.length : 0,
       hasDbToken,
