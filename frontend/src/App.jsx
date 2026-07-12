@@ -541,9 +541,13 @@ function AppContent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Apply theme to document element
+  // Apply theme to document element and dynamically update mobile status bar color
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    const metaThemeColor = document.getElementById('theme-color-meta');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', theme === 'dark' ? '#000000' : '#ffffff');
+    }
   }, [theme]);
 
   useEffect(() => {
