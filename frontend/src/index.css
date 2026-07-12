@@ -3719,17 +3719,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
+  /* Percentage-based separation allows it to scale perfectly when screen shrinks */
   transform: translate3d(
-    calc(var(--layer-factor) * -28px),
-    calc(var(--layer-factor) * -24px),
+    calc(var(--layer-factor) * -10%),
+    calc(var(--layer-factor) * -8%),
     calc(20px - var(--layer-factor) * 40px)
   ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
 }
 
 .bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
+  /* 4x larger separation on PC (approx 12-14% of width) that shrinks naturally on mobile */
   transform: translate3d(
-    calc(var(--layer-factor) * -33px),
-    calc(var(--layer-factor) * -27px),
+    calc(var(--layer-factor) * -13%),
+    calc(var(--layer-factor) * -10%),
     calc(35px - var(--layer-factor) * 55px)
   ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -1.5deg));
 }
@@ -4746,23 +4748,7 @@ h1, h2, h3, h4, h5, h6 {
     width: 96%;
   }
 
-  /* Tighten stack card separation heavily on mobile to prevent clipping search bar */
-  
-  .bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
-    transform: translate3d(
-      calc(var(--layer-factor) * -6px),
-      calc(var(--layer-factor) * -4px),
-      calc(20px - var(--layer-factor) * 40px)
-    ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
-  }
-  
-  .bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
-    transform: translate3d(
-      calc(var(--layer-factor) * -16px),
-      calc(var(--layer-factor) * -11px),
-      calc(22px - var(--layer-factor) * 42px)
-    ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
-  }
+  /* Percent-based layout cascades from global to prevent clipping */
 
   .bundle-youtube-info,
   .bundle-youtube-download-row,
