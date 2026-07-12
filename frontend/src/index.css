@@ -1106,18 +1106,23 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    gap: 0.3rem 0.5rem;
-    /* Prevent search bar from wrapping to line 2 (which would push genres to line 3) */
+    gap: 0.5rem;
     flex-wrap: wrap;
   }
-  /* Force logo + search + icons to stay on one line */
-  .header-left,
+  .header-left {
+    order: 1;
+    flex-shrink: 0;
+  }
   .header-right {
+    order: 2;
     flex-shrink: 0;
   }
   .search-container-header {
-    flex-shrink: 1;
-    min-width: 80px;
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 100%;
+    margin-top: 0.2rem;
   }
   .search-container {
     max-width: 100%;
