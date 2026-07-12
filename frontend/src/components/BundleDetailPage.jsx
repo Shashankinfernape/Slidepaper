@@ -49,6 +49,25 @@ const SAMPLE_RATIOS = [
   { w: '21', h: '9' }
 ];
 
+function timeAgo(dateString) {
+  if (!dateString) return '2 weeks ago';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return 'just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears} year${diffInYears === 1 ? '' : 's'} ago`;
+}
+
 function getOptionIcon(optionId) {
   const id = optionId.toLowerCase();
   if (id.includes('desktop') || id.includes('ultrawide') || id.includes('triple') || id.includes('landscape') || id.includes('original')) {
@@ -515,15 +534,35 @@ export default function BundleDetailPage({
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              fontSize: '0.84rem',
-              color: 'var(--text-secondary)',
+              justifyContent: 'space-between',
               margin: '0.1rem 0 0.25rem 0',
-              fontWeight: 500
             }}>
-              <span>{formatNumber(viewsCount)} views</span>
-              <span>2 weeks ago</span>
-              <span>{formatNumber(downloadsCount)} downloads</span>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '0.84rem',
+                color: 'var(--text-secondary)',
+                fontWeight: 500
+              }}>
+                <span>{formatNumber(viewsCount)} views</span>
+                <span>{timeAgo(bundle.createdAt)}</span>
+                <span>{formatNumber(downloadsCount)} downloads</span>
+              </div>
+              
+              <button
+                className="youtube-action-pill-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Share URL copied to clipboard!');
+                }}
+                style={{ padding: '4px 10px', height: 'auto', fontSize: '0.8rem', background: 'transparent', border: '1px solid var(--border-color)' }}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style={{ marginRight: '4px' }}>
+                  <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
+                </svg>
+                <span>Share</span>
+              </button>
             </div>
 
             <div className="bundle-youtube-meta-row">
@@ -601,16 +640,6 @@ export default function BundleDetailPage({
                     </svg>
                   </button>
                 </div>
-
-                <button
-                  className="youtube-action-pill-btn"
-                  onClick={() => alert('Share URL copied to clipboard!')}
-                >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '4px' }}>
-                    <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
-                  </svg>
-                  <span>Share</span>
-                </button>
 
               </div>
             </div>

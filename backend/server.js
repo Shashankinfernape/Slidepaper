@@ -76,6 +76,17 @@ const bundleSchema = new mongoose.Schema({
   isHero: { type: Boolean, default: false },
   ratioCaches: { type: Map, of: String, default: {} },
   ratioCacheSizes: { type: Map, of: Number, default: {} }
+}, { timestamps: true });
+
+bundleSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    // If createdAt is missing (legacy bundle), derive it from the ObjectId
+    if (!ret.createdAt && doc._id) {
+      ret.createdAt = doc._id.getTimestamp();
+    }
+    return ret;
+  }
 });
 
 const Bundle = mongoose.model('Bundle', bundleSchema);
