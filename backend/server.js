@@ -61,8 +61,8 @@ const bundleSchema = new mongoose.Schema({
   tags: [String],
   includes: [String],
   stats: {
-    views: { type: Number, default: 100 },
-    likes: { type: Number, default: 5 },
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
     downloads: { type: Number, default: 0 }
   },
   likedBy: { type: [String], default: [] },
