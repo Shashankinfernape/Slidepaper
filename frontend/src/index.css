@@ -3712,18 +3712,22 @@ h1, h2, h3, h4, h5, h6 {
   transform: none;
 }
 
+.bundle-card--watch-hero .stack-image-wrapper.active,
 .bundle-card--watch-hero:hover .stack-image-wrapper.active {
   transform: translate3d(0, 0, 20px) scale(1.02);
 }
 
+.bundle-card--watch-hero .stack-image-wrapper.next,
 .bundle-card--watch-hero:hover .stack-image-wrapper.next {
   transform: translate3d(-6px, -4.5px, -10px) scale(0.96) rotate(-0.5deg);
 }
 
+.bundle-card--watch-hero .stack-image-wrapper.prev,
 .bundle-card--watch-hero:hover .stack-image-wrapper.prev {
   transform: translate3d(-12px, -9px, -20px) scale(0.92) rotate(-1deg);
 }
 
+.bundle-card--watch-hero .stack-image-wrapper.hidden,
 .bundle-card--watch-hero:hover .stack-image-wrapper.hidden {
   transform: translate3d(-18px, -13.5px, -30px) scale(0.88);
 }
@@ -3733,20 +3737,13 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(180deg, rgba(4, 6, 12, 0) 65%, rgba(4, 6, 12, 0.05) 80%, rgba(4, 6, 12, 0.4) 100%);
 }
 
-.bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
+.bundle-card--watch-hero .stack-image-wrapper.layer-active-stack,
+.bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
   transform: translate3d(
     calc(var(--layer-factor) * -10px),
     calc(var(--layer-factor) * -8px),
     calc(20px - var(--layer-factor) * 40px)
   ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
-}
-
-.bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
-  transform: translate3d(
-    calc(var(--layer-factor) * -14px),
-    calc(var(--layer-factor) * -11px),
-    calc(35px - var(--layer-factor) * 55px)
-  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -2deg));
 }
 
 .bundle-card--sidebar-preview {
@@ -4762,38 +4759,28 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   /* Tighten stack card separation heavily on mobile to prevent clipping search bar */
-  .bundle-card--watch-hero .stack-image-wrapper.next {
+  .bundle-card--watch-hero .stack-image-wrapper.next,
+  .bundle-card--watch-hero:hover .stack-image-wrapper.next {
     transform: translate3d(-3px, -2px, -10px) scale(0.96);
   }
-  .bundle-card--watch-hero .stack-image-wrapper.prev {
+  
+  .bundle-card--watch-hero .stack-image-wrapper.prev,
+  .bundle-card--watch-hero:hover .stack-image-wrapper.prev {
     transform: translate3d(-6px, -4px, -20px) scale(0.92);
   }
-  .bundle-card--watch-hero .stack-image-wrapper.hidden {
+  
+  .bundle-card--watch-hero .stack-image-wrapper.hidden,
+  .bundle-card--watch-hero:hover .stack-image-wrapper.hidden {
     transform: translate3d(-9px, -6px, -30px) scale(0.88);
   }
-  .bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
+  
+  .bundle-card--watch-hero .stack-image-wrapper.layer-active-stack,
+  .bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
     transform: translate3d(
       calc(var(--layer-factor) * -6px),
       calc(var(--layer-factor) * -4px),
       calc(20px - var(--layer-factor) * 40px)
     ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
-  }
-  .bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
-    transform: translate3d(
-      calc(var(--layer-factor) * -8px),
-      calc(var(--layer-factor) * -5px),
-      calc(35px - var(--layer-factor) * 55px)
-    ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -2.5deg));
-  }
-  
-  .bundle-card--watch-hero:hover .stack-image-wrapper.next {
-    transform: translate3d(-4px, -3px, 0px) scale(0.98);
-  }
-  .bundle-card--watch-hero:hover .stack-image-wrapper.prev {
-    transform: translate3d(-8px, -6px, -20px) scale(0.94);
-  }
-  .bundle-card--watch-hero:hover .stack-image-wrapper.hidden {
-    transform: translate3d(-12px, -9px, -30px) scale(0.90);
   }
 
   .bundle-youtube-info,
