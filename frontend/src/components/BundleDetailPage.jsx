@@ -534,35 +534,15 @@ export default function BundleDetailPage({
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              gap: '12px',
+              fontSize: '0.84rem',
+              color: 'var(--text-secondary)',
               margin: '0.1rem 0 0.25rem 0',
+              fontWeight: 500
             }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                fontSize: '0.84rem',
-                color: 'var(--text-secondary)',
-                fontWeight: 500
-              }}>
-                <span>{formatNumber(viewsCount)} views</span>
-                <span>{timeAgo(bundle.createdAt)}</span>
-                <span>{formatNumber(downloadsCount)} downloads</span>
-              </div>
-              
-              <button
-                className="youtube-action-pill-btn"
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert('Share URL copied to clipboard!');
-                }}
-                style={{ padding: '4px 10px', height: 'auto', fontSize: '0.8rem', background: 'transparent', border: '1px solid var(--border-color)' }}
-              >
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style={{ marginRight: '4px' }}>
-                  <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
-                </svg>
-                <span>Share</span>
-              </button>
+              <span>{formatNumber(viewsCount)} views</span>
+              <span>{timeAgo(bundle.createdAt)}</span>
+              <span>{formatNumber(downloadsCount)} downloads</span>
             </div>
 
             <div className="bundle-youtube-meta-row">
@@ -613,7 +593,7 @@ export default function BundleDetailPage({
                 </div>
               </div>
  
-              <div className="youtube-actions-group">
+              <div className="youtube-actions-group" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', marginTop: '1rem' }}>
                 <div className="youtube-like-dislike-pill">
                   <button
                     className={`youtube-like-btn ${reaction === 'like' ? 'active' : ''}`}
@@ -625,7 +605,7 @@ export default function BundleDetailPage({
                     <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'like' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'like' ? '0' : '2'} style={{ marginRight: '6px' }}>
                       <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
                     </svg>
-                    <span>{formatNumber(Math.max(0, likeCount))}</span>
+                    <span>{formatNumber(likeCount)}</span>
                   </button>
                   <div className="youtube-pill-divider"></div>
                   <button
@@ -640,7 +620,19 @@ export default function BundleDetailPage({
                     </svg>
                   </button>
                 </div>
-
+                
+                <button
+                  className="youtube-action-pill-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Share URL copied to clipboard!');
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '4px' }}>
+                    <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
+                  </svg>
+                  <span>Share</span>
+                </button>
               </div>
             </div>
           </div>
