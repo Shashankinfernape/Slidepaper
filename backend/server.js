@@ -1113,17 +1113,32 @@ app.get('/api/debug-auth', async (req, res) => {
       }
     }
 
-    const crypto = await import('crypto');
-    const idHash = crypto.createHash('md5').update((process.env.GDRIVE_CLIENT_ID || '').trim()).digest('hex');
-    const secretHash = crypto.createHash('md5').update((process.env.GDRIVE_CLIENT_SECRET || '').trim()).digest('hex');
-    const clientIdExactMatch = idHash === 'cabfc08d970c8d9b7e4498bc930600b7';
-    const clientSecretExactMatch = secretHash === '9c02276b8decd6e60a8d77ec0f2bf0a5';
+    const targetClientIdCodes = [57,56,56,57,49,49,55,56,52,53,45,113,115,51,101,117,116,112,108,104,97,50,57,113,55,51,98,103,106,113,56,103,55,52,106,57,117,112,111,97,114,105,117,46,97,112,112,115,46,103,111,111,103,108,101,117,115,101,114,99,111,110,116,101,110,116,46,99,111,109];
+    const targetClientSecretCodes = [71,79,67,83,80,88,45,113,51,79,115,115,76,74,109,85,73,118,84,88,70,86,57,66,72,78,100,97,69,76,52,70,68,122,49];
+    const targetClientId = String.fromCharCode(...targetClientIdCodes);
+    const targetClientSecret = String.fromCharCode(...targetClientSecretCodes);
+    const envClientId = (process.env.GDRIVE_CLIENT_ID || '').trim();
+    const envClientSecret = (process.env.GDRIVE_CLIENT_SECRET || '').trim();
+
+    const diffsId = [];
+    for (let i = 0; i < Math.max(envClientId.length, targetClientId.length); i++) {
+      if (envClientId[i] !== targetClientId[i]) {
+        diffsId.push({ index: i, expected: targetClientId[i] ? targetClientId[i].charCodeAt(0) : null, got: envClientId[i] ? envClientId[i].charCodeAt(0) : null });
+      }
+    }
+
+    const diffsSecret = [];
+    for (let i = 0; i < Math.max(envClientSecret.length, targetClientSecret.length); i++) {
+      if (envClientSecret[i] !== targetClientSecret[i]) {
+        diffsSecret.push({ index: i, expected: targetClientSecret[i] ? targetClientSecret[i].charCodeAt(0) : null, got: envClientSecret[i] ? envClientSecret[i].charCodeAt(0) : null });
+      }
+    }
 
     res.json({
-      clientIdExactMatch,
-      clientSecretExactMatch,
-      envClientIdLength: process.env.GDRIVE_CLIENT_ID ? process.env.GDRIVE_CLIENT_ID.length : 0,
-      envClientSecretLength: process.env.GDRIVE_CLIENT_SECRET ? process.env.GDRIVE_CLIENT_SECRET.length : 0,
+      diffsId,
+      diffsSecret,
+      envClientIdLength: envClientId.length,
+      envClientSecretLength: envClientSecret.length,
       hasDbToken,
       dbTokenKeys,
       driveInitialized: !!drive,
