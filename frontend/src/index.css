@@ -3699,12 +3699,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-card--watch-hero .stack-container {
   aspect-ratio: 16 / 9.5;
-  padding: 0.15rem 0.5rem 0.5rem 2.25rem;
+  padding: 0.15rem 0.5rem 0.5rem 0.5rem;
   justify-content: center;
 }
 
 .bundle-card--watch-hero .stack-wrapper {
-  width: 95%;
+  width: 98%;
   transform: rotateX(3deg) rotateY(5deg) rotateZ(-0.25deg) scale(1.02);
 }
 
@@ -3717,11 +3717,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-card--watch-hero:hover .stack-image-wrapper.next {
-  transform: translate3d(-18px, -15px, -10px) scale(0.96) rotate(-0.5deg);
+  transform: translate3d(-6px, -4.5px, -10px) scale(0.96) rotate(-0.5deg);
 }
 
 .bundle-card--watch-hero:hover .stack-image-wrapper.prev {
-  transform: translate3d(-36px, -30px, -20px) scale(0.92) rotate(-1deg);
+  transform: translate3d(-12px, -9px, -20px) scale(0.92) rotate(-1deg);
+}
+
+.bundle-card--watch-hero:hover .stack-image-wrapper.hidden {
+  transform: translate3d(-18px, -13.5px, -30px) scale(0.88);
 }
 
 /* Watch Hero Specific Stack Tweaks (organic tilt & lighter gradient overlay) */
@@ -3731,18 +3735,18 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-card--watch-hero .stack-image-wrapper.layer-active-stack {
   transform: translate3d(
-    calc(var(--layer-factor) * -28px),
-    calc(var(--layer-factor) * -24px),
+    calc(var(--layer-factor) * -10px),
+    calc(var(--layer-factor) * -8px),
     calc(20px - var(--layer-factor) * 40px)
-  ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -2.5deg));
+  ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
 }
 
 .bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
   transform: translate3d(
-    calc(var(--layer-factor) * -33px),
-    calc(var(--layer-factor) * -27px),
+    calc(var(--layer-factor) * -14px),
+    calc(var(--layer-factor) * -11px),
     calc(35px - var(--layer-factor) * 55px)
-  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -3.5deg));
+  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -2deg));
 }
 
 .bundle-card--sidebar-preview {
@@ -4750,11 +4754,11 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .bundle-card--watch-hero .stack-container {
-    padding: 0.15rem 0.5rem 0.5rem 1rem;
+    padding: 0.15rem 0.5rem 0.5rem 0.5rem;
   }
 
   .bundle-card--watch-hero .stack-wrapper {
-    width: 95%;
+    width: 98%;
   }
 
   /* Tighten stack card separation heavily on mobile to prevent clipping search bar */
