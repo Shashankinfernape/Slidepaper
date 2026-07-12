@@ -1,4 +1,4 @@
-const CACHE_NAME = 'slidepapers-cache-v3';
+const CACHE_NAME = 'slidepapers-cache-v4';
 const ASSETS = [
   '/',
   '/manifest.json',
