@@ -1113,9 +1113,16 @@ app.get('/api/debug-auth', async (req, res) => {
       }
     }
 
+    const hasClientId = !!process.env.GDRIVE_CLIENT_ID;
+    const hasClientSecret = !!process.env.GDRIVE_CLIENT_SECRET;
+    const clientIdValidFormat = hasClientId && process.env.GDRIVE_CLIENT_ID.endsWith('.apps.googleusercontent.com');
+    const clientSecretValidFormat = hasClientSecret && process.env.GDRIVE_CLIENT_SECRET.startsWith('GOCSPX-') && process.env.GDRIVE_CLIENT_SECRET.length === 35;
+
     res.json({
-      envClientId: process.env.GDRIVE_CLIENT_ID ? `${process.env.GDRIVE_CLIENT_ID.substring(0, 10)}...` : 'missing',
-      envClientSecret: process.env.GDRIVE_CLIENT_SECRET ? `${process.env.GDRIVE_CLIENT_SECRET.substring(0, 5)}...` : 'missing',
+      clientIdValidFormat,
+      clientSecretValidFormat,
+      envClientIdLength: process.env.GDRIVE_CLIENT_ID ? process.env.GDRIVE_CLIENT_ID.length : 0,
+      envClientSecretLength: process.env.GDRIVE_CLIENT_SECRET ? process.env.GDRIVE_CLIENT_SECRET.length : 0,
       hasDbToken,
       dbTokenKeys,
       driveInitialized: !!drive,
