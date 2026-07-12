@@ -100,6 +100,13 @@ const notificationSchema = new mongoose.Schema({
 
 const Notification = mongoose.model('Notification', notificationSchema);
 
+// Define Credential Schema
+const credentialSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  value: { type: String, required: true }
+});
+const Credential = mongoose.model('Credential', credentialSchema);
+
 // Seeding logic for first run
 async function seedDatabase() {
   try {
@@ -161,8 +168,9 @@ async function seedDatabase() {
   }
 }
 
-mongoose.connection.once('open', () => {
-  seedDatabase();
+mongoose.connection.once('open', async () => {
+  await seedDatabase();
+  await initializeDriveClient();
 });
 
 const execPromise = promisify(exec);
@@ -459,7 +467,7 @@ async function saveBundlesToDrive() {
 }
 
 // Initialize Google OAuth2 client and Drive client
-function initializeDriveClient() {
+async function initializeDriveClient() {
   isServiceAccount = false;
 
   let client_id = process.env.GDRIVE_CLIENT_ID;
@@ -495,6 +503,31 @@ function initializeDriveClient() {
       process.env.GDRIVE_REDIRECT_URI || 'http://localhost:5001/oauth2callback'
     );
 
+    // Auto-save refreshed tokens to MongoDB and disk
+    oauth2Client.on('tokens', async (newTokens) => {
+      console.log('[OAuth] Google client refreshed tokens automatically.');
+      try {
+        let currentTokens = {};
+        if (fs.existsSync(TOKENS_PATH)) {
+          currentTokens = JSON.parse(fs.readFileSync(TOKENS_PATH, 'utf-8') || '{}');
+        } else {
+          const dbTokenObj = await Credential.findOne({ key: 'gdrive_tokens' });
+          if (dbTokenObj && dbTokenObj.value) {
+            currentTokens = JSON.parse(dbTokenObj.value);
+          }
+        }
+        const merged = { ...currentTokens, ...newTokens };
+        fs.writeFileSync(TOKENS_PATH, JSON.stringify(merged, null, 2));
+        await Credential.findOneAndUpdate(
+          { key: 'gdrive_tokens' },
+          { value: JSON.stringify(merged) },
+          { upsert: true }
+        );
+      } catch (err) {
+        console.warn('[OAuth Warning] Failed to update refreshed tokens:', err.message);
+      }
+    });
+
     // If we have saved tokens, load them
     let tokens = null;
     if (fs.existsSync(TOKENS_PATH)) {
@@ -506,6 +539,17 @@ function initializeDriveClient() {
         console.log('[OAuth] Drive client successfully initialized with tokens from Environment Variable.');
       } catch (err) {
         console.error('[OAuth] Failed to parse GDRIVE_TOKENS_JSON env variable:', err.message);
+      }
+    } else {
+      // Fallback: load tokens from MongoDB persistent collection
+      try {
+        const dbTokenObj = await Credential.findOne({ key: 'gdrive_tokens' });
+        if (dbTokenObj && dbTokenObj.value) {
+          tokens = JSON.parse(dbTokenObj.value);
+          console.log('[OAuth] Drive client successfully initialized with tokens from MongoDB.');
+        }
+      } catch (dbErr) {
+        console.warn('[OAuth] Could not load tokens from MongoDB:', dbErr.message);
       }
     }
 
@@ -520,8 +564,6 @@ function initializeDriveClient() {
     console.error('[OAuth] Failed to initialize OAuth Drive client:', error);
   }
 }
-
-initializeDriveClient();
 
 const BUNDLE_IMAGES = {};
 
@@ -971,6 +1013,18 @@ app.get('/oauth2callback', async (req, res) => {
     
     // Save tokens locally (contains refresh_token)
     fs.writeFileSync(TOKENS_PATH, JSON.stringify(tokens, null, 2));
+
+    // Save tokens persistently to MongoDB
+    try {
+      await Credential.findOneAndUpdate(
+        { key: 'gdrive_tokens' },
+        { value: JSON.stringify(tokens) },
+        { upsert: true }
+      );
+      console.log('[OAuth] Saved tokens persistently to MongoDB.');
+    } catch (dbSaveErr) {
+      console.warn('[OAuth Warning] Failed to save tokens to MongoDB:', dbSaveErr.message);
+    }
     
     // Re-initialize Drive client
     drive = google.drive({ version: 'v3', auth: oauth2Client });
