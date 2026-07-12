@@ -4773,27 +4773,21 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     gap: 0.5rem;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 0.2rem;
-  }
-
-  .apple-picker-wrapper::-webkit-scrollbar {
-    display: none;
   }
 
   .apple-picker-container {
     width: 100%;
-    flex: 0 0 auto;
-    min-width: 380px;
+    flex: 1;
+    max-width: 100%;
   }
 
   .apple-download-action-btn {
-    width: 100%;
-    margin-top: 0.75rem;
+    width: auto;
+    min-width: 240px;
+    margin: 0.25rem auto 0 auto;
   }
 
   .youtube-pill-divider {
@@ -4814,12 +4808,12 @@ h1, h2, h3, h4, h5, h6 {
   .apple-picker-option {
     flex-direction: column !important;
     gap: 3px !important;
-    padding: 0 0.25rem !important;
-    font-size: 0.7rem !important;
+    padding: 0 0.4rem !important;
+    font-size: 0.68rem !important;
     font-weight: 600 !important;
     white-space: normal !important;
     text-align: center !important;
-    line-height: 1.15 !important;
+    line-height: 1.1 !important;
   }
 
   .apple-picker-option svg {
