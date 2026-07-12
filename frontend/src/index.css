@@ -566,7 +566,7 @@ h1, h2, h3, h4, h5, h6 {
     calc(var(--layer-factor) * -28px),
     calc(var(--layer-factor) * -24px),
     calc(20px - var(--layer-factor) * 40px)
-  ) scale(calc(1.02 - var(--layer-factor) * 0.10));
+  ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -2.5deg));
 }
 
 .stack-image-wrapper.layer-active-stack.active .stack-image-bg {
@@ -592,7 +592,7 @@ h1, h2, h3, h4, h5, h6 {
     calc(var(--layer-factor) * -33px),
     calc(var(--layer-factor) * -27px),
     calc(35px - var(--layer-factor) * 55px)
-  ) scale(calc(1.03 - var(--layer-factor) * 0.09));
+  ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -3.5deg));
 }
 
 .bundle-card:hover .stack-image-wrapper.layer-active-stack.active .stack-image-bg {
@@ -4751,14 +4751,14 @@ h1, h2, h3, h4, h5, h6 {
       calc(var(--layer-factor) * -6px),
       calc(var(--layer-factor) * -4px),
       calc(20px - var(--layer-factor) * 40px)
-    ) scale(calc(1.02 - var(--layer-factor) * 0.10));
+    ) scale(calc(1.02 - var(--layer-factor) * 0.10)) rotateZ(calc(var(--layer-factor) * -1.5deg));
   }
   .bundle-card--watch-hero:hover .stack-image-wrapper.layer-active-stack {
     transform: translate3d(
       calc(var(--layer-factor) * -8px),
       calc(var(--layer-factor) * -5px),
       calc(35px - var(--layer-factor) * 55px)
-    ) scale(calc(1.03 - var(--layer-factor) * 0.09));
+    ) scale(calc(1.03 - var(--layer-factor) * 0.09)) rotateZ(calc(var(--layer-factor) * -2.5deg));
   }
   
   .bundle-card--watch-hero:hover .stack-image-wrapper.next {
