@@ -109,6 +109,9 @@ export function DownloadProvider({ children }) {
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
+          if (errorData.details) {
+            errorMessage += ` (${errorData.details})`;
+          }
         } catch (_) {}
         throw new Error(errorMessage);
       }

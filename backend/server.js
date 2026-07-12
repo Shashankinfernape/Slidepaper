@@ -807,6 +807,8 @@ app.post('/api/custom-ratio', async (req, res) => {
     // Process images one at a time (controls RAM, no OOM)
     const imagesToProcess = dbBundle.images && dbBundle.images.length > 0 ? dbBundle.images : [];
     let appendedCount = 0;
+    const fetchErrors = [];
+
     for (let i = 0; i < imagesToProcess.length; i++) {
       if (isClientDisconnected) {
         console.log(`[Build Aborted] Skipping remaining images for disconnected job "${jobKey}"`);
@@ -831,7 +833,9 @@ app.post('/api/custom-ratio', async (req, res) => {
             : `sources/${bundleId}/${imgName}`;
           const [buf] = await gcs.bucket(GCS_BUCKET).file(gcsSourcePath).download();
           imgBuffer = buf;
-        } catch (_) { /* not in GCS yet, fall through to Drive */ }
+        } catch (gcsErr) {
+          fetchErrors.push(`GCS [${imgName}]: ${gcsErr.message}`);
+        }
       }
 
       // Source 2: Google Drive (fallback for older bundles without GCS sources)
@@ -839,16 +843,23 @@ app.post('/api/custom-ratio', async (req, res) => {
         const imgUrl = typeof imgObj === 'string' ? imgObj : (imgObj?.url || imgObj?.previewUrl || '');
         const match = imgUrl?.match(/[?&]id=([^&]+)/);
         const fileId = match ? match[1] : null;
-        if (fileId && drive) {
-          try {
-            const driveRes = await drive.files.get(
-              { fileId, alt: 'media' },
-              { responseType: 'arraybuffer' }
-            );
-            if (driveRes?.data) imgBuffer = Buffer.from(driveRes.data);
-          } catch (dErr) {
-            console.warn(`[Build] Drive fallback failed for image ${i}:`, dErr.message);
+        if (fileId) {
+          if (drive) {
+            try {
+              const driveRes = await drive.files.get(
+                { fileId, alt: 'media' },
+                { responseType: 'arraybuffer' }
+              );
+              if (driveRes?.data) imgBuffer = Buffer.from(driveRes.data);
+            } catch (dErr) {
+              fetchErrors.push(`Drive [${imgName}]: ${dErr.message}`);
+              console.warn(`[Build] Drive fallback failed for image ${i}:`, dErr.message);
+            }
+          } else {
+            fetchErrors.push(`Drive [${imgName}]: Google Drive client not authenticated`);
           }
+        } else {
+          fetchErrors.push(`Drive [${imgName}]: No valid file ID parsed from URL`);
         }
       }
 
@@ -898,7 +909,11 @@ app.post('/api/custom-ratio', async (req, res) => {
     if (appendedCount === 0) {
       if (!res.headersSent) {
         const authUrl = `${req.protocol}://${req.get('host')}/api/auth`;
-        res.status(500).json({ error: `Failed to retrieve wallpapers from Google Drive or GCS. Please re-authenticate your Google Drive connection by visiting: ${authUrl}` });
+        const errorDetails = fetchErrors.slice(0, 3).join(' | '); // include first 3 errors to keep payload reasonable
+        res.status(500).json({ 
+          error: `Failed to retrieve wallpapers from Google Drive or GCS.`,
+          details: errorDetails || 'No images found in bundle metadata'
+        });
       } else {
         res.destroy();
       }
