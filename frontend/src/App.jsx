@@ -551,8 +551,8 @@ function AppContent() {
   }, [theme]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: currentView === 'bundle' ? 'smooth' : 'auto' });
-  }, [currentView]);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [currentView, activeBundle]);
 
   // Toggle between dark (OLED) and light (Cream) themes
   const toggleTheme = () => {
