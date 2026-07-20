@@ -194,7 +194,27 @@ export default function AdminDashboard({ onBack, logout }) {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const getInitialTab = () => {
+    const path = window.location.pathname.toLowerCase();
+    if (path.startsWith('/admin/')) {
+      const tab = path.split('/admin/')[1].split('/')[0];
+      const validTabs = ['overview', 'drive', 'bundles', 'upload', 'monetize', 'profile', 'subscribers'];
+      if (validTabs.includes(tab)) return tab;
+    }
+    return 'overview';
+  };
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
+
+  const setActiveTab = (tab) => {
+    setActiveTabState(tab);
+    window.history.pushState(null, '', `/admin/${tab}`);
+  };
+
+  useEffect(() => {
+    const handlePopState = () => setActiveTabState(getInitialTab());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
