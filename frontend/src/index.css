@@ -4560,6 +4560,36 @@ h1, h2, h3, h4, h5, h6 {
   overflow: visible;
 }
 
+/* Bottom Grid (under Adsense) */
+.bundle-youtube-bottom-grid {
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.bottom-grid-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.bottom-bundles-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.bundle-card--bottom-grid {
+  width: 100%;
+}
+
+.bundle-card--bottom-grid .stack-container {
+  aspect-ratio: 16 / 9.8;
+  padding: 0.35rem 0.15rem 0.1rem 0.55rem;
+  overflow: visible;
+}
+
 .bundle-card--sidebar-grid .stack-wrapper {
   width: 95%;
 }
@@ -4842,6 +4872,12 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 600px) {
   .sidebar-bundles-list {
+    grid-template-columns: 1fr;
+  }
+  .sidebar-bundles-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bottom-bundles-list {
     grid-template-columns: 1fr;
   }
 
