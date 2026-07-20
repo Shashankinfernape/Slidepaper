@@ -5088,7 +5088,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5099,7 +5099,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .admin-modal-input {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .admin-modal-input:focus {
@@ -5286,7 +5286,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5297,7 +5297,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .admin-modal-input {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .admin-modal-input:focus {
