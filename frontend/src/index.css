@@ -4567,35 +4567,27 @@ h1, h2, h3, h4, h5, h6 {
   overflow: visible;
 }
 
-/* Bottom Grid (under Adsense) */
-.bundle-youtube-bottom-grid {
-  margin-top: 1.5rem;
-  width: 100%;
-}
-
-.bottom-grid-title {
-  display: none;
-}
-
-.bottom-bundles-list {
+/* Unified Bottom Grid */
+.unified-bundles-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.12rem;
   width: 100%;
+  margin-top: 1.25rem;
 }
 
-.bundle-card--bottom-grid {
+.bundle-card--unified-grid {
   width: 100%;
 }
 
-.bundle-card--bottom-grid .stack-container {
+.bundle-card--unified-grid .stack-container {
   aspect-ratio: 16 / 9.8;
   padding: 0.35rem 0.15rem 0.1rem 0.55rem;
   overflow: visible;
 }
 
 .bundle-card--sidebar-grid .stack-wrapper {
-  width: 95%;
+  width: 100%;
 }
 
 /* Sidebar card overlay — fixed font sizes that maintain ratio to card at any viewport */
@@ -4872,14 +4864,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 600px) {
-  .sidebar-bundles-list {
-    grid-template-columns: 1fr;
-  }
-  .sidebar-bundles-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .bottom-bundles-list {
-    grid-template-columns: 1fr;
+  .unified-bundles-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   /* Two-line ratio picker on phone: icon on top, label below */

@@ -520,16 +520,8 @@ export default function BundleDetailPage({
     return allOptions.findIndex((option) => option.id === selectedDownloadId);
   }, [selectedDownloadId, allOptions]);
 
-  const { bottomBundles, sidebarBundles } = useMemo(() => {
-    const left = [];
-    const right = [];
-    filteredRelatedBundles.forEach((bundle, index) => {
-      // 3 items to the left, 2 items to the right
-      if (index % 5 < 3) left.push(bundle);
-      else right.push(bundle);
-    });
-    return { bottomBundles: left, sidebarBundles: right };
-  }, [filteredRelatedBundles]);
+  const topSidebarBundles = useMemo(() => filteredRelatedBundles.slice(0, 6), [filteredRelatedBundles]);
+  const unifiedBundles = useMemo(() => filteredRelatedBundles.slice(6), [filteredRelatedBundles]);
 
   return (
     <div className="bundle-youtube-page">
@@ -785,7 +777,7 @@ export default function BundleDetailPage({
           </div>
 
           <div className="sidebar-bundles-list">
-            {sidebarBundles.map((item) => (
+            {topSidebarBundles.map((item) => (
               <BundleCard
                 key={item.id}
                 bundle={item}
@@ -800,6 +792,21 @@ export default function BundleDetailPage({
           </div>
         </aside>
       </section>
+
+      {/* Unified Bundles Grid (Continues downward flawlessly) */}
+      {unifiedBundles.length > 0 && (
+        <section className="unified-bundles-grid">
+          {unifiedBundles.map((item) => (
+            <BundleCard
+              key={item.id}
+              bundle={item}
+              onClick={() => onOpenBundle?.(item)}
+              showOverlay={true}
+              className="bundle-card--unified-grid"
+            />
+          ))}
+        </section>
+      )}
 
       {showAuthPrompt && (
         <div className="bundle-auth-popup-backdrop" onClick={() => setShowAuthPrompt(false)}>
