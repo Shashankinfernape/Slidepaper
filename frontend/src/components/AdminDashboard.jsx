@@ -3,6 +3,7 @@ import {
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
   CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import DraggableGrid from './common/DraggableGrid';
 import { useAuth } from '../context/AuthContext';
 import MonetizationDashboard from './MonetizationDashboard';
@@ -230,38 +231,6 @@ export default function AdminDashboard({ onBack, logout }) {
   const [editedYoutube, setEditedYoutube] = useState('');
   const [editedInstagram, setEditedInstagram] = useState('');
   const [editedTwitter, setEditedTwitter] = useState('');
-
-  // Helper for ratio detection
-  const gcd = (a, b) => {
-    return b === 0 ? a : gcd(b, a % b);
-  };
-
-  useEffect(() => {
-    if (bundleRatio === 'original' && mediaItems.length > 0) {
-      const firstItem = mediaItems[0];
-      
-      const calculateRatio = (width, height) => {
-        const divisor = gcd(width, height);
-        setCustomRatioW((width / divisor).toString());
-        setCustomRatioH((height / divisor).toString());
-        setBundleRatio('custom');
-      };
-
-      if (firstItem.type === 'existing' && firstItem.data.url) {
-        const img = new Image();
-        img.onload = () => calculateRatio(img.width, img.height);
-        img.src = firstItem.data.url;
-      } else if (firstItem.type === 'new' && firstItem.data) {
-        const img = new Image();
-        const url = URL.createObjectURL(firstItem.data);
-        img.onload = () => {
-          calculateRatio(img.width, img.height);
-          URL.revokeObjectURL(url);
-        };
-        img.src = url;
-      }
-    }
-  }, [bundleRatio, mediaItems]);
 
   const [editedAccent, setEditedAccent] = useState('midnight');
   const [editedBannerURL, setEditedBannerURL] = useState('');
@@ -737,6 +706,8 @@ export default function AdminDashboard({ onBack, logout }) {
   // Upload form submission
   const handleSubmitBundle = async (e) => {
     e.preventDefault();
+    const submitter = e.nativeEvent?.submitter;
+    const rect = submitter ? submitter.getBoundingClientRect() : null;
     const existingImages = mediaItems.filter(m => m.type === 'existing').map(m => m.data);
     const newImages = mediaItems.filter(m => m.type === 'new').map(m => m.data);
 
@@ -865,7 +836,19 @@ export default function AdminDashboard({ onBack, logout }) {
         xhr.send(formData);
       });
 
-      alert(`Wallpaper bundle ${editingBundleId ? 'updated' : 'uploaded and published'} successfully!`);
+      if (rect) {
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { x, y },
+          startVelocity: 35,
+          colors: ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b']
+        });
+      } else {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      }
       
       // Reset form
       setEditingBundleId(null);
