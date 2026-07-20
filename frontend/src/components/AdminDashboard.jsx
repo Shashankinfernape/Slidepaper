@@ -227,6 +227,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [animatingDeleteId, setAnimatingDeleteId] = useState(null);
   const [subscribersList, setSubscribersList] = useState([]);
   const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+  const [viewingSubscriberImage, setViewingSubscriberImage] = useState(null);
 
   // Form states for uploading new bundle
   const [bundleName, setBundleName] = useState('');
@@ -2075,7 +2076,10 @@ export default function AdminDashboard({ onBack, logout }) {
                       <img 
                         src={getProxiedImageUrl(sub.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'} 
                         alt={sub.displayName}
-                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                        onClick={() => setViewingSubscriberImage(getProxiedImageUrl(sub.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>')}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', transition: 'transform 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         <span style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2107,6 +2111,42 @@ export default function AdminDashboard({ onBack, logout }) {
             stage={uploadMetrics.stage}
             onClose={() => setShowUploadHud(false)}
           />
+        )}
+
+        {/* Subscriber Profile Picture Viewer Modal */}
+        {viewingSubscriberImage && (
+          <div 
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 999999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(5px)'
+            }}
+            onClick={() => setViewingSubscriberImage(null)}
+          >
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+              <button 
+                onClick={() => setViewingSubscriberImage(null)}
+                style={{
+                  position: 'absolute', top: '-40px', right: '-10px',
+                  background: 'none', border: 'none', color: 'white', cursor: 'pointer',
+                  padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                <X size={28} />
+              </button>
+              <img 
+                src={viewingSubscriberImage} 
+                alt="Enlarged profile" 
+                style={{
+                  width: '320px', height: '320px',
+                  borderRadius: '50%', objectFit: 'cover',
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                  border: '4px solid var(--border-color)'
+                }} 
+              />
+            </div>
+          </div>
         )}
       </main>
       </div>
