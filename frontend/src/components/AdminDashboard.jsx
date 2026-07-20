@@ -1954,8 +1954,8 @@ export default function AdminDashboard({ onBack, logout }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
                     <div style={{
                       width: '100%',
-                      height: '200px',
-                      borderRadius: '18px',
+                      height: '110px',
+                      borderRadius: '12px',
                       background: editedBannerURL ? `url(${getProxiedImageUrl(editedBannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
                       position: 'relative',
                       overflow: 'hidden',
@@ -1983,24 +1983,24 @@ export default function AdminDashboard({ onBack, logout }) {
                         WebkitBackdropFilter: 'blur(12px)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
                         color: '#ffffff',
-                        padding: '0.55rem 1.2rem',
+                        padding: '0.45rem 1rem',
                         borderRadius: '999px',
                         fontWeight: 600,
-                        fontSize: '0.85rem'
+                        fontSize: '0.75rem'
                       }}>
-                        <ArrowLeft size={16} />
+                        <ArrowLeft size={14} />
                         <span>Back to Feed</span>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.75rem', padding: '0 0.5rem', marginTop: '-2.5rem', flexWrap: 'wrap' }} className="channel-header-block">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 0.5rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
                       <div style={{
                         position: 'relative',
-                        width: '128px',
-                        height: '128px',
+                        width: '90px',
+                        height: '90px',
                         borderRadius: '50%',
                         overflow: 'hidden',
-                        border: '4px solid var(--bg-primary)',
+                        border: '3px solid var(--bg-primary)',
                         boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                         background: 'var(--bg-secondary)',
                         flexShrink: 0
@@ -2013,17 +2013,17 @@ export default function AdminDashboard({ onBack, logout }) {
                         />
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '30px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
-                          <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}>
+                          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
+                          <span className="verified-badge-circle" title="Verified Creator" style={{ width: '16px', height: '16px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg viewBox="0 0 24 24" style={{ width: '10px', height: '10px' }}>
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
                             </svg>
                           </span>
                         </div>
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.78rem', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{editedDisplayName ? editedDisplayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
                           <span>•</span>
                           <span>{userProfile?.subscribers || 0} subscribers</span>

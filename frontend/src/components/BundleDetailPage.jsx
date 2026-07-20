@@ -599,8 +599,8 @@ export default function BundleDetailPage({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
                 <div style={{
                   width: '100%',
-                  height: '200px',
-                  borderRadius: '18px',
+                  height: '110px',
+                  borderRadius: '12px',
                   background: resolvedAuthorProfile.bannerURL ? `url(${getProxiedImageUrl(resolvedAuthorProfile.bannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
                   position: 'relative',
                   overflow: 'hidden',
@@ -623,12 +623,12 @@ export default function BundleDetailPage({
                     WebkitBackdropFilter: 'blur(12px)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#ffffff',
-                    padding: '0.55rem 1.2rem',
+                    padding: '0.45rem 1rem',
                     borderRadius: '999px',
                     fontWeight: 600,
-                    fontSize: '0.85rem'
+                    fontSize: '0.75rem'
                   }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     <span>Back to Feed</span>
                   </div>
                 </div>
@@ -636,18 +636,18 @@ export default function BundleDetailPage({
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '1.75rem',
+                  gap: '1.25rem',
                   padding: '0 0.5rem',
-                  marginTop: '-2.5rem',
+                  marginTop: '-30px',
                   flexWrap: 'wrap'
                 }} className="channel-header-block">
                   <div style={{
                     position: 'relative',
-                    width: '128px',
-                    height: '128px',
+                    width: '90px',
+                    height: '90px',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '4px solid var(--bg-primary)',
+                    border: '3px solid var(--bg-primary)',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                     background: 'var(--bg-secondary)',
                     flexShrink: 0,
@@ -663,22 +663,22 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '30px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h1 
-                        style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
                         onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
                       >
                         {resolvedAuthorProfile.displayName || 'Creator Name'}
                       </h1>
-                      <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}>
+                      <span className="verified-badge-circle" title="Verified Creator" style={{ width: '16px', height: '16px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg viewBox="0 0 24 24" style={{ width: '10px', height: '10px' }}>
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
                         </svg>
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.78rem', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
                       <span>•</span>
                       <span>{formatSubscribers(subscribersCount)} subscribers</span>
