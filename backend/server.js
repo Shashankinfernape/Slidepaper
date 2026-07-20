@@ -1504,6 +1504,183 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
   }
 });
 
+// Endpoint: Edit existing wallpaper bundle
+app.put('/api/bundles/:bundleId', upload.array('images'), async (req, res) => {
+  if (!drive) {
+    return res.status(401).json({ error: 'Google Drive client not authenticated. Please authenticate by visiting http://localhost:5001/api/auth' });
+  }
+
+  const bundleId = req.params.bundleId;
+  const { 
+    name, description, type, orientation, ratio, tags, includes, existingImages
+  } = req.body;
+  const files = req.files || [];
+
+  try {
+    const existingBundle = await Bundle.findOne({ id: bundleId });
+    if (!existingBundle) {
+      return res.status(404).json({ error: 'Bundle not found' });
+    }
+
+    let parsedExistingImages = [];
+    try {
+      if (existingImages) {
+        parsedExistingImages = JSON.parse(existingImages);
+      }
+    } catch (e) {
+      console.warn('Failed to parse existingImages', e);
+    }
+
+    // Sort files by original filename
+    files.sort((a, b) => {
+      return a.originalname.localeCompare(b.originalname, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    console.log(`[Admin] Editing bundle "${bundleId}" adding ${files.length} new images...`);
+
+    const parentFolderId = await getOrCreateFolder();
+    
+    const uploadResults = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      const fileMetadata = {
+        name: file.originalname,
+        parents: [parentFolderId]
+      };
+      const media = {
+        mimeType: file.mimetype,
+        body: fs.createReadStream(file.path)
+      };
+      const driveFile = await drive.files.create({
+        requestBody: fileMetadata,
+        media: media,
+        fields: 'id, name'
+      });
+      const fileId = driveFile.data.id;
+      console.log(`[Google Drive] Uploaded new file "${file.originalname}" ID: ${fileId}`);
+      
+      await drive.permissions.create({
+        fileId: fileId,
+        requestBody: { role: 'reader', type: 'anyone' }
+      });
+      
+      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      const previewDownloadUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+
+      const gcsSourcePath = `sources/${bundleId}/${file.originalname}`;
+      if (gcsEnabled && GCS_BUCKET) {
+        try {
+          const fileBuffer = fs.readFileSync(file.path);
+          await gcs.bucket(GCS_BUCKET).file(gcsSourcePath).save(fileBuffer, {
+            contentType: file.mimetype,
+            resumable: false
+          });
+          console.log(`[GCS Source] Saved source image "${file.originalname}" at gs://${GCS_BUCKET}/${gcsSourcePath}`);
+        } catch (gcsSaveErr) {
+          console.warn(`[GCS Source Error] Failed to save "${file.originalname}":`, gcsSaveErr.message);
+        }
+      }
+
+      try {
+        await fs.promises.unlink(file.path);
+      } catch (_) {}
+
+      uploadResults.push({
+        index: parsedExistingImages.length + i,
+        name: file.originalname,
+        gcsPath: gcsSourcePath,
+        url: downloadUrl,
+        previewUrl: previewDownloadUrl,
+        label: `Screen ${parsedExistingImages.length + i + 1}: ${file.originalname.split('.')[0]}`,
+        size: file.size
+      });
+    }
+
+    const newImageUrls = uploadResults.map(r => ({ name: r.name, gcsPath: r.gcsPath, url: r.url, previewUrl: r.previewUrl, label: r.label, size: r.size }));
+    
+    // Combine existing and new images
+    const combinedImages = [...parsedExistingImages, ...newImageUrls];
+    // update labels of combinedImages sequentially
+    combinedImages.forEach((img, index) => {
+        img.label = `Screen ${index + 1}: ${img.name ? img.name.split('.')[0] : 'Wallpaper'}`;
+    });
+
+    const tagsArray = tags ? tags.split(',').map(t => t.trim()) : [];
+    const includesArray = includes ? includes.split(',').map(i => i.trim()) : [];
+
+    // Build dynamic ratioOptions based on orientation
+    const ratioOptions = [
+      { id: 'original', label: 'Original', subtitle: 'Uncropped high-res wallpapers', resolution: 'Original', size: 'Full Size ZIP', formats: ['PNG', 'JPG'] }
+    ];
+    if (orientation === 'landscape') {
+      ratioOptions.push(
+        { id: 'desktop-16-9', label: '16:9 Desktop', subtitle: 'Core wallpaper set', resolution: '3840 x 2160', size: '1.80 MB ZIP', formats: ['PNG', 'JPG'] },
+        { id: 'ultrawide-21-9', label: '21:9 Ultrawide', subtitle: 'Panoramic flow crop', resolution: '5120 x 2160', size: '1.50 MB ZIP', formats: ['PNG', 'JPG'] }
+      );
+    } else {
+      ratioOptions.push(
+        { id: 'mobile-9-19', label: '9:19.5 Mobile', subtitle: 'Vertical lockscreen pack', resolution: '1290 x 2796', size: '511 KB ZIP', formats: ['PNG', 'JPG'] },
+        { id: 'mobile-9-16', label: '9:16 Mobile', subtitle: 'Standard vertical screen', resolution: '1080 x 1920', size: '420 KB ZIP', formats: ['PNG', 'JPG'] }
+      );
+    }
+
+    existingBundle.name = name || existingBundle.name;
+    existingBundle.description = description || existingBundle.description;
+    existingBundle.type = type || existingBundle.type;
+    existingBundle.orientation = orientation || existingBundle.orientation;
+    existingBundle.ratio = ratio || existingBundle.ratio;
+    existingBundle.ratioOptions = ratioOptions;
+    existingBundle.tags = tagsArray;
+    existingBundle.includes = includesArray;
+    existingBundle.images = combinedImages;
+
+    await existingBundle.save();
+    console.log(`[Database] Bundle "${name}" updated in MongoDB successfully.`);
+
+    // Sync database
+    saveBundlesToDrive().catch(e => console.warn('[Drive Sync Warning]', e.message));
+
+    // Non-blocking background worker
+    if (files.length > 0) {
+      (async () => {
+        try {
+          const LANDSCAPE_PRESETS = ['original', '16:9', '21:9'];
+          const PORTRAIT_PRESETS  = ['original', '9:16', '9:19.5'];
+          const presets = orientation === 'portrait' ? PORTRAIT_PRESETS : LANDSCAPE_PRESETS;
+          console.log(`[Background Worker] Starting preset pre-gen for updated "${bundleId}" [${orientation}]:`, presets);
+          const gcsSources = combinedImages.map((img, idx) => ({ name: img.name || `wallpaper_${idx + 1}.png`, gcsPath: img.gcsPath }));
+          for (const ratioStr of presets) {
+            await generateAndCacheRatio(bundleId, ratioStr, gcsSources);
+          }
+          console.log(`[Background Worker COMPLETE] All preset ZIPs cached in GCS for "${bundleId}".`);
+        } catch (bgErr) {
+          console.warn('[Background Worker Error]', bgErr.message);
+        }
+      })();
+    }
+
+    return res.status(200).json({ success: true, message: 'Bundle updated successfully!', bundle: existingBundle });
+
+  } catch (error) {
+    console.error('Bundle edit failed:', error);
+    
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+        } catch (_) {}
+      }
+    }
+
+    return res.status(500).json({ error: 'Failed to update wallpaper bundle', details: error.message });
+  }
+});
+
+
 // Admin-Only Endpoint: Retroactively migrate existing bundles to GCS sources & pre-generate preset ZIPs
 app.post('/api/admin/migrate-to-gcs', async (req, res) => {
   const adminSecret = process.env.ADMIN_SECRET || 'slidepapers-admin-secret';

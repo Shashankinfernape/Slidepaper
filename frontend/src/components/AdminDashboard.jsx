@@ -126,6 +126,24 @@ function FilePreviewItem({ file, index, removeFile }) {
   );
 }
 
+function ExistingFilePreviewItem({ file, index, removeFile }) {
+  return (
+    <div style={{ position: 'relative', aspectRatio: '16/10', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+      <img src={file.previewUrl || file.url} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      <button 
+        type="button" 
+        onClick={(e) => { e.stopPropagation(); removeFile(index); }} 
+        style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Trash2 size={12} />
+      </button>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {file.name} (Existing)
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard({ onBack, logout }) {
   const { user, userProfile, updateUserProfileState } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
@@ -160,6 +178,10 @@ export default function AdminDashboard({ onBack, logout }) {
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
   const [bundleRatio, setBundleRatio] = useState('16:9');
+
+  // Edit Bundle states
+  const [editingBundleId, setEditingBundleId] = useState(null);
+  const [existingFiles, setExistingFiles] = useState([]);
 
   // Form states for profile editing
   const [editedDisplayName, setEditedDisplayName] = useState('');
@@ -577,6 +599,10 @@ export default function AdminDashboard({ onBack, logout }) {
     setSelectedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
+  const removeExistingFile = (indexToRemove) => {
+    setExistingFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   const handleSetHeroBundle = async (bundleId, bundleName) => {
     try {
       const response = await fetch(`${API_URL}/api/set-hero-bundle`, {
@@ -639,8 +665,8 @@ export default function AdminDashboard({ onBack, logout }) {
   // Upload form submission
   const handleSubmitBundle = async (e) => {
     e.preventDefault();
-    if (selectedFiles.length === 0) {
-      alert('Please upload at least one image.');
+    if (selectedFiles.length === 0 && existingFiles.length === 0) {
+      alert('Please upload or keep at least one image.');
       return;
     }
 
@@ -655,6 +681,10 @@ export default function AdminDashboard({ onBack, logout }) {
     formData.append('tags', bundleTags);
     formData.append('includes', bundleIncludes);
     
+    if (editingBundleId) {
+      formData.append('existingImages', JSON.stringify(existingFiles));
+    }
+
     selectedFiles.forEach((file) => {
       formData.append('images', file);
     });
@@ -686,7 +716,11 @@ export default function AdminDashboard({ onBack, logout }) {
       let lastTime = startTime;
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${API_URL}/api/bundles/upload`, true);
+      if (editingBundleId) {
+        xhr.open('PUT', `${API_URL}/api/bundles/${editingBundleId}`, true);
+      } else {
+        xhr.open('POST', `${API_URL}/api/bundles/upload`, true);
+      }
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable || e.total > 0) {
@@ -753,9 +787,11 @@ export default function AdminDashboard({ onBack, logout }) {
         xhr.send(formData);
       });
 
-      alert('Wallpaper bundle uploaded and published successfully!');
+      alert(`Wallpaper bundle ${editingBundleId ? 'updated' : 'uploaded and published'} successfully!`);
       
       // Reset form
+      setEditingBundleId(null);
+      setExistingFiles([]);
       setBundleName('');
       setBundleDescription('');
       setBundleOrientation('landscape');
@@ -841,7 +877,17 @@ export default function AdminDashboard({ onBack, logout }) {
               <span>Bundles Manager</span>
             </button>
             <button
-              onClick={() => { setActiveTab('upload'); setIsSidebarOpen(false); }}
+              onClick={() => { 
+                setActiveTab('upload'); 
+                setIsSidebarOpen(false); 
+                setEditingBundleId(null);
+                setExistingFiles([]);
+                setBundleName('');
+                setBundleDescription('');
+                setBundleTags('');
+                setBundleIncludes('');
+                setSelectedFiles([]);
+              }}
               className={`admin-nav-item ${activeTab === 'upload' ? 'active' : ''}`}
             >
               <Plus size={16} style={{ flexShrink: 0 }} />
@@ -883,7 +929,7 @@ export default function AdminDashboard({ onBack, logout }) {
               {activeTab === 'overview' && 'Command Center'}
               {activeTab === 'drive' && 'Google Drive Integration'}
               {activeTab === 'bundles' && 'Bundles Manager'}
-              {activeTab === 'upload' && 'Publish New Bundle'}
+              {activeTab === 'upload' && (editingBundleId ? 'Edit Wallpaper Bundle' : 'Publish New Bundle')}
               {activeTab === 'monetize' && 'Partner Earnings Studio'}
               {activeTab === 'profile' && 'Creator Profile Settings'}
             </h1>
@@ -1152,7 +1198,20 @@ export default function AdminDashboard({ onBack, logout }) {
               ).map((bundle) => (
                 <div 
                   key={bundle.id} 
-                  className="admin-card" 
+                  className="admin-card admin-bundle-row" 
+                  onClick={() => {
+                    setEditingBundleId(bundle.id);
+                    setBundleName(bundle.name || '');
+                    setBundleDescription(bundle.description || '');
+                    setBundleOrientation(bundle.orientation || 'landscape');
+                    setBundleType(bundle.type || '');
+                    setBundleTags((bundle.tags || []).join(', '));
+                    setBundleIncludes((bundle.includes || []).join(', '));
+                    setBundleRatio(bundle.ratio || (bundle.orientation === 'landscape' ? '16:9' : '9:16'));
+                    setExistingFiles(bundle.images || []);
+                    setSelectedFiles([]);
+                    setActiveTab('upload');
+                  }}
                   style={{ 
                     padding: '1.25rem', 
                     background: 'var(--bg-primary)', 
@@ -1161,8 +1220,12 @@ export default function AdminDashboard({ onBack, logout }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: '1.5rem'
+                    gap: '1.5rem',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s ease'
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <img 
@@ -1212,7 +1275,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       </span>
                     ) : (
                       <button
-                        onClick={() => handleSetHeroBundle(bundle.id, bundle.name)}
+                        onClick={(e) => { e.stopPropagation(); handleSetHeroBundle(bundle.id, bundle.name); }}
                         className="admin-btn secondary"
                         style={{
                           padding: '8px 12px',
@@ -1233,7 +1296,7 @@ export default function AdminDashboard({ onBack, logout }) {
                     )}
 
                     <button 
-                      onClick={() => handleDeleteBundle(bundle.id, bundle.name)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteBundle(bundle.id, bundle.name); }}
                       className="admin-btn secondary"
                       style={{ 
                         padding: '8px 12px', 
@@ -1392,13 +1455,21 @@ export default function AdminDashboard({ onBack, logout }) {
                 </div>
               </div>
 
-              {selectedFiles.length > 0 && (
+              {(selectedFiles.length > 0 || existingFiles.length > 0) && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Selected Wallpapers ({selectedFiles.length})</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Wallpapers in Bundle ({existingFiles.length + selectedFiles.length})</span>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                    {existingFiles.map((file, index) => (
+                      <ExistingFilePreviewItem 
+                        key={`existing-${file.name}-${index}`} 
+                        file={file} 
+                        index={index} 
+                        removeFile={removeExistingFile} 
+                      />
+                    ))}
                     {selectedFiles.map((file, index) => (
                       <FilePreviewItem 
-                        key={`${file.name}-${index}`} 
+                        key={`new-${file.name}-${index}`} 
                         file={file} 
                         index={index} 
                         removeFile={removeFile} 
@@ -1408,24 +1479,41 @@ export default function AdminDashboard({ onBack, logout }) {
                 </div>
               )}
 
-              <button 
-                type="submit" 
-                disabled={uploading || selectedFiles.length === 0}
-                className="admin-btn primary"
-                style={{ width: '100%', padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.92rem', marginTop: '1rem' }}
-              >
-                {uploading ? (
-                  <>
-                    <div className="download-spinner-tiny" style={{ borderTopColor: '#000', width: '14px', height: '14px' }}></div>
-                    <span>Uploading files to Google Drive & Publishing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={16} />
-                    <span>Publish Wallpaper Bundle</span>
-                  </>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                {editingBundleId && (
+                  <button 
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => {
+                      setActiveTab('bundles');
+                      setEditingBundleId(null);
+                      setExistingFiles([]);
+                    }}
+                    className="admin-btn secondary"
+                    style={{ flex: 1, padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.92rem' }}
+                  >
+                    Discard
+                  </button>
                 )}
-              </button>
+                <button 
+                  type="submit" 
+                  disabled={uploading || (selectedFiles.length === 0 && existingFiles.length === 0)}
+                  className="admin-btn primary"
+                  style={{ flex: 2, padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.92rem' }}
+                >
+                  {uploading ? (
+                    <>
+                      <div className="download-spinner-tiny" style={{ borderTopColor: '#000', width: '14px', height: '14px' }}></div>
+                      <span>{editingBundleId ? 'Applying changes...' : 'Uploading files to Google Drive & Publishing...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      <span>{editingBundleId ? 'Apply Changes' : 'Publish Wallpaper Bundle'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         )}
