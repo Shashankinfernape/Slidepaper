@@ -173,7 +173,7 @@ function CustomDropdown({ value, onChange, options }) {
         </svg>
       </div>
       {isOpen && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: 'var(--bg-secondary)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '6px', zIndex: 100, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: 'var(--bg-primary)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '6px', zIndex: 100, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           {options.map((opt) => (
             <div 
               key={opt.value}
@@ -873,7 +873,7 @@ export default function AdminDashboard({ onBack, logout }) {
       <div className="admin-dashboard-container" style={{
         display: 'flex',
         minHeight: '85vh',
-        background: 'var(--bg-secondary)',
+        background: 'var(--bg-primary)',
         borderRadius: '16px',
         overflow: 'hidden',
         border: '1px solid var(--border-color)',
@@ -1083,7 +1083,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       <span style={{ fontSize: '0.88rem', fontWeight: 500 }}>Successfully connected to Google Drive API using personal credentials.</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', background: 'var(--bg-secondary)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', background: 'var(--bg-primary)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Target Folder Name</span>
                         <span style={{ fontSize: '0.95rem', fontWeight: 600, display: 'block', marginTop: '0.25rem' }}>{driveStatus.folderName}</span>
@@ -1121,7 +1121,7 @@ export default function AdminDashboard({ onBack, logout }) {
 
                     {/* Per-Creator Storage Usage Breakdown */}
                     {driveStatus.creatorStorage && driveStatus.creatorStorage.length > 0 && (
-                      <div style={{ background: 'var(--bg-secondary)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ background: 'var(--bg-primary)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                         <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 600 }}>Storage Usage by Creator / Admin</h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {driveStatus.creatorStorage.map((creator, idx) => (
@@ -1144,7 +1144,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       {driveStatus.files.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {driveStatus.files.map((file) => (
-                            <div key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0.8rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                            <div key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0.8rem', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <FileText size={14} style={{ color: 'var(--text-secondary)' }} />
                                 <span style={{ fontWeight: 500 }}>{file.name}</span>
@@ -1198,7 +1198,7 @@ export default function AdminDashboard({ onBack, logout }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Manage Wallpapers</h3>
-              <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--bg-primary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                 <button
                   onClick={() => setBundleFilter('all')}
                   style={{
@@ -1325,7 +1325,7 @@ export default function AdminDashboard({ onBack, logout }) {
                         style={{
                           padding: '8px 12px',
                           border: '1px solid var(--border-color)',
-                          background: 'var(--bg-secondary)',
+                          background: 'var(--bg-primary)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
