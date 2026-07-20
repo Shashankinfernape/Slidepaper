@@ -5088,7 +5088,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: var(--bg-primary);
+  background: var(--bg-surface-elevated);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5100,20 +5100,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .admin-modal-input {
-  background: var(--bg-primary);
+  background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .admin-modal-input:focus {
   border-color: rgba(255, 255, 255, 0.35) !important;
-  background: var(--bg-primary);
+  background: var(--bg-surface-elevated);
   outline: none !important;
   box-shadow: none !important;
 }
 
 [data-theme="light"] .admin-modal-input:focus {
   border-color: rgba(0, 0, 0, 0.28) !important;
-  background: var(--bg-primary);
+  background: #ffffff;
 }
 
 .admin-password-input {
@@ -5296,7 +5296,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: var(--bg-primary);
+  background: var(--bg-surface-elevated);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5308,20 +5308,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .admin-modal-input {
-  background: var(--bg-primary);
+  background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .admin-modal-input:focus {
   border-color: rgba(255, 255, 255, 0.35) !important;
-  background: var(--bg-primary);
+  background: var(--bg-surface-elevated);
   outline: none !important;
   box-shadow: none !important;
 }
 
 [data-theme="light"] .admin-modal-input:focus {
   border-color: rgba(0, 0, 0, 0.28) !important;
-  background: var(--bg-primary);
+  background: #ffffff;
 }
 
 .custom-dropdown-option {
@@ -5329,19 +5329,23 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   background: transparent;
   color: var(--text-primary);
-  transition: background 0.1s ease;
+  transition: all 0.2s ease;
 }
 .custom-dropdown-option:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-google-blue);
+  color: #000;
 }
 [data-theme="light"] .custom-dropdown-option:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--color-google-blue);
+  color: #000;
 }
 .custom-dropdown-option.selected {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
 }
 [data-theme="light"] .custom-dropdown-option.selected {
   background: rgba(0, 0, 0, 0.08);
+  font-weight: 600;
 }
 
 .admin-password-input {
