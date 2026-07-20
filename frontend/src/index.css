@@ -1335,7 +1335,23 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-theme="light"] .search-input-header {
   background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .admin-modal-input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+}
+
+.admin-modal-input:focus {
+  border-color: var(--border-focus) !important;
+  background: var(--bg-surface);
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .admin-modal-input:focus {
+  border-color: var(--border-focus) !important;
+  background: var(--bg-surface);
 }
 
 .search-input-header:focus {
@@ -1346,7 +1362,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .search-input-header:focus {
-  border-color: rgba(0, 0, 0, 0.28) !important;
+  border-color: var(--border-focus) !important;
   background: rgba(0, 0, 0, 0.05);
   outline: none !important;
   box-shadow: none !important;
@@ -5112,7 +5128,7 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-theme="light"] .admin-modal-input {
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-color);
 }
 
 .admin-modal-input:focus {
@@ -5123,7 +5139,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .admin-modal-input:focus {
-  border-color: rgba(0, 0, 0, 0.28) !important;
+  border-color: var(--border-focus) !important;
   background: #ffffff;
 }
 
@@ -5320,7 +5336,7 @@ h1, h2, h3, h4, h5, h6 {
 
 [data-theme="light"] .admin-modal-input {
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-color);
 }
 
 .admin-modal-input:focus {
@@ -5331,7 +5347,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 [data-theme="light"] .admin-modal-input:focus {
-  border-color: rgba(0, 0, 0, 0.28) !important;
+  border-color: var(--border-focus) !important;
   background: var(--bg-primary);
 }
 
