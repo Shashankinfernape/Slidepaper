@@ -525,7 +525,7 @@ export default function BundleDetailPage({
   return (
     <div className="bundle-youtube-page">
       <section className="bundle-youtube-layout" style={{ gridAutoFlow: 'dense', alignItems: 'start' }}>
-        <div className="bundle-youtube-main" style={{ gridColumn: 'span 3', gridRow: 'span 6' }}>
+        <div className="bundle-youtube-main" style={{ gridRow: 'span 6' }}>
           <div className="bundle-youtube-hero">
             <BundleCard
               bundle={bundle}
@@ -789,8 +789,8 @@ export default function BundleDetailPage({
 
         </div>
 
-        {/* The top right sidebar genre filters span 2 columns and 1 row */}
-        <div style={{ gridColumn: 'span 2', gridRow: 'span 1', alignSelf: 'end', marginBottom: '8px' }} className="sidebar-genres-header">
+        {/* The top right sidebar genre filters */}
+        <div className="sidebar-genres-header">
           {genres.map((genre) => (
             <button
               key={genre}
@@ -809,13 +809,12 @@ export default function BundleDetailPage({
             bundle={item}
             onClick={() => onOpenBundle?.(item)}
             showOverlay={true}
-            className="bundle-card--unified-grid"
-            style={{ gridColumn: 'span 1', gridRow: 'span 1' }}
+            className="bundle-card--unified-grid bundle-youtube-grid-item"
           />
         ))}
 
         {filteredRelatedBundles.length === 0 && (
-          <span className="sidebar-empty-note" style={{ gridColumn: 'span 2' }}>No other bundles in this genre.</span>
+          <span className="sidebar-empty-note">No other bundles in this genre.</span>
         )}
       </section>
 

@@ -4489,6 +4489,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Dynamic Genre filter bar at the top of recommendations */
 .sidebar-genres-header {
+  grid-column: span 2;
+  align-self: end;
   display: flex;
   gap: 0.45rem;
   overflow-x: auto;
@@ -4669,6 +4671,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sidebar-empty-note {
+  grid-column: span 2;
   color: var(--text-secondary);
   font-size: 0.84rem;
   text-align: center;
@@ -4691,7 +4694,9 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   .bundle-youtube-main,
-  .bundle-youtube-sidebar {
+  .bundle-youtube-sidebar,
+  .sidebar-genres-header,
+  .sidebar-empty-note {
     grid-column: span 1;
   }
 }
