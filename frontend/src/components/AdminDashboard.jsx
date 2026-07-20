@@ -1954,7 +1954,7 @@ export default function AdminDashboard({ onBack, logout }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
                     <div style={{
                       width: '100%',
-                      height: '110px',
+                      height: '140px',
                       borderRadius: '12px',
                       background: editedBannerURL ? `url(${getProxiedImageUrl(editedBannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
                       position: 'relative',
@@ -1996,8 +1996,8 @@ export default function AdminDashboard({ onBack, logout }) {
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 0.5rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
                       <div style={{
                         position: 'relative',
-                        width: '90px',
-                        height: '90px',
+                        width: '100px',
+                        height: '100px',
                         borderRadius: '50%',
                         overflow: 'hidden',
                         border: '3px solid var(--bg-primary)',
@@ -2015,7 +2015,7 @@ export default function AdminDashboard({ onBack, logout }) {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '30px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
+                          <h1 style={{ margin: 0, fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
                           <span className="verified-badge-circle" title="Verified Creator" style={{ width: '16px', height: '16px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                             <svg viewBox="0 0 24 24" style={{ width: '10px', height: '10px' }}>
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
