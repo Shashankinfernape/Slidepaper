@@ -230,6 +230,39 @@ export default function AdminDashboard({ onBack, logout }) {
   const [editedYoutube, setEditedYoutube] = useState('');
   const [editedInstagram, setEditedInstagram] = useState('');
   const [editedTwitter, setEditedTwitter] = useState('');
+
+  // Helper for ratio detection
+  const gcd = (a, b) => {
+    return b === 0 ? a : gcd(b, a % b);
+  };
+
+  useEffect(() => {
+    if (bundleRatio === 'original' && mediaItems.length > 0) {
+      const firstItem = mediaItems[0];
+      
+      const calculateRatio = (width, height) => {
+        const divisor = gcd(width, height);
+        setCustomRatioW((width / divisor).toString());
+        setCustomRatioH((height / divisor).toString());
+        setBundleRatio('custom');
+      };
+
+      if (firstItem.type === 'existing' && firstItem.data.url) {
+        const img = new Image();
+        img.onload = () => calculateRatio(img.width, img.height);
+        img.src = firstItem.data.url;
+      } else if (firstItem.type === 'new' && firstItem.data) {
+        const img = new Image();
+        const url = URL.createObjectURL(firstItem.data);
+        img.onload = () => {
+          calculateRatio(img.width, img.height);
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
+      }
+    }
+  }, [bundleRatio, mediaItems]);
+
   const [editedAccent, setEditedAccent] = useState('midnight');
   const [editedBannerURL, setEditedBannerURL] = useState('');
 
