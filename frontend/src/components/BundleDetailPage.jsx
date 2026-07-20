@@ -595,24 +595,17 @@ export default function BundleDetailPage({
               </div>
             </div>
 
-            <div className="bundle-youtube-meta-row">
-              <div className="creator-about-section" style={{
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                flexDirection: 'column',
-                background: 'var(--bg-primary)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                overflow: 'hidden',
-                width: '100%',
-                marginTop: '1.25rem'
-              }}>
+            <div className="bundle-youtube-meta-row" style={{ marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
                 <div style={{
                   width: '100%',
-                  height: '140px',
-                  position: 'relative',
+                  height: '200px',
+                  borderRadius: '18px',
                   background: resolvedAuthorProfile.bannerURL ? `url(${getProxiedImageUrl(resolvedAuthorProfile.bannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                   cursor: 'pointer'
                 }}
                 onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
@@ -621,28 +614,37 @@ export default function BundleDetailPage({
                     position: 'absolute',
                     top: '16px',
                     left: '16px',
+                    zIndex: 10,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                     background: 'rgba(0, 0, 0, 0.55)',
                     backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#ffffff',
-                    padding: '0.5rem 1rem',
+                    padding: '0.55rem 1.2rem',
                     borderRadius: '999px',
                     fontWeight: 600,
-                    fontSize: '0.75rem'
+                    fontSize: '0.85rem'
                   }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    <span>View Channel</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <span>Back to Feed</span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 1.25rem 1.25rem 1.25rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '1.75rem',
+                  padding: '0 0.5rem',
+                  marginTop: '-2.5rem',
+                  flexWrap: 'wrap'
+                }} className="channel-header-block">
                   <div style={{
                     position: 'relative',
-                    width: '90px',
-                    height: '90px',
+                    width: '128px',
+                    height: '128px',
                     borderRadius: '50%',
                     overflow: 'hidden',
                     border: '4px solid var(--bg-primary)',
@@ -661,22 +663,22 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '200px', marginTop: '35px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h1 
-                        style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                        style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
                         onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
                       >
                         {resolvedAuthorProfile.displayName || 'Creator Name'}
                       </h1>
-                      <span className="verified-badge-circle" title="Verified Creator" style={{ width: '15px', height: '15px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 24 24" style={{ width: '10px', height: '10px' }}>
+                      <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}>
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
                         </svg>
                       </span>
                     </div>
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', flexWrap: 'wrap' }}>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
                       <span>•</span>
                       <span>{formatSubscribers(subscribersCount)} subscribers</span>
@@ -687,10 +689,10 @@ export default function BundleDetailPage({
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '35px' }}>
+                  <div style={{ marginTop: '2.5rem' }}>
                     <button
                       className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                      style={!subscribeAnimEnabled ? { transition: 'none', padding: '0.7rem 1.5rem', fontSize: '0.95rem' } : { padding: '0.7rem 1.5rem', fontSize: '0.95rem' }}
                       onClick={() => {
                         setSubscribeAnimEnabled(true);
                         runAuthedAction('subscribe to this author', handleSubscribeToggle);
@@ -698,7 +700,7 @@ export default function BundleDetailPage({
                     >
                       {isSubscribed ? (
                         <>
-                          <Bell size={15} />
+                          <Bell size={18} />
                           <span>Subscribed</span>
                         </>
                       ) : (

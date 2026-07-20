@@ -1951,51 +1951,53 @@ export default function AdminDashboard({ onBack, logout }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Live Creator Card Preview</span>
                   
-                  <div className="creator-about-section" style={{
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: 'var(--bg-primary)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                    overflow: 'hidden',
-                    width: '100%'
-                  }}>
-                    {/* Banner Header */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
                     <div style={{
                       width: '100%',
-                      height: '140px',
-                      position: 'relative',
+                      height: '200px',
+                      borderRadius: '18px',
                       background: editedBannerURL ? `url(${getProxiedImageUrl(editedBannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
-                      borderBottom: '1px solid rgba(255,255,255,0.05)'
+                      position: 'relative',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.25)'
                     }}>
+                      {!editedBannerURL && (
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'radial-gradient(circle at 75% 30%, rgba(59, 130, 246, 0.2), transparent 65%)',
+                          pointerEvents: 'none'
+                        }} />
+                      )}
                       <div style={{
                         position: 'absolute',
                         top: '16px',
                         left: '16px',
+                        zIndex: 10,
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
                         background: 'rgba(0, 0, 0, 0.55)',
                         backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
                         color: '#ffffff',
-                        padding: '0.5rem 1rem',
+                        padding: '0.55rem 1.2rem',
                         borderRadius: '999px',
                         fontWeight: 600,
-                        fontSize: '0.75rem'
+                        fontSize: '0.85rem'
                       }}>
-                        <ArrowLeft size={14} />
+                        <ArrowLeft size={16} />
                         <span>Back to Feed</span>
                       </div>
                     </div>
 
-                    {/* Content Body */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 1.25rem 1.25rem 1.25rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.75rem', padding: '0 0.5rem', marginTop: '-2.5rem', flexWrap: 'wrap' }} className="channel-header-block">
                       <div style={{
                         position: 'relative',
-                        width: '90px',
-                        height: '90px',
+                        width: '128px',
+                        height: '128px',
                         borderRadius: '50%',
                         overflow: 'hidden',
                         border: '4px solid var(--bg-primary)',
@@ -2011,17 +2013,17 @@ export default function AdminDashboard({ onBack, logout }) {
                         />
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '200px', marginTop: '35px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
-                          <span className="verified-badge-circle" title="Verified Creator" style={{ width: '15px', height: '15px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg viewBox="0 0 24 24" style={{ width: '10px', height: '10px' }}>
+                          <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
+                          <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg viewBox="0 0 24 24" style={{ width: '12px', height: '12px' }}>
                               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
                             </svg>
                           </span>
                         </div>
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.75rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{editedDisplayName ? editedDisplayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
                           <span>•</span>
                           <span>{userProfile?.subscribers || 0} subscribers</span>
@@ -2032,20 +2034,20 @@ export default function AdminDashboard({ onBack, logout }) {
                         </div>
                       </div>
 
-                      <div style={{ marginTop: '35px' }}>
+                      <div style={{ marginTop: '2.5rem' }}>
                         <button style={{ 
                           background: 'transparent', 
                           color: 'var(--text-primary)', 
                           border: '1px solid var(--border-color)', 
-                          padding: '0.5rem 1rem', 
+                          padding: '0.7rem 1.5rem', 
                           borderRadius: '999px', 
-                          fontSize: '0.8rem', 
+                          fontSize: '0.95rem', 
                           fontWeight: 600, 
                           display: 'flex', 
                           alignItems: 'center', 
-                          gap: '6px' 
+                          gap: '8px' 
                         }}>
-                          <Check size={14} />
+                          <Check size={18} />
                           Subscribed
                         </button>
                       </div>
