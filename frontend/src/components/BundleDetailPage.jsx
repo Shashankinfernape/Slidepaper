@@ -743,24 +743,6 @@ export default function BundleDetailPage({
               )}
             </button>
           </div>
-
-          {/* Bottom Bundles Grid (Filling the empty space) */}
-          {bottomBundles.length > 0 && (
-            <div className="bundle-youtube-bottom-grid">
-              <h3 className="bottom-grid-title">More bundles for you</h3>
-              <div className="bottom-bundles-list">
-                {bottomBundles.map((item) => (
-                  <BundleCard
-                    key={item.id}
-                    bundle={item}
-                    onClick={() => onOpenBundle?.(item)}
-                    showOverlay={true}
-                    className="bundle-card--bottom-grid"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <aside className="bundle-youtube-sidebar">
