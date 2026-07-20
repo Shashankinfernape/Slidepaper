@@ -2091,7 +2091,11 @@ app.post('/api/users/sync-profile', async (req, res) => {
       );
     }
 
-    return res.status(200).json({ success: true, user });
+    // Fetch user's subscriptions (channels they are subscribed to)
+    const subscriptionDocs = await User.find({ subscriberUids: uid }).select('uid');
+    const subscriptions = subscriptionDocs.map(doc => doc.uid);
+
+    return res.status(200).json({ success: true, user, subscriptions });
   } catch (error) {
     console.error('Error syncing user profile:', error);
     return res.status(500).json({ error: 'Failed to sync user profile' });
@@ -2293,6 +2297,29 @@ app.get('/api/authors/:authorUid/status', async (req, res) => {
   } catch (error) {
     console.error('Error fetching author status:', error);
     return res.status(500).json({ error: 'Failed to fetch author status' });
+  }
+});
+
+// Endpoint: Fetch full list of subscribers for an author
+app.get('/api/authors/:authorUid/subscribers-list', async (req, res) => {
+  const { authorUid } = req.params;
+  try {
+    const author = await User.findOne({ uid: authorUid });
+    if (!author) {
+      return res.status(404).json({ error: 'Author not found' });
+    }
+
+    const subscriberUids = author.subscriberUids || [];
+    
+    // Fetch detailed profiles of subscribers
+    const subscribers = await User.find({ uid: { $in: subscriberUids } })
+      .select('uid displayName email photoURL joined')
+      .lean();
+
+    return res.status(200).json({ success: true, subscribers });
+  } catch (error) {
+    console.error('Error fetching subscribers list:', error);
+    return res.status(500).json({ error: 'Failed to fetch subscribers list' });
   }
 });
 
