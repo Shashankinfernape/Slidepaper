@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User
+  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import MonetizationDashboard from './MonetizationDashboard';
@@ -223,6 +223,8 @@ export default function AdminDashboard({ onBack, logout }) {
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
   const [bundleRatio, setBundleRatio] = useState('16:9');
+  const [customRatioW, setCustomRatioW] = useState('16');
+  const [customRatioH, setCustomRatioH] = useState('9');
 
   // Edit Bundle states
   const [editingBundleId, setEditingBundleId] = useState(null);
@@ -721,7 +723,8 @@ export default function AdminDashboard({ onBack, logout }) {
     formData.append('name', bundleName);
     formData.append('description', bundleDescription);
     formData.append('orientation', bundleOrientation);
-    formData.append('ratio', bundleRatio);
+    const finalRatio = bundleRatio === 'custom' ? `${customRatioW}:${customRatioH}` : bundleRatio;
+    formData.append('ratio', finalRatio);
     formData.append('type', bundleType || (bundleOrientation === 'landscape' ? 'Landscape Wallpaper Pack' : 'Vertical Mobile Pack'));
     formData.append('tags', bundleTags);
     formData.append('includes', bundleIncludes);
@@ -1397,22 +1400,55 @@ export default function AdminDashboard({ onBack, logout }) {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Native Ratio *</label>
-                  <CustomDropdown 
-                    value={bundleRatio} 
-                    onChange={setBundleRatio} 
-                    options={bundleOrientation === 'landscape' ? [
-                      { value: '16:9', label: '16:9 (Standard Desktop)' },
-                      { value: '21:9', label: '21:9 (Ultrawide)' },
-                      { value: '32:9', label: '32:9 (Super Ultrawide)' },
-                      { value: '16:10', label: '16:10 (MacBook/Display)' },
-                      { value: '48:9', label: '48:9 (Triple Monitor Spread)' },
-                      { value: 'original', label: 'Original (Uncropped)' }
-                    ] : [
-                      { value: '9:16', label: '9:16 (Standard Mobile)' },
-                      { value: '9:19.5', label: '9:19.5 (Tall Mobile e.g. iPhone)' },
-                      { value: 'original', label: 'Original (Uncropped)' }
-                    ]}
-                  />
+                  {bundleRatio === 'custom' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input 
+                        type="number" 
+                        value={customRatioW} 
+                        onChange={(e) => setCustomRatioW(e.target.value)} 
+                        className="admin-modal-input" 
+                        style={{ width: '80px', textAlign: 'center' }} 
+                        placeholder="16"
+                      />
+                      <span style={{ fontWeight: 'bold' }}>:</span>
+                      <input 
+                        type="number" 
+                        value={customRatioH} 
+                        onChange={(e) => setCustomRatioH(e.target.value)} 
+                        className="admin-modal-input" 
+                        style={{ width: '80px', textAlign: 'center' }} 
+                        placeholder="9"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setBundleRatio(bundleOrientation === 'landscape' ? '16:9' : '9:16')}
+                        className="admin-modal-input"
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.65rem', cursor: 'pointer', width: 'auto' }}
+                        title="Reset to default ratio"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <CustomDropdown 
+                      value={bundleRatio} 
+                      onChange={setBundleRatio} 
+                      options={bundleOrientation === 'landscape' ? [
+                        { value: '16:9', label: '16:9 (Standard Desktop)' },
+                        { value: '21:9', label: '21:9 (Ultrawide)' },
+                        { value: '32:9', label: '32:9 (Super Ultrawide)' },
+                        { value: '16:10', label: '16:10 (MacBook/Display)' },
+                        { value: '48:9', label: '48:9 (Triple Monitor Spread)' },
+                        { value: 'original', label: 'Original (Uncropped)' },
+                        { value: 'custom', label: 'Custom Ratio' }
+                      ] : [
+                        { value: '9:16', label: '9:16 (Standard Mobile)' },
+                        { value: '9:19.5', label: '9:19.5 (Tall Mobile e.g. iPhone)' },
+                        { value: 'original', label: 'Original (Uncropped)' },
+                        { value: 'custom', label: 'Custom Ratio' }
+                      ]}
+                    />
+                  )}
                 </div>
               </div>
 
