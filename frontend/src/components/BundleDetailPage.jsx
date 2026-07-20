@@ -525,7 +525,7 @@ export default function BundleDetailPage({
   return (
     <div className="bundle-youtube-page">
       <section className="bundle-youtube-layout" style={{ gridAutoFlow: 'dense', alignItems: 'start' }}>
-        <div className="bundle-youtube-main" style={{ gridRow: 'span 6' }}>
+        <div className="bundle-youtube-main">
           <div className="bundle-youtube-hero">
             <BundleCard
               bundle={bundle}
