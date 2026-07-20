@@ -628,49 +628,12 @@ export default function BundleDetailPage({
                   >
                     <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'dislike' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'dislike' ? '0' : '2'}>
                       <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
-              <span>•</span>
-              <span>{formatTimeAgo(bundle.createdAt)}</span>
-              <span>•</span>
-              <span style={{ color: 'var(--text-primary)' }}>{formatNumber(bundle.downloads || 0)} downloads</span>
-            </div>
-
-            <div className="bundle-youtube-channel-row">
-              <div className="bundle-youtube-channel-info">
-                <div className="bundle-youtube-avatar">
-                  <img src={uploaderProfilePic} alt={uploaderName} className="bundle-youtube-avatar-img" />
-                </div>
-                <div className="bundle-youtube-channel-text">
-                  <div className="bundle-youtube-channel-name">
-                    {uploaderName}
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="var(--text-secondary)" style={{ marginLeft: '4px' }}>
-                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM9.8 17.3l-4.2-4.1L7 11.8l2.8 2.7L17 7.4l1.4 1.4-8.6 8.5z" />
                     </svg>
-                  </div>
-                  <div className="bundle-youtube-subs">
-                    {bundle.uploaderId ? subscriberCount : '3'} subscribers
-                  </div>
+                  </button>
                 </div>
+                
                 <button
-                  className={`bundle-youtube-subscribe ${isSubscribed ? 'subscribed' : ''}`}
-                  onClick={handleSubscribe}
-                  disabled={isSubscribing}
-                >
-                  {isSubscribed ? 'Subscribed' : 'Subscribe'}
-                </button>
-              </div>
-
-              <div className="bundle-youtube-actions">
-                <button className="bundle-youtube-action-btn">
-                  <ThumbsUp size={16} />
-                  <span>{formatNumber(bundle.likes || 0)}</span>
-                </button>
-                <div className="bundle-youtube-action-divider"></div>
-                <button className="bundle-youtube-action-btn">
-                  <ThumbsDown size={16} />
-                </button>
-                <button
-                  className="bundle-youtube-action-btn"
-                  style={{ marginLeft: '8px' }}
+                  className="youtube-action-pill-btn"
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                     alert('Share URL copied to clipboard!');
@@ -779,6 +742,7 @@ export default function BundleDetailPage({
               )}
             </button>
           </div>
+
         </div>
 
         {/* The top right sidebar genre filters span 2 columns and 1 row */}
@@ -809,7 +773,6 @@ export default function BundleDetailPage({
         {filteredRelatedBundles.length === 0 && (
           <span className="sidebar-empty-note" style={{ gridColumn: 'span 2' }}>No other bundles in this genre.</span>
         )}
-
       </section>
 
       {showAuthPrompt && (
