@@ -520,20 +520,12 @@ export default function BundleDetailPage({
     return allOptions.findIndex((option) => option.id === selectedDownloadId);
   }, [selectedDownloadId, allOptions]);
 
-  const { leftBundles, rightBundles } = useMemo(() => {
-    const left = [];
-    const right = [];
-    filteredRelatedBundles.forEach((bundle, index) => {
-      if (index % 5 < 3) left.push(bundle);
-      else right.push(bundle);
-    });
-    return { leftBundles: left, rightBundles: right };
-  }, [filteredRelatedBundles]);
+
 
   return (
     <div className="bundle-youtube-page">
-      <section className="bundle-youtube-layout">
-        <div className="bundle-youtube-main">
+      <section className="bundle-youtube-layout" style={{ gridAutoFlow: 'dense', alignItems: 'start' }}>
+        <div className="bundle-youtube-main" style={{ gridColumn: 'span 3', gridRow: 'span 5' }}>
           <div className="bundle-youtube-hero">
             <BundleCard
               bundle={bundle}
@@ -636,12 +628,49 @@ export default function BundleDetailPage({
                   >
                     <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'dislike' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'dislike' ? '0' : '2'}>
                       <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
-                    </svg>
-                  </button>
+              <span>•</span>
+              <span>{formatTimeAgo(bundle.createdAt)}</span>
+              <span>•</span>
+              <span style={{ color: 'var(--text-primary)' }}>{formatNumber(bundle.downloads || 0)} downloads</span>
+            </div>
+
+            <div className="bundle-youtube-channel-row">
+              <div className="bundle-youtube-channel-info">
+                <div className="bundle-youtube-avatar">
+                  <img src={uploaderProfilePic} alt={uploaderName} className="bundle-youtube-avatar-img" />
                 </div>
-                
+                <div className="bundle-youtube-channel-text">
+                  <div className="bundle-youtube-channel-name">
+                    {uploaderName}
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="var(--text-secondary)" style={{ marginLeft: '4px' }}>
+                      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zM9.8 17.3l-4.2-4.1L7 11.8l2.8 2.7L17 7.4l1.4 1.4-8.6 8.5z" />
+                    </svg>
+                  </div>
+                  <div className="bundle-youtube-subs">
+                    {bundle.uploaderId ? subscriberCount : '3'} subscribers
+                  </div>
+                </div>
                 <button
-                  className="youtube-action-pill-btn"
+                  className={`bundle-youtube-subscribe ${isSubscribed ? 'subscribed' : ''}`}
+                  onClick={handleSubscribe}
+                  disabled={isSubscribing}
+                >
+                  {isSubscribed ? 'Subscribed' : 'Subscribe'}
+                </button>
+              </div>
+
+              <div className="bundle-youtube-actions">
+                <button className="bundle-youtube-action-btn">
+                  <ThumbsUp size={16} />
+                  <span>{formatNumber(bundle.likes || 0)}</span>
+                </button>
+                <div className="bundle-youtube-action-divider"></div>
+                <button className="bundle-youtube-action-btn">
+                  <ThumbsDown size={16} />
+                </button>
+                <button
+                  className="bundle-youtube-action-btn"
+                  style={{ marginLeft: '8px' }}
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                     alert('Share URL copied to clipboard!');
@@ -750,51 +779,37 @@ export default function BundleDetailPage({
               )}
             </button>
           </div>
-
-          {/* Left Bundles Grid (Flows directly under video with no gaps) */}
-          {leftBundles.length > 0 && (
-            <div className="left-bundles-grid">
-              {leftBundles.map((item) => (
-                <BundleCard
-                  key={item.id}
-                  bundle={item}
-                  onClick={() => onOpenBundle?.(item)}
-                  showOverlay={true}
-                  className="bundle-card--unified-grid"
-                />
-              ))}
-            </div>
-          )}
         </div>
 
-        <aside className="bundle-youtube-sidebar">
-          <div className="sidebar-genres-header">
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
-                onClick={() => setSelectedSidebarGenre(genre)}
-              >
-                {genre}
-              </button>
-            ))}
-          </div>
+        {/* The top right sidebar genre filters span 2 columns and 1 row */}
+        <div style={{ gridColumn: 'span 2', gridRow: 'span 1', alignSelf: 'end', marginBottom: '8px' }} className="sidebar-genres-header">
+          {genres.map((genre) => (
+            <button
+              key={genre}
+              className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
+              onClick={() => setSelectedSidebarGenre(genre)}
+            >
+              {genre}
+            </button>
+          ))}
+        </div>
 
-          <div className="sidebar-bundles-list">
-            {rightBundles.map((item) => (
-              <BundleCard
-                key={item.id}
-                bundle={item}
-                onClick={() => onOpenBundle?.(item)}
-                showOverlay={true}
-                className="bundle-card--unified-grid"
-              />
-            ))}
-            {filteredRelatedBundles.length === 0 && (
-              <span className="sidebar-empty-note">No other bundles in this genre.</span>
-            )}
-          </div>
-        </aside>
+        {/* All bundles follow directly in the grid. CSS Grid Auto-Placement handles everything! */}
+        {filteredRelatedBundles.map((item) => (
+          <BundleCard
+            key={item.id}
+            bundle={item}
+            onClick={() => onOpenBundle?.(item)}
+            showOverlay={true}
+            className="bundle-card--unified-grid"
+            style={{ gridColumn: 'span 1', gridRow: 'span 1' }}
+          />
+        ))}
+
+        {filteredRelatedBundles.length === 0 && (
+          <span className="sidebar-empty-note" style={{ gridColumn: 'span 2' }}>No other bundles in this genre.</span>
+        )}
+
       </section>
 
       {showAuthPrompt && (
