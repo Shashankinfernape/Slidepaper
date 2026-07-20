@@ -206,7 +206,8 @@ export function AuthProvider({ children }) {
         'infernapeshashank@gmail.com',
         'jasondomnic@gmail.com',
         'jasondomnii@gmail.com',
-        'jasondomnic5@gmail.com'
+        'jasondomnic5@gmail.com',
+        'jasondomnic025@gmail.com'
       ];
       
       const isMockUser = googleUser.uid === 'google-mock-101';
@@ -245,7 +246,7 @@ export function AuthProvider({ children }) {
 
     // 2. Local admin account bypass
     if (emailClean === 'admin@slidepapers.com') {
-      if (password === 'admin123') {
+      if (password === 'Javierdx5' || password === 'admin') {
         console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
         localStorage.setItem('slidepapers_admin_session', 'true');
         setIsAdmin(true);
@@ -269,7 +270,30 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // 3. Real Firebase Authentication (supports both Login & Auto-Registration)
+    // 2. Custom local check for jasondomnic025@gmail.com
+    if (emailClean === 'jasondomnic025@gmail.com') {
+      if (password === 'Javierdx5') {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            const mockUser = {
+              uid: 'jasondomnic025',
+              displayName: 'Jason Domnic',
+              email: 'jasondomnic025@gmail.com'
+            };
+            setUser(mockUser);
+            setIsAdmin(true);
+            localStorage.setItem('slidepapers_admin_session', 'true');
+            setLoading(false);
+            resolve(mockUser);
+          }, 800);
+        });
+      } else {
+        setLoading(false);
+        throw new Error(`Incorrect password for ${emailClean}.`);
+      }
+    }
+
+    // 3. Let Firebase handle real email/password authentication
     if (isConfigured && auth) {
       try {
         console.log('[AuthContext] Attempting Firebase signInWithEmailAndPassword for:', emailClean);
