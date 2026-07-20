@@ -691,7 +691,7 @@ export default function BundleDetailPage({
               </div>
             </div>
  
-            <div className="apple-download-panel" style={{ marginTop: '0.5rem' }}>
+            <div className="apple-download-panel" style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
               {supportsLandscapeDownloads ? (
                   <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
                     <div className="apple-picker-container">
