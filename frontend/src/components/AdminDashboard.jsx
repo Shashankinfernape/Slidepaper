@@ -873,6 +873,10 @@ export default function AdminDashboard({ onBack, logout }) {
       setBundleTags('');
       setBundleIncludes('');
       setMediaItems([]);
+
+      // Navigate to My Uploads
+      setActiveTab('bundles');
+      setBundleFilter('mine');
       
       // Refresh bundles list
       fetchBundles();
@@ -1295,9 +1299,11 @@ export default function AdminDashboard({ onBack, logout }) {
               (bundleFilter === 'mine' 
                 ? bundles.filter(b => (user?.uid && b.author?.uid === user.uid) || (user?.email && b.author?.email === user.email))
                 : bundles
-              ).map((bundle) => (
+              )
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+              .map((bundle) => (
                 <div 
-                  key={bundle.id} 
+                  key={bundle.id}  
                   className={`admin-card admin-bundle-row ${animatingDeleteId === bundle.id ? 'animating-delete' : ''}`} 
                   onClick={() => {
                     setEditingBundleId(bundle.id);
