@@ -111,7 +111,7 @@ export default function BundleDetailPage({
   loginWithGoogle,
   bundles = []
 }) {
-  const { userProfile } = useAuth();
+  const { userProfile, subscriptions = [], toggleSubscriptionLocal } = useAuth();
   const { startDownload } = useDownload();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -204,7 +204,7 @@ export default function BundleDetailPage({
     steps: []
   });
   const [reaction, setReaction] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(null);
+  const isSubscribed = bundle.author?.uid ? subscriptions.includes(bundle.author.uid) : false;
   const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(bundle.author?.subscribers || 0);
   const [viewsCount, setViewsCount] = useState(bundle.stats?.views || 0);
@@ -284,7 +284,6 @@ export default function BundleDetailPage({
         const res = await fetch(`${API_URL}/api/authors/${bundle.author.uid}/status${uidParam}`);
         if (res.ok) {
           const data = await res.json();
-          setIsSubscribed(data.isSubscribed);
           setSubscribersCount(data.subscribers);
           setAuthorProfile(data.profile);
         }
@@ -368,9 +367,11 @@ export default function BundleDetailPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid: user.uid })
       });
+      
+      toggleSubscriptionLocal(bundle.author.uid);
+      
       if (res.ok) {
         const data = await res.json();
-        setIsSubscribed(data.subscribed);
         setSubscribersCount(data.subscribers);
       }
     } catch (err) {
@@ -576,27 +577,23 @@ export default function BundleDetailPage({
                 </div>
  
                 <div className="bundle-youtube-author-actions">
-                  {isSubscribed === null ? (
-                    <div style={{ width: '115px', height: '36px', background: 'rgba(128,128,128,0.15)', borderRadius: '999px' }} className="spin-skeleton" />
-                  ) : (
-                    <button
-                      className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
-                      onClick={() => {
-                        setSubscribeAnimEnabled(true);
-                        runAuthedAction('subscribe to this author', handleSubscribeToggle);
-                      }}
-                    >
-                      {isSubscribed ? (
-                        <>
-                          <Bell size={15} />
-                          <span>Subscribed</span>
-                        </>
-                      ) : (
-                        <span>Subscribe</span>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                    style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                    onClick={() => {
+                      setSubscribeAnimEnabled(true);
+                      runAuthedAction('subscribe to this author', handleSubscribeToggle);
+                    }}
+                  >
+                    {isSubscribed ? (
+                      <>
+                        <Bell size={15} />
+                        <span>Subscribed</span>
+                      </>
+                    ) : (
+                      <span>Subscribe</span>
+                    )}
+                  </button>
                 </div>
               </div>
  

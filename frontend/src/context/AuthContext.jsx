@@ -45,6 +45,17 @@ export function AuthProvider({ children }) {
 
   const hasSynced = useRef(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [subscriptions, setSubscriptions] = useState([]);
+
+  const toggleSubscriptionLocal = (authorUid) => {
+    setSubscriptions(prev => {
+      if (prev.includes(authorUid)) {
+        return prev.filter(uid => uid !== authorUid);
+      } else {
+        return [...prev, authorUid];
+      }
+    });
+  };
 
   const updateUserProfileState = (updatedProfile) => {
     setUserProfile(updatedProfile);
@@ -78,6 +89,9 @@ export function AuthProvider({ children }) {
         if (data.success && data.user) {
           hasSynced.current = true;
           setUserProfile(data.user);
+          if (data.subscriptions) {
+            setSubscriptions(data.subscriptions);
+          }
           setUser(prev => {
             if (!prev) return null;
             return {
@@ -335,7 +349,9 @@ export function AuthProvider({ children }) {
     loginAdminWithGoogle,
     loginWithEmail,
     logout,
-    isFirebaseReal: isConfigured
+    isFirebaseReal: isConfigured,
+    subscriptions,
+    toggleSubscriptionLocal
   };
 
   return (

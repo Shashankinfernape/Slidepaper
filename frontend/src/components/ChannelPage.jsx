@@ -17,9 +17,12 @@ if (
 }
 
 export default function ChannelPage({ channel, bundles = [], onSelectBundle, onBack, user }) {
-  const { userProfile } = useAuth();
+  const { userProfile, subscriptions = [], toggleSubscriptionLocal } = useAuth();
   const [remoteAuthor, setRemoteAuthor] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(null);
+  
+  const targetUid = channel?.uid || channel?.author?.uid;
+  const isSubscribed = targetUid ? subscriptions.includes(targetUid) : false;
+  
   const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 68400);
   const [activeTab, setActiveTab] = useState('wallpapers'); // 'wallpapers' | 'monetization'
@@ -37,16 +40,12 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           if (data.profile.subscribers !== undefined) {
             setSubscribersCount(data.profile.subscribers);
           }
-          if (data.isSubscribed !== undefined) {
-            setIsSubscribed(data.isSubscribed);
-          }
         }
       })
       .catch(() => {});
   }, [channel, user]);
 
   // Extract isOwnChannel outside to conditionally show admin tabs
-  const targetUid = channel?.uid || channel?.author?.uid;
   const isOwnChannel = (targetUid && (userProfile?.uid === targetUid || user?.uid === targetUid)) ||
                        (!targetUid && (userProfile?.email === channel?.email || userProfile?.uid === 'admin-mock-999'));
 
@@ -93,18 +92,19 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
 
   const handleSubscribeToggle = async () => {
     setSubscribeAnimEnabled(true);
-    const targetUid = resolvedProfile?.uid || 'admin-mock-999';
+    const resolvedTargetUid = resolvedProfile?.uid || 'admin-mock-999';
+    
     if (isSubscribed) {
-      setIsSubscribed(false);
       setSubscribersCount(prev => Math.max(0, prev - 1));
     } else {
-      setIsSubscribed(true);
       setSubscribersCount(prev => prev + 1);
     }
+    
+    toggleSubscriptionLocal(resolvedTargetUid);
 
     if (user) {
       try {
-        await fetch(`${API_URL}/api/authors/${targetUid}/subscribe`, {
+        await fetch(`${API_URL}/api/authors/${resolvedTargetUid}/subscribe`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uid: user.uid })
@@ -270,37 +270,33 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
 
         {/* YouTube Subscribe Action */}
         <div style={{ marginTop: '2.5rem', flexShrink: 0 }}>
-          {isSubscribed === null ? (
-            <div style={{ width: '135px', height: '42px', background: 'rgba(128,128,128,0.15)', borderRadius: '999px' }} className="spin-skeleton" />
-          ) : (
-            <button
-              onClick={handleSubscribeToggle}
-              style={{
-                padding: '0.75rem 1.8rem',
-                borderRadius: '999px',
-                fontWeight: 700,
-                fontSize: '0.92rem',
-                cursor: 'pointer',
-                border: isSubscribed ? '1px solid var(--border-color)' : 'none',
-                transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
-                background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
-                color: isSubscribed ? 'var(--text-primary)' : '#000000',
-                boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              {isSubscribed ? (
-                <>
-                  <Check size={16} />
-                  <span>Subscribed</span>
-                </>
-              ) : (
-                <span>Subscribe</span>
-              )}
-            </button>
-          )}
+          <button
+            onClick={handleSubscribeToggle}
+            style={{
+              padding: '0.75rem 1.8rem',
+              borderRadius: '999px',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              border: isSubscribed ? '1px solid var(--border-color)' : 'none',
+              transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
+              background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
+              color: isSubscribed ? 'var(--text-primary)' : '#000000',
+              boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {isSubscribed ? (
+              <>
+                <Check size={16} />
+                <span>Subscribed</span>
+              </>
+            ) : (
+              <span>Subscribe</span>
+            )}
+          </button>
         </div>
       </div>
 
