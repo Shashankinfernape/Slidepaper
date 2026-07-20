@@ -160,9 +160,9 @@ export default function DraggableGrid({
               transform: isDragged
                 ? `translate3d(${translation.x}px, ${translation.y}px, 0)`
                 : `translate3d(${shiftX}px, ${shiftY}px, 0)`,
-              transition: isDragged
-                ? 'none'
-                : 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              transition: (isActive && !isDragged)
+                ? 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)'
+                : 'none',
             }}
           >
             {renderItem(item, index, isDragged)}
