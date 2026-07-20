@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X
+  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X, Users
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import DraggableGrid from './common/DraggableGrid';
@@ -205,6 +205,8 @@ export default function AdminDashboard({ onBack, logout }) {
   const [isDragging, setIsDragging] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [animatingDeleteId, setAnimatingDeleteId] = useState(null);
+  const [subscribersList, setSubscribersList] = useState([]);
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
 
   // Form states for uploading new bundle
   const [bundleName, setBundleName] = useState('');
@@ -592,6 +594,25 @@ export default function AdminDashboard({ onBack, logout }) {
     fetchBundles();
     checkDriveStatus();
   }, []);
+
+  // Fetch subscribers when tab is active
+  useEffect(() => {
+    if (activeTab === 'subscribers' && userProfile?.uid) {
+      setLoadingSubscribers(true);
+      fetch(`${API_URL}/api/authors/${userProfile.uid}/subscribers-list`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.subscribers) {
+            setSubscribersList(data.subscribers);
+          }
+          setLoadingSubscribers(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch subscribers:', err);
+          setLoadingSubscribers(false);
+        });
+    }
+  }, [activeTab, userProfile?.uid]);
 
   // Compute aggregate stats from fetched bundles
   const stats = {
@@ -1011,6 +1032,13 @@ export default function AdminDashboard({ onBack, logout }) {
               <User size={16} style={{ flexShrink: 0 }} />
               <span>Profile Settings</span>
             </button>
+            <button
+              onClick={() => { setActiveTab('subscribers'); setIsSidebarOpen(false); }}
+              className={`admin-nav-item ${activeTab === 'subscribers' ? 'active' : ''}`}
+            >
+              <Users size={16} style={{ flexShrink: 0 }} />
+              <span>Subscribers</span>
+            </button>
           </nav>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
@@ -1036,6 +1064,7 @@ export default function AdminDashboard({ onBack, logout }) {
               {activeTab === 'upload' && (editingBundleId ? 'Edit Wallpaper Bundle' : 'Publish New Bundle')}
               {activeTab === 'monetize' && 'Partner Earnings Studio'}
               {activeTab === 'profile' && 'Creator Profile Settings'}
+              {activeTab === 'subscribers' && 'Subscriber List'}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.25rem' }}>
               {activeTab === 'overview' && 'System diagnostics, wallpaper caching and API metrics'}
@@ -1044,6 +1073,7 @@ export default function AdminDashboard({ onBack, logout }) {
               {activeTab === 'upload' && 'Upload high-resolution images dynamically to your Google Drive'}
               {activeTab === 'monetize' && 'YouTube Studio-style revenue sharing, ad metrics, and CPM'}
               {activeTab === 'profile' && 'Customize display name, channel about details, brand accents and socials'}
+              {activeTab === 'subscribers' && 'View your channel subscribers and community members'}
             </p>
           </div>
 
@@ -1998,6 +2028,47 @@ export default function AdminDashboard({ onBack, logout }) {
 
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'subscribers' && (
+          <div className="admin-profile-layout">
+            <div className="admin-card">
+              <h2 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={20} className="text-blue-500" /> Subscribers ({subscribersList.length})
+              </h2>
+              {loadingSubscribers ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>Loading subscribers...</div>
+              ) : subscribersList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                  <Users size={48} style={{ opacity: 0.2, margin: '0 auto 1rem auto' }} />
+                  <p>You don't have any subscribers yet.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {subscribersList.map(sub => (
+                    <div key={sub.uid} style={{
+                      display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem',
+                      background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)'
+                    }}>
+                      <img 
+                        src={getProxiedImageUrl(sub.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'} 
+                        alt={sub.displayName}
+                        style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {sub.displayName}
+                        </span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {sub.email || 'No email provided'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
