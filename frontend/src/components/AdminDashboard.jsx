@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
   CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X
 } from 'lucide-react';
+import DraggableGrid from './common/DraggableGrid';
 import { useAuth } from '../context/AuthContext';
 import MonetizationDashboard from './MonetizationDashboard';
 import TransferHUD from './TransferHUD';
@@ -96,9 +97,8 @@ function drawAvatarCrop(canvas, image, zoom, offset) {
   context.restore();
 }
 
-function MediaPreviewItem({ item, index, removeFile, moveFile }) {
+function MediaPreviewItem({ item, index, removeFile, isDragged }) {
   const [objectUrl, setObjectUrl] = useState('');
-  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (item.type === 'new') {
@@ -108,48 +108,19 @@ function MediaPreviewItem({ item, index, removeFile, moveFile }) {
     }
   }, [item]);
 
-  const handleDragStart = (e) => {
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-    if (!isNaN(fromIndex) && fromIndex !== index) {
-      moveFile(fromIndex, index);
-    }
-  };
-
   const imgSrc = item.type === 'existing' ? (item.data.previewUrl || item.data.url) : objectUrl;
   if (!imgSrc) return null;
 
   return (
     <div 
-      draggable
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
       style={{ 
         position: 'relative', 
         aspectRatio: '16/10', 
         borderRadius: '6px', 
         overflow: 'hidden', 
-        border: isDragOver ? '2px solid var(--color-google-blue)' : '1px solid var(--border-color)',
-        opacity: isDragOver ? 0.7 : 1,
-        cursor: 'grab',
-        transition: 'all 0.2s ease'
+        border: isDragged ? '2px solid var(--color-google-blue)' : '1px solid var(--border-color)',
+        boxShadow: isDragged ? '0 8px 16px rgba(0,0,0,0.2)' : 'none',
+        opacity: isDragged ? 0.9 : 1
       }}
     >
       <img src={imgSrc} alt={item.data.name} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
@@ -670,14 +641,6 @@ export default function AdminDashboard({ onBack, logout }) {
     setMediaItems(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
-  const moveMediaItem = (fromIndex, toIndex) => {
-    setMediaItems(prev => {
-      const updated = [...prev];
-      const [movedItem] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, movedItem);
-      return updated;
-    });
-  };
 
   const handleSetHeroBundle = async (bundleId, bundleName) => {
     try {
@@ -1578,17 +1541,19 @@ export default function AdminDashboard({ onBack, logout }) {
               {mediaItems.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Wallpapers in Bundle ({mediaItems.length})</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                    {mediaItems.map((item, index) => (
+                  <DraggableGrid
+                    items={mediaItems}
+                    onChange={(newItems) => setMediaItems(newItems)}
+                    keyExtractor={(item) => item.id}
+                    renderItem={(item, index, isDragging) => (
                       <MediaPreviewItem 
-                        key={item.id} 
                         item={item} 
                         index={index} 
                         removeFile={removeMediaItem} 
-                        moveFile={moveMediaItem}
+                        isDragged={isDragging}
                       />
-                    ))}
-                  </div>
+                    )}
+                  />
                 </div>
               )}
 
