@@ -1288,10 +1288,7 @@ app.post('/api/bundles/upload', upload.array('images'), async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields: name and image files' });
   }
 
-  // Sort files by original filename in natural ascending order (e.g. Screenshot1 before Screenshot2)
-  files.sort((a, b) => {
-    return a.originalname.localeCompare(b.originalname, undefined, { numeric: true, sensitivity: 'base' });
-  });
+  // We rely on the frontend to order the files via FormData append order
 
   const bundleId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   const bundleAssetsDir = path.join(tempDir, 'bundle_assets', bundleId);
@@ -1512,7 +1509,7 @@ app.put('/api/bundles/:bundleId', upload.array('images'), async (req, res) => {
 
   const bundleId = req.params.bundleId;
   const { 
-    name, description, type, orientation, ratio, tags, includes, existingImages
+    name, description, type, orientation, ratio, tags, includes, existingImages, finalImageOrder
   } = req.body;
   const files = req.files || [];
 
@@ -1531,10 +1528,7 @@ app.put('/api/bundles/:bundleId', upload.array('images'), async (req, res) => {
       console.warn('Failed to parse existingImages', e);
     }
 
-    // Sort files by original filename
-    files.sort((a, b) => {
-      return a.originalname.localeCompare(b.originalname, undefined, { numeric: true, sensitivity: 'base' });
-    });
+    // We rely on the frontend to order the files via FormData append order
 
     console.log(`[Admin] Editing bundle "${bundleId}" adding ${files.length} new images...`);
 
@@ -1601,7 +1595,29 @@ app.put('/api/bundles/:bundleId', upload.array('images'), async (req, res) => {
     const newImageUrls = uploadResults.map(r => ({ name: r.name, gcsPath: r.gcsPath, url: r.url, previewUrl: r.previewUrl, label: r.label, size: r.size }));
     
     // Combine existing and new images
-    const combinedImages = [...parsedExistingImages, ...newImageUrls];
+    let combinedImages = [];
+    if (finalImageOrder) {
+      try {
+        const orderArray = JSON.parse(finalImageOrder);
+        let newImageIndex = 0;
+        orderArray.forEach(item => {
+          if (item.type === 'existing') {
+            const existingImg = parsedExistingImages.find(img => img.url === item.url);
+            if (existingImg) combinedImages.push(existingImg);
+          } else if (item.type === 'new') {
+            if (newImageUrls[newImageIndex]) {
+              combinedImages.push(newImageUrls[newImageIndex]);
+              newImageIndex++;
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('Failed to parse finalImageOrder, falling back to append', e);
+        combinedImages = [...parsedExistingImages, ...newImageUrls];
+      }
+    } else {
+      combinedImages = [...parsedExistingImages, ...newImageUrls];
+    }
     // update labels of combinedImages sequentially
     combinedImages.forEach((img, index) => {
         img.label = `Screen ${index + 1}: ${img.name ? img.name.split('.')[0] : 'Wallpaper'}`;

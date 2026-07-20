@@ -96,22 +96,63 @@ function drawAvatarCrop(canvas, image, zoom, offset) {
   context.restore();
 }
 
-function FilePreviewItem({ file, index, removeFile }) {
+function MediaPreviewItem({ item, index, removeFile, moveFile }) {
   const [objectUrl, setObjectUrl] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setObjectUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [file]);
+    if (item.type === 'new') {
+      const url = URL.createObjectURL(item.data);
+      setObjectUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [item]);
 
-  if (!objectUrl) return null;
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    if (!isNaN(fromIndex) && fromIndex !== index) {
+      moveFile(fromIndex, index);
+    }
+  };
+
+  const imgSrc = item.type === 'existing' ? (item.data.previewUrl || item.data.url) : objectUrl;
+  if (!imgSrc) return null;
 
   return (
-    <div style={{ position: 'relative', aspectRatio: '16/10', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-      <img src={objectUrl} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    <div 
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      style={{ 
+        position: 'relative', 
+        aspectRatio: '16/10', 
+        borderRadius: '6px', 
+        overflow: 'hidden', 
+        border: isDragOver ? '2px solid var(--color-google-blue)' : '1px solid var(--border-color)',
+        opacity: isDragOver ? 0.7 : 1,
+        cursor: 'grab',
+        transition: 'all 0.2s ease'
+      }}
+    >
+      <img src={imgSrc} alt={item.data.name} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
       <button 
         type="button" 
         onClick={(e) => { e.stopPropagation(); removeFile(index); }} 
@@ -120,25 +161,7 @@ function FilePreviewItem({ file, index, removeFile }) {
         <Trash2 size={12} />
       </button>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {file.name}
-      </div>
-    </div>
-  );
-}
-
-function ExistingFilePreviewItem({ file, index, removeFile }) {
-  return (
-    <div style={{ position: 'relative', aspectRatio: '16/10', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-      <img src={file.previewUrl || file.url} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      <button 
-        type="button" 
-        onClick={(e) => { e.stopPropagation(); removeFile(index); }} 
-        style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Trash2 size={12} />
-      </button>
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '0.65rem', padding: '2px 4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {file.name} (Existing)
+        {item.data.name} {item.type === 'existing' && '(Existing)'}
       </div>
     </div>
   );
@@ -208,7 +231,7 @@ export default function AdminDashboard({ onBack, logout }) {
   const [bundleType, setBundleType] = useState('');
   const [bundleTags, setBundleTags] = useState('');
   const [bundleIncludes, setBundleIncludes] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [mediaItems, setMediaItems] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [showUploadHud, setShowUploadHud] = useState(false);
   const [uploadMetrics, setUploadMetrics] = useState({
@@ -228,7 +251,6 @@ export default function AdminDashboard({ onBack, logout }) {
 
   // Edit Bundle states
   const [editingBundleId, setEditingBundleId] = useState(null);
-  const [existingFiles, setExistingFiles] = useState([]);
 
   // Form states for profile editing
   const [editedDisplayName, setEditedDisplayName] = useState('');
@@ -629,7 +651,8 @@ export default function AdminDashboard({ onBack, logout }) {
       file.type.startsWith('image/')
     );
     if (files.length > 0) {
-      setSelectedFiles(prev => sortFilesByName([...prev, ...files]));
+      const newItems = sortFilesByName(files).map(f => ({ id: Math.random().toString(36), type: 'new', data: f }));
+      setMediaItems(prev => [...prev, ...newItems]);
     }
   };
 
@@ -638,16 +661,22 @@ export default function AdminDashboard({ onBack, logout }) {
       file.type.startsWith('image/')
     );
     if (files.length > 0) {
-      setSelectedFiles(prev => sortFilesByName([...prev, ...files]));
+      const newItems = sortFilesByName(files).map(f => ({ id: Math.random().toString(36), type: 'new', data: f }));
+      setMediaItems(prev => [...prev, ...newItems]);
     }
   };
 
-  const removeFile = (indexToRemove) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  const removeMediaItem = (indexToRemove) => {
+    setMediaItems(prev => prev.filter((_, i) => i !== indexToRemove));
   };
 
-  const removeExistingFile = (indexToRemove) => {
-    setExistingFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+  const moveMediaItem = (fromIndex, toIndex) => {
+    setMediaItems(prev => {
+      const updated = [...prev];
+      const [movedItem] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, movedItem);
+      return updated;
+    });
   };
 
   const handleSetHeroBundle = async (bundleId, bundleName) => {
@@ -712,7 +741,10 @@ export default function AdminDashboard({ onBack, logout }) {
   // Upload form submission
   const handleSubmitBundle = async (e) => {
     e.preventDefault();
-    if (selectedFiles.length === 0 && existingFiles.length === 0) {
+    const existingImages = mediaItems.filter(m => m.type === 'existing').map(m => m.data);
+    const newImages = mediaItems.filter(m => m.type === 'new').map(m => m.data);
+
+    if (existingImages.length === 0 && newImages.length === 0) {
       alert('Please upload or keep at least one image.');
       return;
     }
@@ -730,10 +762,12 @@ export default function AdminDashboard({ onBack, logout }) {
     formData.append('includes', bundleIncludes);
     
     if (editingBundleId) {
-      formData.append('existingImages', JSON.stringify(existingFiles));
+      formData.append('existingImages', JSON.stringify(existingImages));
+      const finalImageOrder = mediaItems.map(m => ({ type: m.type, url: m.type === 'existing' ? m.data.url : null }));
+      formData.append('finalImageOrder', JSON.stringify(finalImageOrder));
     }
 
-    selectedFiles.forEach((file) => {
+    newImages.forEach((file) => {
       formData.append('images', file);
     });
 
@@ -839,14 +873,14 @@ export default function AdminDashboard({ onBack, logout }) {
       
       // Reset form
       setEditingBundleId(null);
-      setExistingFiles([]);
       setBundleName('');
       setBundleDescription('');
       setBundleOrientation('landscape');
+      setBundleRatio('16:9');
       setBundleType('');
       setBundleTags('');
       setBundleIncludes('');
-      setSelectedFiles([]);
+      setMediaItems([]);
       
       // Refresh bundles list
       fetchBundles();
@@ -929,12 +963,14 @@ export default function AdminDashboard({ onBack, logout }) {
                 setActiveTab('upload'); 
                 setIsSidebarOpen(false); 
                 setEditingBundleId(null);
-                setExistingFiles([]);
                 setBundleName('');
                 setBundleDescription('');
+                setBundleOrientation('landscape');
+                setBundleRatio('16:9');
+                setBundleType('');
                 setBundleTags('');
                 setBundleIncludes('');
-                setSelectedFiles([]);
+                setMediaItems([]);
               }}
               className={`admin-nav-item ${activeTab === 'upload' ? 'active' : ''}`}
             >
@@ -1256,8 +1292,7 @@ export default function AdminDashboard({ onBack, logout }) {
                     setBundleTags((bundle.tags || []).join(', '));
                     setBundleIncludes((bundle.includes || []).join(', '));
                     setBundleRatio(bundle.ratio || (bundle.orientation === 'landscape' ? '16:9' : '9:16'));
-                    setExistingFiles(bundle.images || []);
-                    setSelectedFiles([]);
+                    setMediaItems((bundle.images || []).map(img => ({ type: 'existing', data: img, id: img.url })));
                     setActiveTab('upload');
                   }}
                   style={{ 
@@ -1540,24 +1575,17 @@ export default function AdminDashboard({ onBack, logout }) {
                 </div>
               </div>
 
-              {(selectedFiles.length > 0 || existingFiles.length > 0) && (
+              {mediaItems.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Wallpapers in Bundle ({existingFiles.length + selectedFiles.length})</span>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Wallpapers in Bundle ({mediaItems.length})</span>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                    {existingFiles.map((file, index) => (
-                      <ExistingFilePreviewItem 
-                        key={`existing-${file.name}-${index}`} 
-                        file={file} 
+                    {mediaItems.map((item, index) => (
+                      <MediaPreviewItem 
+                        key={item.id} 
+                        item={item} 
                         index={index} 
-                        removeFile={removeExistingFile} 
-                      />
-                    ))}
-                    {selectedFiles.map((file, index) => (
-                      <FilePreviewItem 
-                        key={`new-${file.name}-${index}`} 
-                        file={file} 
-                        index={index} 
-                        removeFile={removeFile} 
+                        removeFile={removeMediaItem} 
+                        moveFile={moveMediaItem}
                       />
                     ))}
                   </div>
@@ -1572,7 +1600,7 @@ export default function AdminDashboard({ onBack, logout }) {
                     onClick={() => {
                       setActiveTab('bundles');
                       setEditingBundleId(null);
-                      setExistingFiles([]);
+                      setMediaItems([]);
                     }}
                     className="admin-btn secondary"
                     style={{ flex: 1, padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.92rem' }}
@@ -1582,7 +1610,7 @@ export default function AdminDashboard({ onBack, logout }) {
                 )}
                 <button 
                   type="submit" 
-                  disabled={uploading || (selectedFiles.length === 0 && existingFiles.length === 0)}
+                  disabled={uploading || mediaItems.length === 0}
                   className="admin-btn primary"
                   style={{ flex: 2, padding: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.92rem' }}
                 >
@@ -1906,7 +1934,7 @@ export default function AdminDashboard({ onBack, logout }) {
           <TransferHUD
             type="upload"
             title="Publishing Wallpaper Pack"
-            fileName={`${bundleName} (${selectedFiles.length} files)`}
+            fileName={`${bundleName} (${mediaItems.length} files)`}
             progress={uploadMetrics.progress}
             speedMbps={uploadMetrics.speedMbps}
             transferredMB={uploadMetrics.transferredMB}
