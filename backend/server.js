@@ -2194,7 +2194,7 @@ app.post('/api/bundles/:bundleId/like', async (req, res) => {
 // Endpoint: Toggle subscribe/unsubscribe to an author
 app.post('/api/authors/:authorUid/subscribe', async (req, res) => {
   const { authorUid } = req.params;
-  const { uid } = req.body; // logged-in user UID
+  const { uid, email, displayName, photoURL } = req.body; // logged-in user UID and profile
 
   if (!uid) {
     return res.status(400).json({ error: 'Authentication required to subscribe' });
@@ -2216,6 +2216,25 @@ app.post('/api/authors/:authorUid/subscribe', async (req, res) => {
         subscribers: 0,
         subscriberUids: []
       });
+    }
+
+    // 1.5. Find or create the subscriber profile
+    let subscriberUser = await User.findOne({ uid });
+    if (!subscriberUser) {
+      subscriberUser = await User.create({
+        uid,
+        email: email,
+        displayName: displayName,
+        photoURL: photoURL,
+        subscribers: 0,
+        subscriberUids: []
+      });
+      console.log(`[Database] Created profile for new subscriber: ${uid}`);
+    } else if (email && !subscriberUser.email) {
+      subscriberUser.email = email;
+      subscriberUser.displayName = displayName || subscriberUser.displayName;
+      subscriberUser.photoURL = photoURL || subscriberUser.photoURL;
+      await subscriberUser.save();
     }
 
     const subIndex = author.subscriberUids.indexOf(uid);
