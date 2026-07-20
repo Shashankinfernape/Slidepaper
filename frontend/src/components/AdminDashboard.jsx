@@ -1682,10 +1682,10 @@ export default function AdminDashboard({ onBack, logout }) {
 
         {activeTab === 'profile' && (
           <div className="admin-card admin-profile-shell" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2.5rem', alignItems: 'flex-start' }} className="profile-layout-grid admin-profile-layout">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', alignItems: 'center', maxWidth: '750px', margin: '0 auto', width: '100%' }} className="profile-layout-grid admin-profile-layout">
               
               {/* Form Column */}
-              <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }} className="admin-profile-form">
+              <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }} className="admin-profile-form">
                 <input
                   ref={avatarInputRef}
                   type="file"
@@ -1851,7 +1851,7 @@ export default function AdminDashboard({ onBack, logout }) {
               </form>
 
               {/* Media & Preview Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="admin-profile-preview-column">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }} className="admin-profile-preview-column">
 
                 {/* WhatsApp-style full screen cropper modal without sliders */}
                 {imageSrc && (
@@ -1891,31 +1891,42 @@ export default function AdminDashboard({ onBack, logout }) {
                 )}
 
                 {/* Live Card Preview */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Live Creator Card Preview</span>
                   
                   <div className="creator-about-section" style={{
-                    padding: '1.25rem',
                     borderRadius: '12px',
                     border: '1px solid var(--border-color)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1rem',
                     background: 'var(--bg-primary)',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                    overflow: 'hidden',
+                    width: '100%'
                   }}>
-                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }} className="creator-about-body">
+                    {/* Banner Header */}
+                    <div style={{
+                      width: '100%',
+                      height: '110px',
+                      background: editedBannerURL ? `url(${getProxiedImageUrl(editedBannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)'
+                    }} />
+
+                    {/* Content Body */}
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start', padding: '1.25rem', marginTop: '-30px' }} className="creator-about-body">
                       <img
                         src={getProxiedImageUrl(editedPhotoURL) || AVATAR_FALLBACK_URL}
                         alt="Avatar Preview"
                         className="creator-avatar-img"
                         onError={(e) => { e.target.src = AVATAR_FALLBACK_URL; }}
                         style={{
-                          width: '56px',
-                          height: '56px',
+                          width: '64px',
+                          height: '64px',
                           borderRadius: '50%',
                           objectFit: 'cover',
-                          background: 'var(--bg-secondary)'
+                          background: 'var(--bg-secondary)',
+                          border: '3px solid var(--bg-primary)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
                         }}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', flex: 1 }}>
