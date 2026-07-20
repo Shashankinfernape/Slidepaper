@@ -537,7 +537,7 @@ export default function BundleDetailPage({
           </div>
 
           <div className="bundle-youtube-info">
-            <div className="bundle-youtube-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <div className="bundle-youtube-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', width: 'calc(96% - 12px)', margin: '0 auto' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <h1 className="bundle-youtube-title" style={{ margin: 0 }}>{bundle.name}</h1>
                 
