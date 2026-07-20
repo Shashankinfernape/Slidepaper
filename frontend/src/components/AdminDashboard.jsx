@@ -1345,7 +1345,7 @@ export default function AdminDashboard({ onBack, logout }) {
                     value={bundleOrientation} 
                     onChange={(e) => setBundleOrientation(e.target.value)} 
                     className="admin-modal-input"
-                    style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                    style={{ cursor: 'pointer' }}
                   >
                     <option value="landscape">Landscape (Desktop & Wide Screen Ratio only)</option>
                     <option value="portrait">Portrait (Mobile Locked Ratio only)</option>
@@ -1357,7 +1357,7 @@ export default function AdminDashboard({ onBack, logout }) {
                     value={bundleRatio} 
                     onChange={(e) => setBundleRatio(e.target.value)} 
                     className="admin-modal-input"
-                    style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                    style={{ cursor: 'pointer' }}
                   >
                     {bundleOrientation === 'landscape' ? (
                       <>
