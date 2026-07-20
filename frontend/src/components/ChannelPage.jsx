@@ -20,6 +20,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   const { userProfile } = useAuth();
   const [remoteAuthor, setRemoteAuthor] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 68400);
   const [activeTab, setActiveTab] = useState('wallpapers'); // 'wallpapers' | 'monetization'
 
@@ -91,6 +92,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   const displayBundles = creatorBundles;
 
   const handleSubscribeToggle = async () => {
+    setSubscribeAnimEnabled(true);
     const targetUid = resolvedProfile?.uid || 'admin-mock-999';
     if (isSubscribed) {
       setIsSubscribed(false);
@@ -277,7 +279,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
               fontSize: '0.92rem',
               cursor: 'pointer',
               border: isSubscribed ? '1px solid var(--border-color)' : 'none',
-              transition: 'all 0.2s',
+              transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
               background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
               color: isSubscribed ? 'var(--text-primary)' : '#000000',
               boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',

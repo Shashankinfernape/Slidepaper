@@ -205,6 +205,7 @@ export default function BundleDetailPage({
   });
   const [reaction, setReaction] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(bundle.author?.subscribers || 0);
   const [viewsCount, setViewsCount] = useState(bundle.stats?.views || 0);
   const [downloadsCount, setDownloadsCount] = useState(bundle.stats?.downloads || 0);
@@ -355,6 +356,7 @@ export default function BundleDetailPage({
   };
 
   const handleSubscribeToggle = async () => {
+    setSubscribeAnimEnabled(true);
     if (!bundle.author || !bundle.author.uid) return;
     if (user.uid === bundle.author.uid) {
       alert('You cannot subscribe to yourself!');
@@ -576,9 +578,11 @@ export default function BundleDetailPage({
                 <div className="bundle-youtube-author-actions">
                   <button
                     className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                    onClick={() =>
-                      runAuthedAction('subscribe to this author', handleSubscribeToggle)
-                    }
+                    style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                    onClick={() => {
+                      setSubscribeAnimEnabled(true);
+                      runAuthedAction('subscribe to this author', handleSubscribeToggle);
+                    }}
                   >
                     {isSubscribed ? (
                       <>
