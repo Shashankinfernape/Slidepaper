@@ -520,8 +520,8 @@ export default function BundleDetailPage({
     return allOptions.findIndex((option) => option.id === selectedDownloadId);
   }, [selectedDownloadId, allOptions]);
 
-  const topSidebarBundles = useMemo(() => filteredRelatedBundles.slice(0, 6), [filteredRelatedBundles]);
-  const unifiedBundles = useMemo(() => filteredRelatedBundles.slice(6), [filteredRelatedBundles]);
+  const topSidebarBundles = useMemo(() => filteredRelatedBundles.slice(0, 10), [filteredRelatedBundles]);
+  const unifiedBundles = useMemo(() => filteredRelatedBundles.slice(10), [filteredRelatedBundles]);
 
   return (
     <div className="bundle-youtube-page">
