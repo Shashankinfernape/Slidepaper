@@ -41,16 +41,16 @@
 
 [data-theme="light"] {
   /* Google Material Design 3 Palette (Refined Light Mode) */
-  --bg-primary: #f0f2f5;
+  --bg-primary: #e2e8f0;
   --bg-surface: #ffffff;
-  --bg-surface-elevated: #e5e7eb;
+  --bg-surface-elevated: #cbd5e1;
   --bg-dropdown: #ffffff;
   
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-disabled: #9ca3af;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-disabled: #64748b;
   
-  --border-color: #d1d5db;
+  --border-color: #94a3b8;
   --border-focus: #2563eb;
   
   --color-google-blue: #1a73e8;
