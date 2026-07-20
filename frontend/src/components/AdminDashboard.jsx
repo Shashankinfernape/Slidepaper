@@ -1951,7 +1951,7 @@ export default function AdminDashboard({ onBack, logout }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Live Creator Card Preview</span>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 1rem)', margin: '0 auto', position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 12px)', margin: '0 auto', position: 'relative' }}>
                     <div style={{
                       width: '100%',
                       height: '140px',
@@ -1970,27 +1970,6 @@ export default function AdminDashboard({ onBack, logout }) {
                           pointerEvents: 'none'
                         }} />
                       )}
-                      <div style={{
-                        position: 'absolute',
-                        top: '16px',
-                        left: '16px',
-                        zIndex: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: 'rgba(0, 0, 0, 0.55)',
-                        backdropFilter: 'blur(12px)',
-                        WebkitBackdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: '#ffffff',
-                        padding: '0.45rem 1rem',
-                        borderRadius: '999px',
-                        fontWeight: 600,
-                        fontSize: '0.75rem'
-                      }}>
-                        <ArrowLeft size={14} />
-                        <span>Back to Feed</span>
-                      </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 0.5rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">

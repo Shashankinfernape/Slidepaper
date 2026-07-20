@@ -596,7 +596,7 @@ export default function BundleDetailPage({
             </div>
 
             <div className="bundle-youtube-meta-row" style={{ marginTop: '1.25rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 1rem)', margin: '0 auto', position: 'relative' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 12px)', margin: '0 auto', position: 'relative' }}>
                 <div style={{
                   width: '100%',
                   height: '140px',
@@ -610,27 +610,6 @@ export default function BundleDetailPage({
                 }}
                 onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
                 >
-                  <div style={{
-                    position: 'absolute',
-                    top: '16px',
-                    left: '16px',
-                    zIndex: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    background: 'rgba(0, 0, 0, 0.55)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: '#ffffff',
-                    padding: '0.45rem 1rem',
-                    borderRadius: '999px',
-                    fontWeight: 600,
-                    fontSize: '0.75rem'
-                  }}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    <span>Back to Feed</span>
-                  </div>
                 </div>
 
                 <div style={{
@@ -712,7 +691,7 @@ export default function BundleDetailPage({
               </div>
             </div>
  
-            <div className="apple-download-panel" style={{ marginTop: '1.25rem' }}>
+            <div className="apple-download-panel" style={{ marginTop: '0.5rem' }}>
               {supportsLandscapeDownloads ? (
                   <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
                     <div className="apple-picker-container">
