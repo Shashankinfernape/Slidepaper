@@ -27,6 +27,12 @@ const AVATAR_CROP_SIZE = 320;
 
 export const getProxiedImageUrl = (url) => {
   if (!url) return '';
+
+  // Force high-resolution for Google profile images
+  if (url.includes('googleusercontent.com') && url.includes('=s')) {
+    url = url.replace(/=s\d+-c/, '=s800-c');
+  }
+
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   if (url.includes('drive.google.com')) {
     const match = url.match(/[?&]id=([^&]+)/);

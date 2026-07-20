@@ -365,7 +365,12 @@ export default function BundleDetailPage({
       const res = await fetch(`${API_URL}/api/authors/${bundle.author.uid}/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: user.uid })
+        body: JSON.stringify({ 
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        })
       });
       
       toggleSubscriptionLocal(bundle.author.uid);
