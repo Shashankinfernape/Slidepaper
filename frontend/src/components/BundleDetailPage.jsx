@@ -520,8 +520,15 @@ export default function BundleDetailPage({
     return allOptions.findIndex((option) => option.id === selectedDownloadId);
   }, [selectedDownloadId, allOptions]);
 
-  const topSidebarBundles = useMemo(() => filteredRelatedBundles.slice(0, 10), [filteredRelatedBundles]);
-  const unifiedBundles = useMemo(() => filteredRelatedBundles.slice(10), [filteredRelatedBundles]);
+  const { leftBundles, rightBundles } = useMemo(() => {
+    const left = [];
+    const right = [];
+    filteredRelatedBundles.forEach((bundle, index) => {
+      if (index % 5 < 3) left.push(bundle);
+      else right.push(bundle);
+    });
+    return { leftBundles: left, rightBundles: right };
+  }, [filteredRelatedBundles]);
 
   return (
     <div className="bundle-youtube-page">
@@ -758,14 +765,31 @@ export default function BundleDetailPage({
             ))}
           </div>
 
+          {/* Left Bundles Grid (Flows directly under video with no gaps) */}
+          {leftBundles.length > 0 && (
+            <div className="left-bundles-grid">
+              {leftBundles.map((item) => (
+                <BundleCard
+                  key={item.id}
+                  bundle={item}
+                  onClick={() => onOpenBundle?.(item)}
+                  showOverlay={true}
+                  className="bundle-card--unified-grid"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <aside className="bundle-youtube-sidebar">
           <div className="sidebar-bundles-list">
-            {topSidebarBundles.map((item) => (
+            {rightBundles.map((item) => (
               <BundleCard
                 key={item.id}
                 bundle={item}
                 onClick={() => onOpenBundle?.(item)}
                 showOverlay={true}
-                className="bundle-card--sidebar-grid"
+                className="bundle-card--unified-grid"
               />
             ))}
             {filteredRelatedBundles.length === 0 && (
@@ -774,21 +798,6 @@ export default function BundleDetailPage({
           </div>
         </aside>
       </section>
-
-      {/* Unified Bundles Grid (Continues downward flawlessly) */}
-      {unifiedBundles.length > 0 && (
-        <section className="unified-bundles-grid">
-          {unifiedBundles.map((item) => (
-            <BundleCard
-              key={item.id}
-              bundle={item}
-              onClick={() => onOpenBundle?.(item)}
-              showOverlay={true}
-              className="bundle-card--unified-grid"
-            />
-          ))}
-        </section>
-      )}
 
       {showAuthPrompt && (
         <div className="bundle-auth-popup-backdrop" onClick={() => setShowAuthPrompt(false)}>

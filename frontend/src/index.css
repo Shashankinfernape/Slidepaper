@@ -4568,6 +4568,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Unified Bottom Grid */
+/* Bottom Grid left side */
+.left-bundles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.12rem;
+  width: 100%;
+  margin-top: 0.12rem;
+}
+
 .unified-bundles-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -4864,7 +4873,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 600px) {
-  .unified-bundles-grid {
+  .left-bundles-grid, .unified-bundles-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 
