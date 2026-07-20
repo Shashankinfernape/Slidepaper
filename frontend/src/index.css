@@ -5088,7 +5088,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5096,6 +5096,10 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.9rem;
   outline: none;
   font-family: var(--font-body);
+}
+
+[data-theme="light"] .admin-modal-input {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .admin-modal-input:focus {
@@ -5282,7 +5286,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5290,6 +5294,10 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.9rem;
   outline: none;
   font-family: var(--font-body);
+}
+
+[data-theme="light"] .admin-modal-input {
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .admin-modal-input:focus {
