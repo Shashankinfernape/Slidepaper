@@ -525,7 +525,7 @@ export default function BundleDetailPage({
   return (
     <div className="bundle-youtube-page">
       <section className="bundle-youtube-layout" style={{ gridAutoFlow: 'dense', alignItems: 'start' }}>
-        <div className="bundle-youtube-main" style={{ gridColumn: 'span 3', gridRow: 'span 5' }}>
+        <div className="bundle-youtube-main" style={{ gridColumn: 'span 3', gridRow: 'span 6' }}>
           <div className="bundle-youtube-hero">
             <BundleCard
               bundle={bundle}
@@ -643,9 +643,10 @@ export default function BundleDetailPage({
                   </button>
                 </div>
               </div>
+            </div>
  
-              <div className="apple-download-panel" style={{ flex: 1, maxWidth: '540px', padding: 0, background: 'none' }}>
-                {supportsLandscapeDownloads ? (
+            <div className="apple-download-panel" style={{ marginTop: '1.25rem' }}>
+              {supportsLandscapeDownloads ? (
                   <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
                     <div className="apple-picker-container">
                       {activeIndex !== -1 && allOptions.length > 0 && (
@@ -717,7 +718,6 @@ export default function BundleDetailPage({
                   className="apple-download-action-btn"
                   onClick={handleDownload}
                   disabled={downloadState === 'downloading' || (selectedDownloadId === 'custom' && !customIsValid)}
-                  style={{ width: '100%', marginTop: '8px' }}
                 >
                   {downloadState === 'idle' && (
                     <>
@@ -740,7 +740,6 @@ export default function BundleDetailPage({
                 </button>
               </div>
             </div>
-          </div>
 
         </div>
 
