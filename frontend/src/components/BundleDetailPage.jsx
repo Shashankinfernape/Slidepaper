@@ -537,7 +537,47 @@ export default function BundleDetailPage({
           </div>
 
           <div className="bundle-youtube-info">
-            <h1 className="bundle-youtube-title">{bundle.name}</h1>
+            <div className="bundle-youtube-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <h1 className="bundle-youtube-title" style={{ margin: 0 }}>{bundle.name}</h1>
+              
+              <div className="youtube-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <div className="youtube-like-dislike-pill">
+                  <button
+                    className={`youtube-like-btn ${reaction === 'like' ? 'active' : ''}`}
+                    onClick={() => runAuthedAction('like this bundle', handleLikeToggle)}
+                    title="I like this"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'like' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'like' ? '0' : '2'} style={{ marginRight: '6px' }}>
+                      <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
+                    </svg>
+                    <span>{formatNumber(likeCount)}</span>
+                  </button>
+                  <div className="youtube-pill-divider"></div>
+                  <button
+                    className={`youtube-dislike-btn ${reaction === 'dislike' ? 'active' : ''}`}
+                    onClick={() => runAuthedAction('dislike this bundle', handleDislikeToggle)}
+                    title="I dislike this"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'dislike' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'dislike' ? '0' : '2'}>
+                      <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <button
+                  className="youtube-action-pill-btn"
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Share URL copied to clipboard!');
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '4px' }}>
+                    <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
+                  </svg>
+                  <span>Share</span>
+                </button>
+              </div>
+            </div>
 
             {/* YouTube style view, date, and downloads meta line under title (lean compact spacing) */}
             <div style={{
@@ -555,7 +595,7 @@ export default function BundleDetailPage({
             </div>
 
             <div className="bundle-youtube-meta-row">
-              <div className="bundle-youtube-author-block">
+              <div className="bundle-youtube-author-block" style={{ flexShrink: 0 }}>
                 <div 
                   className="bundle-youtube-author-main"
                   onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
@@ -604,143 +644,102 @@ export default function BundleDetailPage({
                 </div>
               </div>
  
-              <div className="youtube-actions-group" style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', marginTop: '1rem' }}>
-                <div className="youtube-like-dislike-pill">
-                  <button
-                    className={`youtube-like-btn ${reaction === 'like' ? 'active' : ''}`}
-                    onClick={() =>
-                      runAuthedAction('like this bundle', handleLikeToggle)
-                    }
-                    title="I like this"
-                  >
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'like' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'like' ? '0' : '2'} style={{ marginRight: '6px' }}>
-                      <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.58 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
-                    </svg>
-                    <span>{formatNumber(likeCount)}</span>
-                  </button>
-                  <div className="youtube-pill-divider"></div>
-                  <button
-                    className={`youtube-dislike-btn ${reaction === 'dislike' ? 'active' : ''}`}
-                    onClick={() =>
-                      runAuthedAction('dislike this bundle', handleDislikeToggle)
-                    }
-                    title="I dislike this"
-                  >
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill={reaction === 'dislike' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={reaction === 'dislike' ? '0' : '2'}>
-                      <path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
-                    </svg>
-                  </button>
-                </div>
-                
+              <div className="apple-download-panel" style={{ flex: 1, maxWidth: '540px', padding: 0, background: 'none' }}>
+                {supportsLandscapeDownloads ? (
+                  <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
+                    <div className="apple-picker-container">
+                      {activeIndex !== -1 && allOptions.length > 0 && (
+                        <div
+                          className="apple-picker-indicator"
+                          style={{
+                            width: `${100 / allOptions.length}%`,
+                            transform: `translateX(${activeIndex * 100}%)`,
+                          }}
+                        ></div>
+                      )}
+                      {allOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          className={`apple-picker-option ${selectedDownloadId === option.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedDownloadId(option.id);
+                            setDownloadState('idle');
+                          }}
+                        >
+                          {getOptionIcon(option.id)}
+                          <span>{option.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectedDownloadId === 'custom' && (
+                      <div className="apple-custom-input-group">
+                        <input
+                          type="text"
+                          placeholder={activeSample.w}
+                          value={customRatioWidth}
+                          onChange={(e) => {
+                            setCustomRatioWidth(e.target.value);
+                            setDownloadState('idle');
+                          }}
+                          className="apple-custom-input"
+                        />
+                        <span className="apple-custom-divider">:</span>
+                        <input
+                          type="text"
+                          placeholder={activeSample.h}
+                          value={customRatioHeight}
+                          onChange={(e) => {
+                            setCustomRatioHeight(e.target.value);
+                            setDownloadState('idle');
+                          }}
+                          className="apple-custom-input"
+                        />
+                        {!customIsValid && (
+                          <span className="apple-custom-error-text" style={{ fontSize: '0.72rem', color: '#ef4444', minWidth: '120px', display: 'block', marginTop: '4px' }}>
+                            {Number(customRatioWidth) <= 0 || Number(customRatioHeight) <= 0
+                              ? 'Enter valid ratio'
+                              : isLandscape
+                              ? 'Width must be ≥ Height'
+                              : 'Height must be ≥ Width'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span className="bundle-youtube-orientation-note">
+                    Optimized for vertical layouts.
+                  </span>
+                )}
+
                 <button
-                  className="youtube-action-pill-btn"
-                  onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                    alert('Share URL copied to clipboard!');
-                  }}
+                  className="apple-download-action-btn"
+                  onClick={handleDownload}
+                  disabled={downloadState === 'downloading' || (selectedDownloadId === 'custom' && !customIsValid)}
+                  style={{ width: '100%', marginTop: '8px' }}
                 >
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ marginRight: '4px' }}>
-                    <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
-                  </svg>
-                  <span>Share</span>
+                  {downloadState === 'idle' && (
+                    <>
+                      <Download size={15} />
+                      <span>Download ({bundleSizeLabel})</span>
+                    </>
+                  )}
+                  {downloadState === 'downloading' && (
+                    <>
+                      <div className="download-spinner-tiny"></div>
+                      <span>Preparing...</span>
+                    </>
+                  )}
+                  {downloadState === 'completed' && (
+                    <>
+                      <Check size={15} />
+                      <span>Ready</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="apple-download-panel">
-            {supportsLandscapeDownloads ? (
-              <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
-                <div className="apple-picker-container">
-                  {activeIndex !== -1 && allOptions.length > 0 && (
-                    <div
-                      className="apple-picker-indicator"
-                      style={{
-                        width: `${100 / allOptions.length}%`,
-                        transform: `translateX(${activeIndex * 100}%)`,
-                      }}
-                    ></div>
-                  )}
-                  {allOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      className={`apple-picker-option ${selectedDownloadId === option.id ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedDownloadId(option.id);
-                        setDownloadState('idle');
-                      }}
-                    >
-                      {getOptionIcon(option.id)}
-                      <span>{option.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {selectedDownloadId === 'custom' && (
-                  <div className="apple-custom-input-group">
-                    <input
-                      type="text"
-                      placeholder={activeSample.w}
-                      value={customRatioWidth}
-                      onChange={(e) => {
-                        setCustomRatioWidth(e.target.value);
-                        setDownloadState('idle');
-                      }}
-                      className="apple-custom-input"
-                    />
-                    <span className="apple-custom-divider">:</span>
-                    <input
-                      type="text"
-                      placeholder={activeSample.h}
-                      value={customRatioHeight}
-                      onChange={(e) => {
-                        setCustomRatioHeight(e.target.value);
-                        setDownloadState('idle');
-                      }}
-                      className="apple-custom-input"
-                    />
-                    {!customIsValid && (
-                      <span className="apple-custom-error-text" style={{ fontSize: '0.72rem', color: '#ef4444', minWidth: '120px', display: 'block', marginTop: '4px' }}>
-                        {Number(customRatioWidth) <= 0 || Number(customRatioHeight) <= 0
-                          ? 'Enter valid ratio'
-                          : isLandscape
-                          ? 'Width must be ≥ Height'
-                          : 'Height must be ≥ Width'}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <span className="bundle-youtube-orientation-note">
-                Optimized for vertical layouts.
-              </span>
-            )}
-
-            <button
-              className="apple-download-action-btn"
-              onClick={handleDownload}
-              disabled={downloadState === 'downloading' || (selectedDownloadId === 'custom' && !customIsValid)}
-            >
-              {downloadState === 'idle' && (
-                <>
-                  <Download size={15} />
-                  <span>Download ({bundleSizeLabel})</span>
-                </>
-              )}
-              {downloadState === 'downloading' && (
-                <>
-                  <div className="download-spinner-tiny"></div>
-                  <span>Preparing...</span>
-                </>
-              )}
-              {downloadState === 'completed' && (
-                <>
-                  <Check size={15} />
-                  <span>Ready</span>
-                </>
-              )}
-            </button>
           </div>
 
         </div>
