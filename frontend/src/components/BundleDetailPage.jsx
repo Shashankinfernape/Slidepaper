@@ -537,8 +537,24 @@ export default function BundleDetailPage({
           </div>
 
           <div className="bundle-youtube-info">
-            <div className="bundle-youtube-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-              <h1 className="bundle-youtube-title" style={{ margin: 0 }}>{bundle.name}</h1>
+            <div className="bundle-youtube-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <h1 className="bundle-youtube-title" style={{ margin: 0 }}>{bundle.name}</h1>
+                
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  fontSize: '0.84rem',
+                  color: 'var(--text-secondary)',
+                  margin: '0.25rem 0 0 0',
+                  fontWeight: 500
+                }}>
+                  <span>{formatNumber(viewsCount)} views</span>
+                  <span>{timeAgo(bundle.createdAt)}</span>
+                  <span>{formatNumber(downloadsCount)} downloads</span>
+                </div>
+              </div>
               
               <div className="youtube-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <div className="youtube-like-dislike-pill">
@@ -579,68 +595,94 @@ export default function BundleDetailPage({
               </div>
             </div>
 
-            {/* YouTube style view, date, and downloads meta line under title (lean compact spacing) */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              fontSize: '0.84rem',
-              color: 'var(--text-secondary)',
-              margin: '0.1rem 0 0.25rem 0',
-              fontWeight: 500
-            }}>
-              <span>{formatNumber(viewsCount)} views</span>
-              <span>{timeAgo(bundle.createdAt)}</span>
-              <span>{formatNumber(downloadsCount)} downloads</span>
-            </div>
-
             <div className="bundle-youtube-meta-row">
-              <div className="bundle-youtube-author-block" style={{ flexShrink: 0 }}>
+              <div className="creator-about-section" style={{
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'var(--bg-primary)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+                overflow: 'hidden',
+                width: '100%',
+                marginTop: '1.25rem'
+              }}>
                 <div 
-                  className="bundle-youtube-author-main"
+                  style={{
+                    width: '100%',
+                    height: '80px',
+                    position: 'relative',
+                    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer'
+                  }}
                   onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
-                  style={{ cursor: 'pointer' }}
-                  title="View Channel Page"
                 >
-                  <img
-                    src={getProxiedImageUrl(resolvedAuthorProfile.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
-                    alt={resolvedAuthorProfile.displayName}
-                    className="bundle-youtube-author-avatar"
-                    onError={(e) => { e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'; }}
-                  />
-                  <div className="bundle-youtube-author-copy">
-                    <span className="bundle-youtube-author-name">
-                      {resolvedAuthorProfile.displayName}
-                      <span className="verified-badge-circle" title="Verified Creator">
-                        <svg viewBox="0 0 24 24" className="verified-badge-svg">
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 1.25rem 1.25rem 1.25rem', marginTop: '-25px', flexWrap: 'wrap' }} className="channel-header-block">
+                  <div style={{
+                    position: 'relative',
+                    width: '75px',
+                    height: '75px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: '4px solid var(--bg-primary)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    background: 'var(--bg-secondary)',
+                    flexShrink: 0,
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
+                  >
+                    <img
+                      src={getProxiedImageUrl(resolvedAuthorProfile.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
+                      alt={resolvedAuthorProfile.displayName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'; }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1, minWidth: '200px', marginTop: '28px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h1 
+                        style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                        onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
+                      >
+                        {resolvedAuthorProfile.displayName}
+                      </h1>
+                      <span className="verified-badge-circle" title="Verified Creator" style={{ width: '14px', height: '14px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg viewBox="0 0 24 24" style={{ width: '9px', height: '9px' }}>
                           <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
                         </svg>
                       </span>
-                    </span>
-                    <span className="bundle-youtube-author-subs">
-                      {formatSubscribers(subscribersCount)}
-                    </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
+                      <span>•</span>
+                      <span>{formatSubscribers(subscribersCount)}</span>
+                    </div>
                   </div>
-                </div>
- 
-                <div className="bundle-youtube-author-actions">
-                  <button
-                    className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                    style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
-                    onClick={() => {
-                      setSubscribeAnimEnabled(true);
-                      runAuthedAction('subscribe to this author', handleSubscribeToggle);
-                    }}
-                  >
-                    {isSubscribed ? (
-                      <>
-                        <Bell size={15} />
-                        <span>Subscribed</span>
-                      </>
-                    ) : (
-                      <span>Subscribe</span>
-                    )}
-                  </button>
+
+                  <div style={{ marginTop: '25px' }}>
+                    <button
+                      className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                      onClick={() => {
+                        setSubscribeAnimEnabled(true);
+                        runAuthedAction('subscribe to this author', handleSubscribeToggle);
+                      }}
+                    >
+                      {isSubscribed ? (
+                        <>
+                          <Bell size={15} />
+                          <span>Subscribed</span>
+                        </>
+                      ) : (
+                        <span>Subscribe</span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
