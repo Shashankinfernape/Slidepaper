@@ -688,7 +688,7 @@ export default function AdminDashboard({ onBack, logout }) {
       // Wait for the animation to play before removing from DOM
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const res = await fetch(`http://localhost:5000/api/bundles/${bundleId}`, {
+      const res = await fetch(`${API_URL}/api/bundles/${bundleId}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
