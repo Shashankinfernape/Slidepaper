@@ -5088,7 +5088,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: var(--bg-surface-elevated);
+  background: var(--bg-primary);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5099,6 +5099,15 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.2s ease;
 }
 
+.admin-modal-input[type="number"]::-webkit-inner-spin-button,
+.admin-modal-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.admin-modal-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 [data-theme="light"] .admin-modal-input {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
@@ -5106,7 +5115,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .admin-modal-input:focus {
   border-color: rgba(255, 255, 255, 0.35) !important;
-  background: var(--bg-surface-elevated);
+  background: var(--bg-primary);
   outline: none !important;
   box-shadow: none !important;
 }
@@ -5296,7 +5305,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .admin-modal-input {
-  background: var(--bg-surface-elevated);
+  background: var(--bg-primary);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
   padding: 0.65rem 0.8rem;
@@ -5314,14 +5323,14 @@ h1, h2, h3, h4, h5, h6 {
 
 .admin-modal-input:focus {
   border-color: rgba(255, 255, 255, 0.35) !important;
-  background: var(--bg-surface-elevated);
+  background: var(--bg-primary);
   outline: none !important;
   box-shadow: none !important;
 }
 
 [data-theme="light"] .admin-modal-input:focus {
   border-color: rgba(0, 0, 0, 0.28) !important;
-  background: #ffffff;
+  background: var(--bg-primary);
 }
 
 .custom-dropdown-option {

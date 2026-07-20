@@ -1403,18 +1403,18 @@ export default function AdminDashboard({ onBack, logout }) {
                   {bundleRatio === 'custom' ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input 
-                        type="number" 
+                        type="text" 
                         value={customRatioW} 
-                        onChange={(e) => setCustomRatioW(e.target.value)} 
+                        onChange={(e) => setCustomRatioW(e.target.value.replace(/[^0-9.]/g, ''))} 
                         className="admin-modal-input" 
                         style={{ width: '80px', textAlign: 'center' }} 
                         placeholder="16"
                       />
                       <span style={{ fontWeight: 'bold' }}>:</span>
                       <input 
-                        type="number" 
+                        type="text" 
                         value={customRatioH} 
-                        onChange={(e) => setCustomRatioH(e.target.value)} 
+                        onChange={(e) => setCustomRatioH(e.target.value.replace(/[^0-9.]/g, ''))} 
                         className="admin-modal-input" 
                         style={{ width: '80px', textAlign: 'center' }} 
                         placeholder="9"
@@ -1422,11 +1422,23 @@ export default function AdminDashboard({ onBack, logout }) {
                       <button 
                         type="button"
                         onClick={() => setBundleRatio(bundleOrientation === 'landscape' ? '16:9' : '9:16')}
-                        className="admin-modal-input"
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.65rem', cursor: 'pointer', width: 'auto' }}
+                        style={{ 
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'rgba(255, 255, 255, 0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0.5rem',
+                          cursor: 'pointer',
+                          marginLeft: '2px',
+                          transition: 'color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.15)'}
                         title="Reset to default ratio"
                       >
-                        <X size={16} />
+                        <X size={18} />
                       </button>
                     </div>
                   ) : (
