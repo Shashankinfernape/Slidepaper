@@ -4687,6 +4687,21 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 100%;
 }
 
+@media (max-width: 1350px) {
+  .bundle-youtube-layout {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .bundle-youtube-main {
+    grid-column: span 2;
+  }
+
+  .sidebar-genres-header,
+  .sidebar-empty-note {
+    grid-column: span 1;
+  }
+}
+
 @media (max-width: 1100px) {
   .bundle-youtube-layout {
     grid-template-columns: 1fr;
