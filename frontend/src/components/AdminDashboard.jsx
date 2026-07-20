@@ -1972,7 +1972,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 0.5rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 1.25rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
                       <div style={{
                         position: 'relative',
                         width: '100px',
