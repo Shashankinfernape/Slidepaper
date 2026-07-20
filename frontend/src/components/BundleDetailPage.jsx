@@ -204,7 +204,7 @@ export default function BundleDetailPage({
     steps: []
   });
   const [reaction, setReaction] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(null);
   const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(bundle.author?.subscribers || 0);
   const [viewsCount, setViewsCount] = useState(bundle.stats?.views || 0);
@@ -576,23 +576,27 @@ export default function BundleDetailPage({
                 </div>
  
                 <div className="bundle-youtube-author-actions">
-                  <button
-                    className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                    style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
-                    onClick={() => {
-                      setSubscribeAnimEnabled(true);
-                      runAuthedAction('subscribe to this author', handleSubscribeToggle);
-                    }}
-                  >
-                    {isSubscribed ? (
-                      <>
-                        <Bell size={15} />
-                        <span>Subscribed</span>
-                      </>
-                    ) : (
-                      <span>Subscribe</span>
-                    )}
-                  </button>
+                  {isSubscribed === null ? (
+                    <div style={{ width: '115px', height: '36px', background: 'rgba(128,128,128,0.15)', borderRadius: '999px' }} className="spin-skeleton" />
+                  ) : (
+                    <button
+                      className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                      onClick={() => {
+                        setSubscribeAnimEnabled(true);
+                        runAuthedAction('subscribe to this author', handleSubscribeToggle);
+                      }}
+                    >
+                      {isSubscribed ? (
+                        <>
+                          <Bell size={15} />
+                          <span>Subscribed</span>
+                        </>
+                      ) : (
+                        <span>Subscribe</span>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
  

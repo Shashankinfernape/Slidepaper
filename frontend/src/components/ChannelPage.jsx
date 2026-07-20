@@ -19,7 +19,7 @@ if (
 export default function ChannelPage({ channel, bundles = [], onSelectBundle, onBack, user }) {
   const { userProfile } = useAuth();
   const [remoteAuthor, setRemoteAuthor] = useState(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(null);
   const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
   const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 68400);
   const [activeTab, setActiveTab] = useState('wallpapers'); // 'wallpapers' | 'monetization'
@@ -270,33 +270,37 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
 
         {/* YouTube Subscribe Action */}
         <div style={{ marginTop: '2.5rem', flexShrink: 0 }}>
-          <button
-            onClick={handleSubscribeToggle}
-            style={{
-              padding: '0.75rem 1.8rem',
-              borderRadius: '999px',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              border: isSubscribed ? '1px solid var(--border-color)' : 'none',
-              transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
-              background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
-              color: isSubscribed ? 'var(--text-primary)' : '#000000',
-              boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            {isSubscribed ? (
-              <>
-                <Check size={16} />
-                <span>Subscribed</span>
-              </>
-            ) : (
-              <span>Subscribe</span>
-            )}
-          </button>
+          {isSubscribed === null ? (
+            <div style={{ width: '135px', height: '42px', background: 'rgba(128,128,128,0.15)', borderRadius: '999px' }} className="spin-skeleton" />
+          ) : (
+            <button
+              onClick={handleSubscribeToggle}
+              style={{
+                padding: '0.75rem 1.8rem',
+                borderRadius: '999px',
+                fontWeight: 700,
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                border: isSubscribed ? '1px solid var(--border-color)' : 'none',
+                transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
+                background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
+                color: isSubscribed ? 'var(--text-primary)' : '#000000',
+                boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {isSubscribed ? (
+                <>
+                  <Check size={16} />
+                  <span>Subscribed</span>
+                </>
+              ) : (
+                <span>Subscribe</span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
