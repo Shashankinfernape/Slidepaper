@@ -520,8 +520,16 @@ export default function BundleDetailPage({
     return allOptions.findIndex((option) => option.id === selectedDownloadId);
   }, [selectedDownloadId, allOptions]);
 
-  const sidebarBundles = useMemo(() => filteredRelatedBundles.slice(0, 10), [filteredRelatedBundles]);
-  const bottomBundles = useMemo(() => filteredRelatedBundles.slice(10), [filteredRelatedBundles]);
+  const { bottomBundles, sidebarBundles } = useMemo(() => {
+    const left = [];
+    const right = [];
+    filteredRelatedBundles.forEach((bundle, index) => {
+      // 3 items to the left, 2 items to the right
+      if (index % 5 < 3) left.push(bundle);
+      else right.push(bundle);
+    });
+    return { bottomBundles: left, sidebarBundles: right };
+  }, [filteredRelatedBundles]);
 
   return (
     <div className="bundle-youtube-page">
@@ -744,8 +752,6 @@ export default function BundleDetailPage({
             </button>
           </div>
 
-          <GoogleAd type="leaderboard" />
-
           {/* Bottom Bundles Grid (Filling the empty space) */}
           {bottomBundles.length > 0 && (
             <div className="bundle-youtube-bottom-grid">
@@ -792,8 +798,6 @@ export default function BundleDetailPage({
               <span className="sidebar-empty-note">No other bundles in this genre.</span>
             )}
           </div>
-
-          {filteredRelatedBundles.length > 0 && <GoogleAd type="sidebar" />}
         </aside>
       </section>
 
