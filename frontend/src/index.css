@@ -4694,6 +4694,7 @@ h1, h2, h3, h4, h5, h6 {
   
   .bundle-youtube-main {
     grid-column: span 2;
+    grid-row: span 5;
   }
 
   .sidebar-genres-header,
