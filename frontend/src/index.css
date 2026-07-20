@@ -6011,3 +6011,9 @@ h1, h2, h3, h4, h5, h6 {
 .animating-delete {
   animation: shake-fade-out 0.5s cubic-bezier(.36,.07,.19,.97) forwards;
 }
+@keyframes toast-pop-fade {
+  0% { top: -50px; opacity: 0; transform: translateX(-50%) scale(0.9); }
+  10% { top: 20px; opacity: 1; transform: translateX(-50%) scale(1); }
+  85% { top: 20px; opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { top: 0px; opacity: 0; transform: translateX(-50%) scale(0.95); }
+}

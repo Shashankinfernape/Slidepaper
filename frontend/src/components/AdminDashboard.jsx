@@ -688,14 +688,18 @@ export default function AdminDashboard({ onBack, logout }) {
       // Wait for the animation to play before removing from DOM
       await new Promise(resolve => setTimeout(resolve, 500));
 
+      // Optimistic UI update: immediately remove from list so others refill
+      const originalBundles = [...bundles];
+      setBundles(bundles.filter(b => b.id !== bundleId));
+
       const res = await fetch(`${API_URL}/api/bundles/${bundleId}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
+        setBundles(originalBundles); // revert if failed
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to delete bundle.');
       }
-      setBundles(bundles.filter(b => b.id !== bundleId));
       showToast(`Bundle "${bundleName}" deleted successfully!`, 'success');
     } catch (err) {
       console.error('Delete bundle error:', err);
@@ -891,10 +895,22 @@ export default function AdminDashboard({ onBack, logout }) {
       {toast && (
         <div style={{
           position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
-          background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff',
-          padding: '12px 24px', borderRadius: '8px', zIndex: 9999,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', animation: 'toast-slide-down 0.3s ease'
+          background: 'rgba(20, 20, 20, 0.95)',
+          color: '#fff',
+          padding: '12px 24px', 
+          borderRadius: '8px', 
+          zIndex: 9999,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', 
+          animation: 'toast-pop-fade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 500,
+          fontSize: '0.85rem'
         }}>
+          {toast.type === 'error' ? <AlertCircle size={16} color="#ef4444" /> : <CheckCircle2 size={16} color="#10b981" />}
           {toast.message}
         </div>
       )}
