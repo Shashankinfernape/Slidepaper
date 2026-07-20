@@ -617,7 +617,7 @@ export default function BundleDetailPage({
                   alignItems: 'flex-start',
                   gap: '1.25rem',
                   padding: '0 0.5rem',
-                  marginTop: '-30px',
+                  marginTop: '-45px',
                   flexWrap: 'wrap'
                 }} className="channel-header-block">
                   <div style={{
@@ -642,7 +642,7 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '30px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '45px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h1 
                         style={{ margin: 0, fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}

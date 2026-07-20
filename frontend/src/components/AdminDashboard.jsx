@@ -1972,7 +1972,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 0.5rem', marginTop: '-30px', flexWrap: 'wrap' }} className="channel-header-block">
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '0 0.5rem', marginTop: '-45px', flexWrap: 'wrap' }} className="channel-header-block">
                       <div style={{
                         position: 'relative',
                         width: '100px',
@@ -1992,7 +1992,7 @@ export default function AdminDashboard({ onBack, logout }) {
                         />
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '30px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '45px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <h1 style={{ margin: 0, fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)' }}>{editedDisplayName || 'Creator Name'}</h1>
                           <span className="verified-badge-circle" title="Verified Creator" style={{ width: '16px', height: '16px', background: '#3b82f6', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
