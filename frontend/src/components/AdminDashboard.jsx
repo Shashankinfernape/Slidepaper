@@ -1951,7 +1951,7 @@ export default function AdminDashboard({ onBack, logout }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Live Creator Card Preview</span>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 1rem)', margin: '0 auto', position: 'relative' }}>
                     <div style={{
                       width: '100%',
                       height: '140px',

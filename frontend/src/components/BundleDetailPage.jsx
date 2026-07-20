@@ -596,7 +596,7 @@ export default function BundleDetailPage({
             </div>
 
             <div className="bundle-youtube-meta-row" style={{ marginTop: '1.25rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 1rem)', margin: '0 auto', position: 'relative' }}>
                 <div style={{
                   width: '100%',
                   height: '140px',
