@@ -17,6 +17,7 @@ export default function DraggableGrid({
   const hoveredIndexRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0, clientX: 0, clientY: 0 });
   const itemsRef = useRef([]);
+  const rafRef = useRef(null);
 
   // Keep items ref updated to prevent stale closure in event handlers
   useEffect(() => {
@@ -51,37 +52,47 @@ export default function DraggableGrid({
 
   const handleMove = (e) => {
     if (draggedIndexRef.current === null) return;
+    
+    // Prevent scrolling while dragging
+    if (e.cancelable) e.preventDefault();
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
     const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
     const pageY = 'touches' in e ? e.touches[0].pageY : e.pageY;
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    const deltaX = pageX - startPosRef.current.x;
-    const deltaY = pageY - startPosRef.current.y;
-    setTranslation({ x: deltaX, y: deltaY });
     
-    // Determine which item the dragging item is currently hovering over
-    let newHoveredIndex = draggedIndexRef.current;
-    const rects = initialRectsRef.current;
-    for (let i = 0; i < rects.length; i++) {
-      const rect = rects[i];
-      // Check if mouse coordinates fall inside the initial bounding rect
-      if (
-        clientX >= rect.left &&
-        clientX <= rect.right &&
-        clientY >= rect.top &&
-        clientY <= rect.bottom
-      ) {
-        newHoveredIndex = i;
-        break;
+    rafRef.current = requestAnimationFrame(() => {
+      const deltaX = pageX - startPosRef.current.x;
+      const deltaY = pageY - startPosRef.current.y;
+      setTranslation({ x: deltaX, y: deltaY });
+      
+      // Determine which item the dragging item is currently hovering over
+      let newHoveredIndex = draggedIndexRef.current;
+      const rects = initialRectsRef.current;
+      for (let i = 0; i < rects.length; i++) {
+        const rect = rects[i];
+        // Check if mouse coordinates fall inside the initial bounding rect
+        if (
+          clientX >= rect.left &&
+          clientX <= rect.right &&
+          clientY >= rect.top &&
+          clientY <= rect.bottom
+        ) {
+          newHoveredIndex = i;
+          break;
+        }
       }
-    }
-    if (newHoveredIndex !== hoveredIndexRef.current) {
-      hoveredIndexRef.current = newHoveredIndex;
-      setHoveredIndex(newHoveredIndex);
-    }
+      if (newHoveredIndex !== hoveredIndexRef.current) {
+        hoveredIndexRef.current = newHoveredIndex;
+        setHoveredIndex(newHoveredIndex);
+      }
+    });
   };
 
   const handleEnd = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const fromIdx = draggedIndexRef.current;
     const toIdx = hoveredIndexRef.current;
     if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
@@ -158,11 +169,13 @@ export default function DraggableGrid({
               zIndex: isDragged ? 100 : 1,
               pointerEvents: isDragged ? 'none' : 'auto',
               transform: isDragged
-                ? `translate3d(${translation.x}px, ${translation.y}px, 0)`
-                : `translate3d(${shiftX}px, ${shiftY}px, 0)`,
+                ? `translate3d(${translation.x}px, ${translation.y}px, 0) scale(1.05)`
+                : `translate3d(${shiftX}px, ${shiftY}px, 0) scale(1)`,
               transition: (isActive && !isDragged)
-                ? 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)'
+                ? 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)'
                 : 'none',
+              boxShadow: isDragged ? '0 12px 24px rgba(0,0,0,0.4)' : 'none',
+              filter: isDragged ? 'brightness(1.05)' : 'none',
             }}
           >
             {renderItem(item, index, isDragged)}
