@@ -144,6 +144,51 @@ function ExistingFilePreviewItem({ file, index, removeFile }) {
   );
 }
 
+function CustomDropdown({ value, onChange, options }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        className="admin-modal-input" 
+        style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>{selectedOption?.label}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
+      {isOpen && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: 'var(--bg-secondary)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '6px', zIndex: 100, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+          {options.map((opt) => (
+            <div 
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setIsOpen(false); }}
+              className={`custom-dropdown-option ${opt.value === value ? 'selected' : ''}`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard({ onBack, logout }) {
   const { user, userProfile, updateUserProfileState } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
@@ -1341,41 +1386,33 @@ export default function AdminDashboard({ onBack, logout }) {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Orientation *</label>
-                  <select 
+                  <CustomDropdown 
                     value={bundleOrientation} 
-                    onChange={(e) => setBundleOrientation(e.target.value)} 
-                    className="admin-modal-input"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <option value="landscape">Landscape (Desktop & Wide Screen Ratio only)</option>
-                    <option value="portrait">Portrait (Mobile Locked Ratio only)</option>
-                  </select>
+                    onChange={setBundleOrientation} 
+                    options={[
+                      { value: 'landscape', label: 'Landscape (Desktop & Wide Screen Ratio only)' },
+                      { value: 'portrait', label: 'Portrait (Mobile Locked Ratio only)' }
+                    ]}
+                  />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Native Ratio *</label>
-                  <select 
+                  <CustomDropdown 
                     value={bundleRatio} 
-                    onChange={(e) => setBundleRatio(e.target.value)} 
-                    className="admin-modal-input"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {bundleOrientation === 'landscape' ? (
-                      <>
-                        <option value="16:9">16:9 (Standard Desktop)</option>
-                        <option value="21:9">21:9 (Ultrawide)</option>
-                        <option value="32:9">32:9 (Super Ultrawide)</option>
-                        <option value="16:10">16:10 (MacBook/Display)</option>
-                        <option value="48:9">48:9 (Triple Monitor Spread)</option>
-                        <option value="original">Original (Uncropped)</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="9:16">9:16 (Standard Mobile)</option>
-                        <option value="9:19.5">9:19.5 (iPhone/Modern Mobile)</option>
-                        <option value="original">Original (Uncropped)</option>
-                      </>
-                    )}
-                  </select>
+                    onChange={setBundleRatio} 
+                    options={bundleOrientation === 'landscape' ? [
+                      { value: '16:9', label: '16:9 (Standard Desktop)' },
+                      { value: '21:9', label: '21:9 (Ultrawide)' },
+                      { value: '32:9', label: '32:9 (Super Ultrawide)' },
+                      { value: '16:10', label: '16:10 (MacBook/Display)' },
+                      { value: '48:9', label: '48:9 (Triple Monitor Spread)' },
+                      { value: 'original', label: 'Original (Uncropped)' }
+                    ] : [
+                      { value: '9:16', label: '9:16 (Standard Mobile)' },
+                      { value: '9:19.5', label: '9:19.5 (Tall Mobile e.g. iPhone)' },
+                      { value: 'original', label: 'Original (Uncropped)' }
+                    ]}
+                  />
                 </div>
               </div>
 
