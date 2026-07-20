@@ -186,6 +186,14 @@ function CustomDropdown({ value, onChange, options }) {
 
 export default function AdminDashboard({ onBack, logout }) {
   const { user, userProfile, updateUserProfileState } = useAuth();
+  
+  // Toast Notification State
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
@@ -195,6 +203,8 @@ export default function AdminDashboard({ onBack, logout }) {
   const [loadingDrive, setLoadingDrive] = useState(false);
   const [rebuildingCache, setRebuildingCache] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [animatingDeleteId, setAnimatingDeleteId] = useState(null);
 
   // Form states for uploading new bundle
   const [bundleName, setBundleName] = useState('');
@@ -518,16 +528,16 @@ export default function AdminDashboard({ onBack, logout }) {
         const data = await res.json();
         if (data.success && data.user) {
           updateUserProfileState(data.user);
-          alert('Profile updated successfully!');
+          showToast('Profile updated successfully!', 'success');
         } else {
-          alert('Failed to update profile.');
+          showToast('Failed to update profile.', 'error');
         }
       } else {
-        alert('Failed to update profile.');
+        showToast('Failed to update profile.', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Error updating profile settings.');
+      showToast('Error updating profile settings.', 'error');
     } finally {
       setSavingProfile(false);
     }
@@ -659,7 +669,7 @@ export default function AdminDashboard({ onBack, logout }) {
         throw new Error(errorData.error || 'Failed to update hero bundle.');
       }
 
-      alert(`"${bundleName}" pinned as the Home Page Hero successfully!`);
+      showToast(`"${bundleName}" pinned as the Home Page Hero successfully!`, 'success');
       // Update local bundles state to reflect the change
       setBundles(prev => prev.map(b => ({
         ...b,
@@ -667,31 +677,30 @@ export default function AdminDashboard({ onBack, logout }) {
       })));
     } catch (err) {
       console.error('Error setting hero bundle:', err);
-      alert(`Setting hero failed: ${err.message}`);
+      showToast(`Setting hero failed: ${err.message}`, 'error');
     }
   };
 
   const handleDeleteBundle = async (bundleId, bundleName) => {
-    if (!window.confirm(`Are you sure you want to delete the bundle "${bundleName}"?`)) {
-      return;
-    }
-
     try {
-      const response = await fetch(`${API_URL}/api/bundles/${bundleId}`, {
+      setAnimatingDeleteId(bundleId);
+      
+      // Wait for the animation to play before removing from DOM
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const res = await fetch(`http://localhost:5000/api/bundles/${bundleId}`, {
         method: 'DELETE'
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!res.ok) {
+        const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to delete bundle.');
       }
-
-      alert(`Bundle "${bundleName}" deleted successfully!`);
-      // Update local bundles state
-      setBundles(prev => prev.filter(b => b.id !== bundleId));
+      setBundles(bundles.filter(b => b.id !== bundleId));
+      showToast(`Bundle "${bundleName}" deleted successfully!`, 'success');
     } catch (err) {
-      console.error('Error deleting bundle:', err);
-      alert(`Delete failed: ${err.message}`);
+      console.error('Delete bundle error:', err);
+      setAnimatingDeleteId(null);
+      showToast(`Delete failed: ${err.message}`, 'error');
     }
   };
 
@@ -699,7 +708,7 @@ export default function AdminDashboard({ onBack, logout }) {
     setRebuildingCache(true);
     setTimeout(() => {
       setRebuildingCache(false);
-      alert('Zip Cache rebuilt successfully!');
+      showToast('Zip Cache rebuilt successfully!', 'success');
     }, 1500);
   };
 
@@ -712,7 +721,7 @@ export default function AdminDashboard({ onBack, logout }) {
     const newImages = mediaItems.filter(m => m.type === 'new').map(m => m.data);
 
     if (existingImages.length === 0 && newImages.length === 0) {
-      alert('Please upload or keep at least one image.');
+      showToast('Please upload or keep at least one image.', 'error');
       return;
     }
 
@@ -870,7 +879,7 @@ export default function AdminDashboard({ onBack, logout }) {
       if (msg.includes('Failed to fetch')) {
         msg = 'Failed to connect to the backend server. Please make sure your backend server is running (npm start in the backend directory).';
       }
-      alert(`Publishing failed: ${msg}`);
+      showToast(`Publishing failed: ${msg}`, 'error');
     } finally {
       setUploading(false);
     }
@@ -878,6 +887,18 @@ export default function AdminDashboard({ onBack, logout }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      {/* Toast Notification Element */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+          background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff',
+          padding: '12px 24px', borderRadius: '8px', zIndex: 9999,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', animation: 'toast-slide-down 0.3s ease'
+        }}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Sidebar backdrop overlay (all screen sizes) */}
       {isSidebarOpen && (
         <div
@@ -1261,7 +1282,7 @@ export default function AdminDashboard({ onBack, logout }) {
               ).map((bundle) => (
                 <div 
                   key={bundle.id} 
-                  className="admin-card admin-bundle-row" 
+                  className={`admin-card admin-bundle-row ${animatingDeleteId === bundle.id ? 'animating-delete' : ''}`} 
                   onClick={() => {
                     setEditingBundleId(bundle.id);
                     setBundleName(bundle.name || '');
@@ -1358,13 +1379,21 @@ export default function AdminDashboard({ onBack, logout }) {
                     )}
 
                     <button 
-                      onClick={(e) => { e.stopPropagation(); handleDeleteBundle(bundle.id, bundle.name); }}
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (confirmDeleteId === bundle.id) {
+                          handleDeleteBundle(bundle.id, bundle.name);
+                        } else {
+                          setConfirmDeleteId(bundle.id);
+                          setTimeout(() => setConfirmDeleteId(null), 3000);
+                        }
+                      }}
                       className="admin-btn secondary"
                       style={{ 
                         padding: '8px 12px', 
-                        color: '#ff4444', 
-                        border: '1px solid rgba(255, 68, 68, 0.2)',
-                        background: 'rgba(255, 68, 68, 0.05)',
+                        color: confirmDeleteId === bundle.id ? '#fff' : '#ff4444', 
+                        border: confirmDeleteId === bundle.id ? '1px solid #ef4444' : '1px solid rgba(255, 68, 68, 0.2)',
+                        background: confirmDeleteId === bundle.id ? '#ef4444' : 'rgba(255, 68, 68, 0.05)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -1373,11 +1402,24 @@ export default function AdminDashboard({ onBack, logout }) {
                         fontWeight: 500,
                         transition: 'all 0.2s ease'
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 68, 68, 0.12)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 68, 68, 0.05)'; }}
+                      onMouseEnter={(e) => { 
+                        if (confirmDeleteId !== bundle.id) e.currentTarget.style.background = 'rgba(255, 68, 68, 0.12)'; 
+                      }}
+                      onMouseLeave={(e) => { 
+                        if (confirmDeleteId !== bundle.id) e.currentTarget.style.background = 'rgba(255, 68, 68, 0.05)'; 
+                      }}
                     >
-                      <Trash2 size={14} />
-                      Delete
+                      {confirmDeleteId === bundle.id ? (
+                        <>
+                          <Check size={14} />
+                          Confirm
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={14} />
+                          Delete
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

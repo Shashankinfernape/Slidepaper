@@ -5994,3 +5994,20 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(0) scale(1);
   }
 }
+@keyframes toast-slide-down {
+  from { top: -50px; opacity: 0; }
+  to { top: 20px; opacity: 1; }
+}
+
+@keyframes shake-fade-out {
+  0% { transform: translateX(0); opacity: 1; }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); opacity: 0.5; }
+  100% { transform: translateX(0) scale(0.9); opacity: 0; }
+}
+
+.animating-delete {
+  animation: shake-fade-out 0.5s cubic-bezier(.36,.07,.19,.97) forwards;
+}
