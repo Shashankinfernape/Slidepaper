@@ -750,19 +750,6 @@ export default function BundleDetailPage({
               )}
             </button>
           </div>
-        </div>
-
-        <aside className="bundle-youtube-sidebar">
-          <div className="sidebar-genres-header">
-            {genres.map((genre) => (
-              <button
-                key={genre}
-                className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
-                onClick={() => setSelectedSidebarGenre(genre)}
-              >
-                {genre}
-              </button>
-            ))}
           </div>
 
           {/* Left Bundles Grid (Flows directly under video with no gaps) */}
@@ -782,6 +769,18 @@ export default function BundleDetailPage({
         </div>
 
         <aside className="bundle-youtube-sidebar">
+          <div className="sidebar-genres-header">
+            {genres.map((genre) => (
+              <button
+                key={genre}
+                className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
+                onClick={() => setSelectedSidebarGenre(genre)}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+
           <div className="sidebar-bundles-list">
             {rightBundles.map((item) => (
               <BundleCard
