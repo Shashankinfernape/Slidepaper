@@ -616,7 +616,7 @@ export default function BundleDetailPage({
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '1.25rem',
-                  padding: '0 1.25rem',
+                  padding: '0 0.5rem',
                   marginTop: '-30px',
                   flexWrap: 'wrap'
                 }} className="channel-header-block">
