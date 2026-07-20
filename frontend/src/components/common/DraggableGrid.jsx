@@ -11,6 +11,7 @@ export default function DraggableGrid({
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [translation, setTranslation] = useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = useState(false);
+  const [isSnapping, setIsSnapping] = useState(false);
   const containerRef = useRef(null);
   const initialRectsRef = useRef([]);
   const draggedIndexRef = useRef(null);
@@ -95,18 +96,38 @@ export default function DraggableGrid({
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const fromIdx = draggedIndexRef.current;
     const toIdx = hoveredIndexRef.current;
-    if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx) {
-      const reordered = [...itemsRef.current];
-      const [draggedItem] = reordered.splice(fromIdx, 1);
-      reordered.splice(toIdx, 0, draggedItem);
-      onChange(reordered);
+    
+    if (fromIdx !== null && toIdx !== null) {
+      const rects = initialRectsRef.current;
+      const targetDeltaX = rects[toIdx].left - rects[fromIdx].left;
+      const targetDeltaY = rects[toIdx].top - rects[fromIdx].top;
+      
+      setTranslation({ x: targetDeltaX, y: targetDeltaY });
+      setIsSnapping(true);
+      setIsActive(false);
+      
+      setTimeout(() => {
+        if (fromIdx !== toIdx) {
+          const reordered = [...itemsRef.current];
+          const [draggedItem] = reordered.splice(fromIdx, 1);
+          reordered.splice(toIdx, 0, draggedItem);
+          onChange(reordered);
+        }
+        draggedIndexRef.current = null;
+        hoveredIndexRef.current = null;
+        setDraggedIndex(null);
+        setHoveredIndex(null);
+        setTranslation({ x: 0, y: 0 });
+        setIsSnapping(false);
+      }, 150); // 150ms smooth snap duration
+    } else {
+      draggedIndexRef.current = null;
+      hoveredIndexRef.current = null;
+      setDraggedIndex(null);
+      setHoveredIndex(null);
+      setTranslation({ x: 0, y: 0 });
+      setIsActive(false);
     }
-    draggedIndexRef.current = null;
-    hoveredIndexRef.current = null;
-    setDraggedIndex(null);
-    setHoveredIndex(null);
-    setTranslation({ x: 0, y: 0 });
-    setIsActive(false);
   };
 
   useEffect(() => {
@@ -169,13 +190,15 @@ export default function DraggableGrid({
               zIndex: isDragged ? 100 : 1,
               pointerEvents: isDragged ? 'none' : 'auto',
               transform: isDragged
-                ? `translate3d(${translation.x}px, ${translation.y}px, 0) scale(1.05)`
+                ? `translate3d(${translation.x}px, ${translation.y}px, 0) scale(${isSnapping ? 1 : 1.05})`
                 : `translate3d(${shiftX}px, ${shiftY}px, 0) scale(1)`,
-              transition: (isActive && !isDragged)
+              transition: (isActive && !isDragged) 
                 ? 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)'
-                : 'none',
-              boxShadow: isDragged ? '0 12px 24px rgba(0,0,0,0.4)' : 'none',
-              filter: isDragged ? 'brightness(1.05)' : 'none',
+                : (isSnapping && isDragged)
+                  ? 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)'
+                  : 'none',
+              boxShadow: (isDragged && !isSnapping) ? '0 12px 24px rgba(0,0,0,0.4)' : 'none',
+              filter: (isDragged && !isSnapping) ? 'brightness(1.05)' : 'none',
             }}
           >
             {renderItem(item, index, isDragged)}
