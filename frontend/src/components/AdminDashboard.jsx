@@ -1681,8 +1681,8 @@ export default function AdminDashboard({ onBack, logout }) {
         )}
 
         {activeTab === 'profile' && (
-          <div className="admin-card admin-profile-shell" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', alignItems: 'center', maxWidth: '750px', margin: '0 auto', width: '100%' }} className="profile-layout-grid admin-profile-layout">
+          <div className="admin-profile-shell" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', alignItems: 'center', maxWidth: '750px', margin: '0 auto', width: '100%', padding: '2rem', background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }} className="admin-card profile-layout-grid admin-profile-layout">
               
               {/* Form Column */}
               <form onSubmit={handleSubmitProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }} className="admin-profile-form">

@@ -5,6 +5,7 @@
   --bg-primary: #000000;
   --bg-surface: #0a0a0c;
   --bg-surface-elevated: #141417;
+  --bg-secondary: #1a1b20;
   --bg-dropdown: #0c0c0f;
   
   --text-primary: #f3f4f6;
@@ -44,6 +45,7 @@
   --bg-primary: #e2e8f0;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #cbd5e1;
+  --bg-secondary: #f1f5f9;
   --bg-dropdown: #ffffff;
   
   --text-primary: #0f172a;
