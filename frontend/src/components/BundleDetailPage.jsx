@@ -750,7 +750,6 @@ export default function BundleDetailPage({
               )}
             </button>
           </div>
-          </div>
 
           {/* Left Bundles Grid (Flows directly under video with no gaps) */}
           {leftBundles.length > 0 && (
