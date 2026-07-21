@@ -642,18 +642,6 @@ function AppContent() {
     };
   }, [genres]);
 
-  const scrollGenresRight = () => {
-    if (genreTabsRef.current) {
-      genreTabsRef.current.scrollBy({ left: 150, behavior: 'smooth' });
-    }
-  };
-
-  const scrollGenresLeft = () => {
-    if (genreTabsRef.current) {
-      genreTabsRef.current.scrollBy({ left: -150, behavior: 'smooth' });
-    }
-  };
-
   // Filter wallpaper bundles by search query and selected genre
   const filteredBundles = bundles.filter((bundle) => {
     let matchesGenre = false;
