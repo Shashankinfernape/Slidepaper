@@ -2348,25 +2348,33 @@ app.get('/api/authors/:authorUid/subscribers-list', async (req, res) => {
     }
 
     const subscriberUids = author.subscriberUids || [];
-    
-    // Fetch detailed profiles of subscribers matching UIDs
-    const rawSubscribers = await User.find({
-      $or: [
-        { uid: { $in: subscriberUids } },
-        { email: { $in: subscriberUids.filter(u => u.includes('@')) } }
-      ]
-    })
-    .select('uid displayName email photoURL joined')
-    .lean();
 
-    // Map profiles and backfill missing emails if subscriber document was created without email
+    // Fetch all user documents to maximize profile and email matching
+    const allUsers = await User.find({}).select('uid displayName email photoURL joined').lean();
+
     const subscribers = await Promise.all(subscriberUids.map(async (subUid) => {
-      let matchedUser = rawSubscribers.find(u => u.uid === subUid || u.email === subUid);
-      if (!matchedUser && subUid.includes('@')) {
-        matchedUser = await User.findOne({ email: subUid }).select('uid displayName email photoURL joined').lean();
+      // 1. Direct UID or Email match
+      let matchedUser = allUsers.find(u => u.uid === subUid || (u.email && u.email.toLowerCase() === subUid.toLowerCase()));
+
+      // 2. Fallback: Search by matching displayName
+      if (!matchedUser) {
+        matchedUser = allUsers.find(u => u.displayName && subUid.toLowerCase().includes(u.displayName.toLowerCase()));
       }
 
-      const email = matchedUser?.email || (subUid.includes('@') ? subUid : '');
+      // 3. Fallback: Check if subUid itself is an email address
+      let email = matchedUser?.email;
+      if (!email && subUid.includes('@')) {
+        email = subUid;
+      }
+
+      // 4. Fallback: Search for any user with the same displayName who has an email saved
+      if (!email && matchedUser?.displayName) {
+        const emailMatch = allUsers.find(u => u.displayName === matchedUser.displayName && u.email && u.email.includes('@'));
+        if (emailMatch) {
+          email = emailMatch.email;
+        }
+      }
+
       const displayName = matchedUser?.displayName || (email ? email.split('@')[0] : 'Subscriber');
       const photoURL = matchedUser?.photoURL || '';
 
