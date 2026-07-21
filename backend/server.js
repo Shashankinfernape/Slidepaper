@@ -2349,29 +2349,33 @@ app.get('/api/authors/:authorUid/subscribers-list', async (req, res) => {
 
     const subscriberUids = author.subscriberUids || [];
     
-    // Fetch detailed profiles of subscribers
-    const rawSubscribers = await User.find({ uid: { $in: subscriberUids } })
-      .select('uid displayName email photoURL joined')
-      .lean();
+    // Fetch detailed profiles of subscribers matching UIDs
+    const rawSubscribers = await User.find({
+      $or: [
+        { uid: { $in: subscriberUids } },
+        { email: { $in: subscriberUids.filter(u => u.includes('@')) } }
+      ]
+    })
+    .select('uid displayName email photoURL joined')
+    .lean();
 
     // Map profiles and backfill missing emails if subscriber document was created without email
-    const subscribers = await Promise.all(rawSubscribers.map(async (sub) => {
-      let email = sub.email;
-      if (!email || email === 'No email provided') {
-        if (sub.uid && sub.uid.includes('@')) {
-          email = sub.uid;
-        } else {
-          // Attempt secondary lookup by displayName if UID was generated without email
-          const match = await User.findOne({ 
-            $or: [{ uid: sub.uid }, { displayName: sub.displayName }],
-            email: { $exists: true, $ne: '' }
-          }).select('email').lean();
-          if (match && match.email) email = match.email;
-        }
+    const subscribers = await Promise.all(subscriberUids.map(async (subUid) => {
+      let matchedUser = rawSubscribers.find(u => u.uid === subUid || u.email === subUid);
+      if (!matchedUser && subUid.includes('@')) {
+        matchedUser = await User.findOne({ email: subUid }).select('uid displayName email photoURL joined').lean();
       }
+
+      const email = matchedUser?.email || (subUid.includes('@') ? subUid : '');
+      const displayName = matchedUser?.displayName || (email ? email.split('@')[0] : 'Subscriber');
+      const photoURL = matchedUser?.photoURL || '';
+
       return {
-        ...sub,
-        email: email || 'No email provided'
+        uid: matchedUser?.uid || subUid,
+        displayName,
+        email: email || 'No email provided',
+        photoURL,
+        joined: matchedUser?.joined || null
       };
     }));
 
