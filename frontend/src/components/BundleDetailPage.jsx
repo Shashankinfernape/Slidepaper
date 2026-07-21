@@ -599,7 +599,7 @@ export default function BundleDetailPage({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 12px)', margin: '0 auto', position: 'relative' }}>
                 <div style={{
                   width: '100%',
-                  height: '140px',
+                  height: '110px',
                   borderRadius: '12px',
                   background: resolvedAuthorProfile.bannerURL ? `url(${getProxiedImageUrl(resolvedAuthorProfile.bannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
                   position: 'relative',
@@ -622,11 +622,11 @@ export default function BundleDetailPage({
                 }} className="channel-header-block">
                   <div style={{
                     position: 'relative',
-                    width: '100px',
-                    height: '100px',
+                    width: '128px',
+                    height: '128px',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '3px solid var(--bg-primary)',
+                    border: '4px solid var(--bg-primary)',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                     background: 'var(--bg-secondary)',
                     flexShrink: 0,
@@ -645,7 +645,7 @@ export default function BundleDetailPage({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '40px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h1 
-                        style={{ margin: 0, fontSize: '1.55rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                        style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
                         onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
                       >
                         {resolvedAuthorProfile.displayName || 'Creator Name'}
