@@ -3796,13 +3796,14 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-card--watch-hero .stack-container {
-  aspect-ratio: 16 / 9.5;
-  padding: 0 0.25rem 0.15rem 0.25rem;
+  aspect-ratio: auto !important;
+  padding: 0 !important;
   justify-content: center;
+  align-items: flex-start !important;
 }
 
 .bundle-card--watch-hero .stack-wrapper {
-  width: 96%;
+  width: 100% !important;
 }
 
 /* Watch Hero Specific Stack Tweaks (organic tilt & lighter gradient overlay) */
@@ -3854,7 +3855,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-page {
-  margin-top: 0 !important;
+  margin-top: -0.35rem !important;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -4954,11 +4955,12 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .bundle-card--watch-hero .stack-container {
-    padding: 0 0.25rem 0.15rem 0.25rem;
+    padding: 0 !important;
+    aspect-ratio: auto !important;
   }
 
   .bundle-card--watch-hero .stack-wrapper {
-    width: 96%;
+    width: 100% !important;
   }
 
   /* Percent-based layout cascades from global to prevent clipping */
