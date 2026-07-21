@@ -690,7 +690,7 @@ export default function BundleDetailPage({
                     </div>
                   </div>
 
-                  <div className="responsive-subscribe-container">
+                  <div className="responsive-subscribe-container" style={{ alignSelf: 'flex-end' }}>
                     <button
                       className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                       style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
