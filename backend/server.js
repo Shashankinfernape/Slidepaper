@@ -2218,23 +2218,36 @@ app.post('/api/authors/:authorUid/subscribe', async (req, res) => {
       });
     }
 
-    // 1.5. Find or create the subscriber profile
+    // 1.5. Find or create/update the subscriber profile
     let subscriberUser = await User.findOne({ uid });
     if (!subscriberUser) {
       subscriberUser = await User.create({
         uid,
-        email: email,
-        displayName: displayName,
-        photoURL: photoURL,
+        email: email || '',
+        displayName: displayName || 'Subscriber',
+        photoURL: photoURL || '',
         subscribers: 0,
         subscriberUids: []
       });
-      console.log(`[Database] Created profile for new subscriber: ${uid}`);
-    } else if (email && !subscriberUser.email) {
-      subscriberUser.email = email;
-      subscriberUser.displayName = displayName || subscriberUser.displayName;
-      subscriberUser.photoURL = photoURL || subscriberUser.photoURL;
-      await subscriberUser.save();
+      console.log(`[Database] Created profile for new subscriber: ${uid} (${email})`);
+    } else {
+      let updated = false;
+      if (email && subscriberUser.email !== email) {
+        subscriberUser.email = email;
+        updated = true;
+      }
+      if (displayName && subscriberUser.displayName !== displayName) {
+        subscriberUser.displayName = displayName;
+        updated = true;
+      }
+      if (photoURL && subscriberUser.photoURL !== photoURL) {
+        subscriberUser.photoURL = photoURL;
+        updated = true;
+      }
+      if (updated) {
+        await subscriberUser.save();
+        console.log(`[Database] Updated profile details for subscriber: ${uid} (${email})`);
+      }
     }
 
     const subIndex = author.subscriberUids.indexOf(uid);
@@ -2337,9 +2350,14 @@ app.get('/api/authors/:authorUid/subscribers-list', async (req, res) => {
     const subscriberUids = author.subscriberUids || [];
     
     // Fetch detailed profiles of subscribers
-    const subscribers = await User.find({ uid: { $in: subscriberUids } })
+    const rawSubscribers = await User.find({ uid: { $in: subscriberUids } })
       .select('uid displayName email photoURL joined')
       .lean();
+
+    const subscribers = rawSubscribers.map(sub => ({
+      ...sub,
+      email: sub.email || (sub.uid.includes('@') ? sub.uid : 'No email provided')
+    }));
 
     return res.status(200).json({ success: true, subscribers });
   } catch (error) {
