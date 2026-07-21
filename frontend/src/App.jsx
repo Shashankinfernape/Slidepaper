@@ -630,13 +630,13 @@ function AppContent() {
 
   const scrollGenresRight = () => {
     if (genreTabsRef.current) {
-      genreTabsRef.current.scrollBy({ left: 250, behavior: 'smooth' });
+      genreTabsRef.current.scrollBy({ left: 150, behavior: 'smooth' });
     }
   };
 
   const scrollGenresLeft = () => {
     if (genreTabsRef.current) {
-      genreTabsRef.current.scrollBy({ left: -250, behavior: 'smooth' });
+      genreTabsRef.current.scrollBy({ left: -150, behavior: 'smooth' });
     }
   };
 

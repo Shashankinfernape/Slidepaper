@@ -573,7 +573,7 @@ export default function BundleDetailPage({
 
   const scrollGenres = (direction) => {
     if (genresScrollRef.current) {
-      const amount = direction === 'left' ? -250 : 250;
+      const amount = direction === 'left' ? -150 : 150;
       genresScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
       setTimeout(handleGenresScroll, 300);
     }
