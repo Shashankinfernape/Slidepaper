@@ -687,27 +687,27 @@ export default function BundleDetailPage({
                       <span>{formatSubscribers(subscribersCount)}</span>
                       <span>•</span>
                       <span>{resolvedAuthorProfile.totalBundles || 1} wallpapers</span>
-                      <div className="responsive-subscribe-container" style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}>
-                        <button
-                          className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                          style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSubscribeAnimEnabled(true);
-                            runAuthedAction('subscribe to this author', handleSubscribeToggle);
-                          }}
-                        >
-                          {isSubscribed ? (
-                            <>
-                              <Bell size={18} />
-                              <span>Subscribed</span>
-                            </>
-                          ) : (
-                            <span>Subscribe</span>
-                          )}
-                        </button>
-                      </div>
                     </div>
+                  </div>
+
+                  <div className="responsive-subscribe-container">
+                    <button
+                      className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                      onClick={() => {
+                        setSubscribeAnimEnabled(true);
+                        runAuthedAction('subscribe to this author', handleSubscribeToggle);
+                      }}
+                    >
+                      {isSubscribed ? (
+                        <>
+                          <Bell size={18} />
+                          <span>Subscribed</span>
+                        </>
+                      ) : (
+                        <span>Subscribe</span>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
