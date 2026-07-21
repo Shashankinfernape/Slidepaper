@@ -166,7 +166,6 @@ export function AuthProvider({ children }) {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         const result = await signInWithPopup(auth, provider);
-        alert(`Debug Email: ${result.user.email}`); // Temporary debug
         setLoading(false);
         return result.user;
       } catch (error) {
