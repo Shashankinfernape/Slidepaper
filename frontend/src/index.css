@@ -3902,7 +3902,7 @@ h1, h2, h3, h4, h5, h6 {
   grid-row: span 6;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0;
   min-width: 0;
   overflow: visible;
 }
@@ -3953,7 +3953,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-info {
-  margin-top: -1.2rem !important;
+  margin-top: -0.95rem !important;
   padding: 0 0 0.15rem 0;
   display: flex;
   flex-direction: column;
