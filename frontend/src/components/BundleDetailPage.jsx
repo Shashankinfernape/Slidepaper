@@ -158,9 +158,10 @@ export default function BundleDetailPage({
     // Always ensure 'Original' option exists!
     const hasOriginal = filtered.some(p => p.id === 'original');
     if (!hasOriginal) {
+      const nativeRatio = bundle.ratio && bundle.ratio.includes(':') ? bundle.ratio : null;
       filtered.unshift({
         id: 'original',
-        label: 'Original',
+        label: nativeRatio ? `Original • ${nativeRatio}` : 'Original',
         subtitle: 'Uncropped high-res wallpapers',
         resolution: 'Original',
         size: 'Full Size ZIP',
