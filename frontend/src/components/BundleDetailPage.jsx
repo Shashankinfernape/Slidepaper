@@ -567,7 +567,7 @@ export default function BundleDetailPage({
           </div>
 
           <div className="bundle-youtube-info">
-            <div className="bundle-youtube-title-row responsive-title-row" style={{ width: 'calc(96% - 12px)', margin: '0 auto' }}>
+            <div className="bundle-youtube-title-row responsive-title-row" style={{ width: '100%', padding: '0 0.5rem' }}>
               <div className="responsive-title-group" style={{ display: 'flex', flexDirection: 'column' }}>
                 <h1 className="bundle-youtube-title responsive-bundle-title" style={{ margin: 0 }}>{bundle.name}</h1>
                 
@@ -624,7 +624,7 @@ export default function BundleDetailPage({
             </div>
 
             <div className="bundle-youtube-meta-row" style={{ marginTop: '1.25rem' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 12px)', margin: '0 auto', position: 'relative' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', padding: '0 0.5rem', position: 'relative' }}>
                 <div className="bundle-author-banner" style={{
                   width: '100%',
                   borderRadius: '12px',
