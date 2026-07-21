@@ -2100,11 +2100,6 @@ export default function AdminDashboard({ onBack, logout }) {
                         <span style={{ fontWeight: 600, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {sub.displayName || 'Subscriber'}
                         </span>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {(sub.email && sub.email !== 'No email provided') 
-                            ? sub.email 
-                            : `@${(sub.displayName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                        </span>
                       </div>
                     </div>
                   ))}
