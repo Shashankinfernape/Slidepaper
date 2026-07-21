@@ -164,6 +164,8 @@ export function AuthProvider({ children }) {
     if (isConfigured && auth) {
       try {
         const provider = new GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
         provider.setCustomParameters({ prompt: 'select_account' });
         const result = await signInWithPopup(auth, provider);
         setLoading(false);
