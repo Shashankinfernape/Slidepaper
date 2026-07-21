@@ -34,13 +34,14 @@ export default function GoogleAd({ type = 'leaderboard', client, slot }) {
   // Real Google AdSense unit (when Client ID is configured)
   if (adClient) {
     return (
-      <div className={`ad-wrapper ad-wrapper-${type}`} style={{ margin: '1rem 0', width: '100%', overflow: 'hidden', textAlign: 'center' }}>
+      <div className={`ad-wrapper ad-wrapper-${type}`} style={{ margin: '0', width: '100%', overflow: 'hidden', borderRadius: '12px' }}>
         <ins
           className="adsbygoogle"
-          style={{ display: 'block' }}
+          style={{ display: 'block', borderRadius: '12px' }}
           data-ad-client={adClient}
           {...(adSlot ? { 'data-ad-slot': adSlot } : {})}
-          data-ad-format="auto"
+          data-ad-format={type === 'in-grid' ? 'fluid' : 'auto'}
+          {...(type === 'in-grid' ? { 'data-ad-layout-key': '-fb+5w+4e-db+86' } : {})}
           data-full-width-responsive="true"
         />
       </div>
