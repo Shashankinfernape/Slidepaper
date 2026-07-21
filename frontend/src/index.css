@@ -6415,21 +6415,24 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Responsive adjustments for Bundle Detail Page */
 .bundle-author-banner {
-  height: 110px;
+  height: 70px;
 }
 .responsive-channel-header {
-  margin-top: -40px;
+  margin-top: -35px;
+  gap: 0.75rem;
+  flex-wrap: nowrap !important;
 }
 .bundle-author-avatar {
-  width: 128px;
-  height: 128px;
-  border: 4px solid var(--bg-primary);
+  width: 76px;
+  height: 76px;
+  border: 3px solid var(--bg-primary);
 }
 .bundle-author-meta-container {
-  margin-top: 40px;
+  margin-top: 15px;
+  min-width: 0 !important;
 }
 .bundle-author-title {
-  font-size: 1.85rem;
+  font-size: 1.35rem;
 }
 .responsive-title-row {
   display: flex;
@@ -6453,13 +6456,13 @@ h1, h2, h3, h4, h5, h6 {
   gap: 8px;
 }
 .responsive-author-stats {
-  gap: 8px;
-  font-size: 0.78rem;
+  gap: 6px;
+  font-size: 0.75rem;
 }
 
 .responsive-subscribe-btn {
-  padding: 0.7rem 1.5rem;
-  font-size: 0.95rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.85rem;
 }
 
 /* Mobile Overrides (Phone mode) */
