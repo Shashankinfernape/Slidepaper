@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  ChevronDown, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone
+  ChevronDown, ChevronLeft, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
