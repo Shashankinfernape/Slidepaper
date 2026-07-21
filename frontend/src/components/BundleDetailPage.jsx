@@ -662,10 +662,10 @@ export default function BundleDetailPage({
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '2.5rem' }}>
+                  <div className="responsive-subscribe-container" style={{ marginTop: '2.5rem' }}>
                     <button
-                      className={`youtube-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                      style={!subscribeAnimEnabled ? { transition: 'none', padding: '0.7rem 1.5rem', fontSize: '0.95rem' } : { padding: '0.7rem 1.5rem', fontSize: '0.95rem' }}
+                      className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
                       onClick={() => {
                         setSubscribeAnimEnabled(true);
                         runAuthedAction('subscribe to this author', handleSubscribeToggle);
