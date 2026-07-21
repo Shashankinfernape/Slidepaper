@@ -4839,18 +4839,28 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-@media (max-width: 1100px) and (orientation: portrait), (max-width: 650px) {
+@media (max-width: 1100px) and (orientation: portrait), (max-width: 900px), (max-width: 650px) {
   .bundle-youtube-layout {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem !important;
   }
   
-  .bundle-youtube-main,
+  .bundle-youtube-main {
+    grid-column: span 1 !important;
+    grid-row: auto !important;
+    height: auto !important;
+    margin-bottom: 1.5rem !important;
+  }
+
   .bundle-youtube-sidebar,
   .sidebar-genres-header-container,
   .sidebar-genres-header,
-  .sidebar-empty-note {
-    grid-column: span 1;
+  .sidebar-empty-note,
+  .bundle-card--unified-grid {
+    grid-column: span 1 !important;
+    grid-row: auto !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
   }
   
   .bundle-card--unified-grid .stack-container {
