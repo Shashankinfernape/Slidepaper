@@ -4489,18 +4489,70 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Dynamic Genre filter bar at the top of recommendations */
-.sidebar-genres-header {
+.sidebar-genres-header-container {
   grid-column: span 2;
   align-self: end;
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 0 !important;
+  margin-bottom: 0.85rem;
+  width: 100%;
+}
+
+.sidebar-genres-header {
   display: flex;
   gap: 0.45rem;
   overflow-x: auto;
-  padding-bottom: 0rem;
-  margin-top: 0 !important;
-  margin-bottom: 0.85rem;
+  scroll-behavior: smooth;
   scrollbar-width: none;
   position: relative;
   z-index: 5;
+  width: 100%;
+}
+
+.genre-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.genre-scroll-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.genre-scroll-btn.left {
+  left: -8px;
+}
+.genre-scroll-btn.right {
+  right: -8px;
+}
+
+.genre-scroll-gradient {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  pointer-events: none;
+  z-index: 5;
+}
+.genre-scroll-gradient.left {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-primary) 0%, transparent 100%);
+}
+.genre-scroll-gradient.right {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-primary) 0%, transparent 100%);
 }
 
 .sidebar-genres-header::-webkit-scrollbar {
@@ -4698,6 +4750,7 @@ h1, h2, h3, h4, h5, h6 {
     grid-row: span 5;
   }
 
+  .sidebar-genres-header-container,
   .sidebar-genres-header,
   .sidebar-empty-note {
     grid-column: span 1;
@@ -4712,6 +4765,7 @@ h1, h2, h3, h4, h5, h6 {
   
   .bundle-youtube-main,
   .bundle-youtube-sidebar,
+  .sidebar-genres-header-container,
   .sidebar-genres-header,
   .sidebar-empty-note {
     grid-column: span 1;

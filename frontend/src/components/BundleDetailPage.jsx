@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Bell,
   Check,
@@ -6,6 +6,8 @@ import {
   Monitor,
   Smartphone,
   Sliders,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from '../data';
 import BundleCard from './BundleCard';
@@ -213,6 +215,32 @@ export default function BundleDetailPage({
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authActionLabel, setAuthActionLabel] = useState('continue');
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
+
+  const genresScrollRef = useRef(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true); // default true assuming overflow
+
+  const handleGenresScroll = () => {
+    if (genresScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = genresScrollRef.current;
+      setShowLeftScroll(scrollLeft > 0);
+      setShowRightScroll(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
+    }
+  };
+
+  useEffect(() => {
+    handleGenresScroll();
+    window.addEventListener('resize', handleGenresScroll);
+    return () => window.removeEventListener('resize', handleGenresScroll);
+  }, [genres]);
+
+  const scrollGenres = (direction) => {
+    if (genresScrollRef.current) {
+      const amount = direction === 'left' ? -250 : 250;
+      genresScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      setTimeout(handleGenresScroll, 300); // Check again after scroll animation
+    }
+  };
   const [authorProfile, setAuthorProfile] = useState(null);
   const resolvedAuthorProfile = useMemo(() => {
     const targetUid = bundle.author?.uid || 'admin-mock-999';
@@ -782,16 +810,32 @@ export default function BundleDetailPage({
         </div>
 
         {/* The top right sidebar genre filters */}
-        <div className="sidebar-genres-header">
-          {genres.map((genre) => (
-            <button
-              key={genre}
-              className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
-              onClick={() => setSelectedSidebarGenre(genre)}
-            >
-              {genre}
+        <div className="sidebar-genres-header-container">
+          {showLeftScroll && (
+            <button className="genre-scroll-btn left" onClick={() => scrollGenres('left')}>
+              <ChevronLeft size={20} />
             </button>
-          ))}
+          )}
+          {showLeftScroll && <div className="genre-scroll-gradient left" />}
+          
+          <div className="sidebar-genres-header" ref={genresScrollRef} onScroll={handleGenresScroll}>
+            {genres.map((genre) => (
+              <button
+                key={genre}
+                className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
+                onClick={() => setSelectedSidebarGenre(genre)}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+
+          {showRightScroll && <div className="genre-scroll-gradient right" />}
+          {showRightScroll && (
+            <button className="genre-scroll-btn right" onClick={() => scrollGenres('right')}>
+              <ChevronRight size={20} />
+            </button>
+          )}
         </div>
 
         {/* All bundles follow directly in the grid. CSS Grid Auto-Placement handles everything! */}
