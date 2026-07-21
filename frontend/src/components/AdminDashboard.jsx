@@ -2101,7 +2101,7 @@ export default function AdminDashboard({ onBack, logout }) {
                           {sub.displayName}
                         </span>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {sub.email || 'No email provided'}
+                          {(sub.email && sub.email !== 'No email provided') ? sub.email : `@${sub.uid.slice(0, 12)}...`}
                         </span>
                       </div>
                     </div>
