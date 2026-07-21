@@ -926,21 +926,6 @@ function AppContent() {
         )}
       </main>
 
-      {/* AdSense Compliant Publisher Footer */}
-      <footer className="clean-footer" style={{ flexDirection: 'column', gap: '0.75rem', padding: '1.5rem 2rem' }}>
-        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 500 }}>
-          <a href="/about" onClick={(e) => { e.preventDefault(); setLegalModalType('about'); window.history.pushState(null, '', '/about'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>About Us</a>
-          <a href="/privacy" onClick={(e) => { e.preventDefault(); setLegalModalType('privacy'); window.history.pushState(null, '', '/privacy'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Privacy Policy</a>
-          <a href="/terms" onClick={(e) => { e.preventDefault(); setLegalModalType('terms'); window.history.pushState(null, '', '/terms'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms of Service</a>
-          <a href="/dmca" onClick={(e) => { e.preventDefault(); setLegalModalType('dmca'); window.history.pushState(null, '', '/dmca'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>DMCA Policy</a>
-          <a href="/contact" onClick={(e) => { e.preventDefault(); setLegalModalType('contact'); window.history.pushState(null, '', '/contact'); }} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Contact Us</a>
-        </div>
-        <div className="clean-footer-left" style={{ justifyContent: 'center', gap: '1rem' }}>
-          <span className="footer-badge">Vercel & Render Cloud Hosting</span>
-          <span className="footer-badge">CC-BY 4.0 Art license</span>
-        </div>
-        <p style={{ opacity: 0.7, margin: 0, fontSize: '0.78rem' }}>© 2026 Slidepapers Hub. Desktop-First Continuity Platform. All rights reserved.</p>
-      </footer>
 
       {/* Legal & Compliance Modal */}
       {legalModalType && (
