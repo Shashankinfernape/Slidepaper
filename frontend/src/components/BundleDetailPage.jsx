@@ -270,29 +270,46 @@ export default function BundleDetailPage({
 
   const [authorProfile, setAuthorProfile] = useState(null);
   const resolvedAuthorProfile = useMemo(() => {
-    const targetUid = bundle.author?.uid || 'admin-mock-999';
-    const isOwnBundle = (userProfile && userProfile.uid === targetUid) || (user && user.uid === targetUid);
+    const bundleAuthorUid = bundle.author?.uid;
+    const bundleAuthorEmail = bundle.author?.email?.toLowerCase();
+    const bundleAuthorName = bundle.author?.name || bundle.author?.displayName;
+
+    const isOwnBundle = Boolean(
+      (userProfile?.uid && bundleAuthorUid && userProfile.uid === bundleAuthorUid) ||
+      (user?.uid && bundleAuthorUid && user.uid === bundleAuthorUid) ||
+      (userProfile?.email && bundleAuthorEmail && userProfile.email.toLowerCase() === bundleAuthorEmail) ||
+      (user?.email && bundleAuthorEmail && user.email.toLowerCase() === bundleAuthorEmail)
+    );
+
     const liveProfile = isOwnBundle ? userProfile : null;
     const remoteProfile = authorProfile || {};
+
+    const displayName =
+      liveProfile?.displayName ||
+      remoteProfile.displayName ||
+      bundle.author?.displayName ||
+      bundle.author?.name ||
+      'Creator';
+
+    const photoURL =
+      liveProfile?.photoURL ||
+      remoteProfile.photoURL ||
+      bundle.author?.photoURL ||
+      bundle.author?.avatar;
 
     return {
       ...bundle.author,
       ...remoteProfile,
       ...(liveProfile || {}),
-      uid: liveProfile?.uid || remoteProfile.uid || targetUid,
-      displayName:
-        liveProfile?.displayName ||
-        remoteProfile.displayName ||
-        bundle.author?.name || 'Infernape',
-      photoURL:
-        liveProfile?.photoURL ||
-        remoteProfile.photoURL ||
-        bundle.author?.avatar,
-      about: liveProfile?.about !== undefined ? liveProfile.about : (remoteProfile.about !== undefined ? remoteProfile.about : ''),
-      youtubeUrl: liveProfile?.youtubeUrl || remoteProfile.youtubeUrl || '',
-      instagramUrl: liveProfile?.instagramUrl || remoteProfile.instagramUrl || '',
-      twitterUrl: liveProfile?.twitterUrl || remoteProfile.twitterUrl || '',
-      joined: liveProfile?.joined || remoteProfile.joined || null,
+      uid: liveProfile?.uid || remoteProfile.uid || bundleAuthorUid || 'creator-unknown',
+      displayName,
+      photoURL,
+      about: liveProfile?.about !== undefined ? liveProfile.about : (remoteProfile.about !== undefined ? remoteProfile.about : (bundle.author?.about || '')),
+      bannerURL: liveProfile?.bannerURL || remoteProfile.bannerURL || bundle.author?.bannerURL || '',
+      youtubeUrl: liveProfile?.youtubeUrl || remoteProfile.youtubeUrl || bundle.author?.youtubeUrl || '',
+      instagramUrl: liveProfile?.instagramUrl || remoteProfile.instagramUrl || bundle.author?.instagramUrl || '',
+      twitterUrl: liveProfile?.twitterUrl || remoteProfile.twitterUrl || bundle.author?.twitterUrl || '',
+      joined: liveProfile?.joined || remoteProfile.joined || bundle.author?.joined || null,
     };
   }, [authorProfile, bundle.author, userProfile, user]);
 
@@ -333,14 +350,15 @@ export default function BundleDetailPage({
     
     // 3. Fetch author subscriber count & profile from MongoDB
     const fetchSubscriptionStatus = async () => {
-      if (!bundle.author || !bundle.author.uid) return;
+      const authorIdentifier = bundle.author?.uid || bundle.author?.name || bundle.author?.displayName;
+      if (!authorIdentifier) return;
       try {
-        const uidParam = user ? `?uid=${user.uid}` : '';
-        const res = await fetch(`${API_URL}/api/authors/${bundle.author.uid}/status${uidParam}`);
+        const uidParam = user ? `?userUid=${user.uid}` : '';
+        const res = await fetch(`${API_URL}/api/authors/${encodeURIComponent(authorIdentifier)}/status${uidParam}`);
         if (res.ok) {
           const data = await res.json();
-          setSubscribersCount(data.subscribers);
-          setAuthorProfile(data.profile);
+          if (data.subscribers !== undefined) setSubscribersCount(data.subscribers);
+          if (data.profile) setAuthorProfile(data.profile);
         }
       } catch (err) {
         console.error('Failed to fetch author subscription status:', err);
