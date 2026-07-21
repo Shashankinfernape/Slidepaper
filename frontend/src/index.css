@@ -3954,7 +3954,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-youtube-title {
   font-family: var(--font-heading);
-  font-size: clamp(1.6rem, 1.4rem + 0.8vw, 2rem);
+  font-size: clamp(1.2rem, 1.1rem + 0.8vw, 1.6rem);
   line-height: 1.2;
   letter-spacing: -0.035em;
   font-weight: 800;
@@ -6253,7 +6253,9 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.84rem;
+  font-size: 0.75rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 .responsive-actions-group {
   display: flex;
@@ -6454,7 +6456,9 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.84rem;
+  font-size: 0.75rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 .responsive-actions-group {
   display: flex;
