@@ -3737,7 +3737,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .bundle-card--watch-hero .stack-container {
   aspect-ratio: 16 / 9.5;
-  padding: 0 0.25rem 0.15rem 0.25rem;
+  padding: 0 0.15rem 0.15rem 0.55rem;
   justify-content: center;
 }
 
@@ -4802,10 +4802,6 @@ h1, h2, h3, h4, h5, h6 {
   .sidebar-empty-note {
     grid-column: span 1;
   }
-  
-  .bundle-card--unified-grid .stack-container {
-    padding: 0.15rem 0.25rem 0.1rem 0.25rem;
-  }
 }
 
 /* Sidebar ad slot optimization */
@@ -4906,7 +4902,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .bundle-card--watch-hero .stack-container {
-    padding: 0 0.25rem 0.15rem 0.25rem;
+    padding: 0 0.15rem 0.15rem 0.55rem;
   }
 
   .bundle-card--watch-hero .stack-wrapper {
