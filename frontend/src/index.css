@@ -1763,6 +1763,58 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+.genre-scroll-right-overlay {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 40px;
+  background: linear-gradient(to right, transparent, var(--bg-primary) 60%);
+  pointer-events: none;
+}
+
+.genre-scroll-left-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 40px;
+  background: linear-gradient(to left, transparent, var(--bg-primary) 60%);
+  pointer-events: none;
+}
+
+.genre-scroll-right-btn, .genre-scroll-left-btn {
+  pointer-events: auto;
+  background: var(--bg-secondary);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  transition: all 0.2s ease;
+}
+
+.genre-scroll-right-btn {
+  margin-right: 0.25rem;
+}
+
+.genre-scroll-left-btn {
+  margin-left: 0.25rem;
+}
+
+.genre-scroll-right-btn:hover, .genre-scroll-left-btn:hover {
+  background: var(--border-color);
+}
+
 .genre-tab-btn {
   background: transparent;
   border: 1px solid var(--border-color);

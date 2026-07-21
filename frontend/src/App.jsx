@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  ChevronDown, Check, LogOut, Search, Bell, Shield, AlertCircle
+  ChevronDown, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
@@ -301,6 +301,11 @@ function AppContent() {
   
   // Track keys for secret JDX triggers
   const keySequenceRef = useRef('');
+
+  // Refs and states for genre tabs scrolling
+  const genreTabsRef = useRef(null);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
   
   // Autofocus email input when admin modal is opened
   useEffect(() => {
@@ -599,6 +604,42 @@ function AppContent() {
     return ['All', ...Array.from(uniqueTags)];
   }, [bundles]);
 
+  const handleGenreScroll = () => {
+    if (genreTabsRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = genreTabsRef.current;
+      // Buffer of 2px to handle fractional scroll values
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+      setCanScrollLeft(scrollLeft > 2);
+    }
+  };
+
+  useEffect(() => {
+    handleGenreScroll();
+    const currentRef = genreTabsRef.current;
+    if (currentRef) {
+      currentRef.addEventListener('scroll', handleGenreScroll);
+    }
+    window.addEventListener('resize', handleGenreScroll);
+    return () => {
+      if (currentRef) {
+        currentRef.removeEventListener('scroll', handleGenreScroll);
+      }
+      window.removeEventListener('resize', handleGenreScroll);
+    };
+  }, [genres]);
+
+  const scrollGenresRight = () => {
+    if (genreTabsRef.current) {
+      genreTabsRef.current.scrollBy({ left: 250, behavior: 'smooth' });
+    }
+  };
+
+  const scrollGenresLeft = () => {
+    if (genreTabsRef.current) {
+      genreTabsRef.current.scrollBy({ left: -250, behavior: 'smooth' });
+    }
+  };
+
   // Filter wallpaper bundles by search query and selected genre
   const filteredBundles = bundles.filter((bundle) => {
     const matchesGenre =
@@ -812,16 +853,34 @@ function AppContent() {
               </div>
             )}
 
-            <div className="genre-tabs">
-              {genres.map((genre) => (
-                <button
-                  key={genre}
-                  className={`genre-tab-btn ${selectedGenre === genre ? 'active' : ''}`}
-                  onClick={() => setSelectedGenre(genre)}
-                >
-                  {genre}
-                </button>
-              ))}
+            <div className="genre-tabs-container-wrapper" style={{ position: 'relative', flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              {canScrollLeft && (
+                <div className="genre-scroll-left-overlay">
+                  <button className="genre-scroll-left-btn" onClick={scrollGenresLeft}>
+                    <ChevronLeft size={20} />
+                  </button>
+                </div>
+              )}
+              
+              <div className="genre-tabs" ref={genreTabsRef}>
+                {genres.map((genre) => (
+                  <button
+                    key={genre}
+                    className={`genre-tab-btn ${selectedGenre === genre ? 'active' : ''}`}
+                    onClick={() => setSelectedGenre(genre)}
+                  >
+                    {genre}
+                  </button>
+                ))}
+              </div>
+              
+              {canScrollRight && (
+                <div className="genre-scroll-right-overlay">
+                  <button className="genre-scroll-right-btn" onClick={scrollGenresRight}>
+                    <ChevronRight size={20} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
