@@ -161,6 +161,12 @@ function CustomDropdown({ value, onChange, options }) {
 
   const selectedOption = options.find(opt => opt.value === value) || options[0];
 
+  useEffect(() => {
+    if (selectedOption && selectedOption.value !== value) {
+      onChange(selectedOption.value);
+    }
+  }, [selectedOption, value, onChange]);
+
   return (
     <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
       <div 
