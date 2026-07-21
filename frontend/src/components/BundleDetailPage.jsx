@@ -611,7 +611,7 @@ export default function BundleDetailPage({
 
                 <div style={{
                   display: 'flex',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   gap: '1.25rem',
                   padding: '0 0.5rem',
                   flexWrap: 'wrap'
@@ -657,12 +657,10 @@ export default function BundleDetailPage({
                       <span>{formatSubscribers(subscribersCount)}</span>
                       <span>•</span>
                       <span>{resolvedAuthorProfile.totalBundles || 1} wallpapers</span>
-                      <span>•</span>
-                      <span>Joined 2026</span>
                     </div>
                   </div>
 
-                  <div className="responsive-subscribe-container" style={{ marginTop: '2.5rem' }}>
+                  <div className="responsive-subscribe-container">
                     <button
                       className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                       style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
