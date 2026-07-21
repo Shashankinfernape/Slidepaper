@@ -615,7 +615,11 @@ export default function BundleDetailPage({
                   alignItems: 'center',
                   color: 'var(--text-secondary)',
                   margin: '0.25rem 0 0 0',
-                  fontWeight: 500
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  flexWrap: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
                   <span>{formatNumber(viewsCount)} views</span>
                   <span>{timeAgo(bundle.createdAt)}</span>

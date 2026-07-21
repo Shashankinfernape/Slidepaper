@@ -4802,6 +4802,10 @@ h1, h2, h3, h4, h5, h6 {
     display: none !important;
   }
 
+  .responsive-bundle-title {
+    font-size: 1.15rem !important;
+  }
+
   .bundle-author-banner {
     height: 70px;
   }
