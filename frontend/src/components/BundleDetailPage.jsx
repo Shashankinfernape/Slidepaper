@@ -537,15 +537,13 @@ export default function BundleDetailPage({
           </div>
 
           <div className="bundle-youtube-info">
-            <div className="bundle-youtube-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', width: 'calc(96% - 12px)', margin: '0 auto' }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h1 className="bundle-youtube-title" style={{ margin: 0 }}>{bundle.name}</h1>
+            <div className="bundle-youtube-title-row responsive-title-row" style={{ width: 'calc(96% - 12px)', margin: '0 auto' }}>
+              <div className="responsive-title-group" style={{ display: 'flex', flexDirection: 'column' }}>
+                <h1 className="bundle-youtube-title responsive-bundle-title" style={{ margin: 0 }}>{bundle.name}</h1>
                 
-                <div style={{
+                <div className="responsive-bundle-stats" style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  fontSize: '0.84rem',
                   color: 'var(--text-secondary)',
                   margin: '0.25rem 0 0 0',
                   fontWeight: 500
@@ -556,7 +554,7 @@ export default function BundleDetailPage({
                 </div>
               </div>
               
-              <div className="youtube-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <div className="youtube-actions-group responsive-actions-group" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                 <div className="youtube-like-dislike-pill">
                   <button
                     className={`youtube-like-btn ${reaction === 'like' ? 'active' : ''}`}
@@ -597,9 +595,8 @@ export default function BundleDetailPage({
 
             <div className="bundle-youtube-meta-row" style={{ marginTop: '1.25rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: 'calc(96% - 12px)', margin: '0 auto', position: 'relative' }}>
-                <div style={{
+                <div className="bundle-author-banner" style={{
                   width: '100%',
-                  height: '110px',
                   borderRadius: '12px',
                   background: resolvedAuthorProfile.bannerURL ? `url(${getProxiedImageUrl(resolvedAuthorProfile.bannerURL)}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
                   position: 'relative',
@@ -617,16 +614,12 @@ export default function BundleDetailPage({
                   alignItems: 'flex-start',
                   gap: '1.25rem',
                   padding: '0 0.5rem',
-                  marginTop: '-40px',
                   flexWrap: 'wrap'
-                }} className="channel-header-block">
-                  <div style={{
+                }} className="channel-header-block responsive-channel-header">
+                  <div className="bundle-author-avatar" style={{
                     position: 'relative',
-                    width: '128px',
-                    height: '128px',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '4px solid var(--bg-primary)',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                     background: 'var(--bg-secondary)',
                     flexShrink: 0,
@@ -642,10 +635,11 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '40px' }}>
+                  <div className="bundle-author-meta-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h1 
-                        style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
+                        className="bundle-author-title"
+                        style={{ margin: 0, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
                         onClick={() => onOpenChannel && onOpenChannel(resolvedAuthorProfile)}
                       >
                         {resolvedAuthorProfile.displayName || 'Creator Name'}
