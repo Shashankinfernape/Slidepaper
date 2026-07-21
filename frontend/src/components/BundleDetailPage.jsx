@@ -216,31 +216,7 @@ export default function BundleDetailPage({
   const [authActionLabel, setAuthActionLabel] = useState('continue');
   const [selectedSidebarGenre, setSelectedSidebarGenre] = useState('All');
 
-  const genresScrollRef = useRef(null);
-  const [showLeftScroll, setShowLeftScroll] = useState(false);
-  const [showRightScroll, setShowRightScroll] = useState(true); // default true assuming overflow
 
-  const handleGenresScroll = () => {
-    if (genresScrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = genresScrollRef.current;
-      setShowLeftScroll(scrollLeft > 0);
-      setShowRightScroll(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
-    }
-  };
-
-  useEffect(() => {
-    handleGenresScroll();
-    window.addEventListener('resize', handleGenresScroll);
-    return () => window.removeEventListener('resize', handleGenresScroll);
-  }, [genres]);
-
-  const scrollGenres = (direction) => {
-    if (genresScrollRef.current) {
-      const amount = direction === 'left' ? -250 : 250;
-      genresScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
-      setTimeout(handleGenresScroll, 300); // Check again after scroll animation
-    }
-  };
   const [authorProfile, setAuthorProfile] = useState(null);
   const resolvedAuthorProfile = useMemo(() => {
     const targetUid = bundle.author?.uid || 'admin-mock-999';
@@ -537,6 +513,32 @@ export default function BundleDetailPage({
     });
     return ['All', ...Array.from(uniqueTags)];
   }, [allBundlesList]);
+
+  const genresScrollRef = useRef(null);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true);
+
+  const handleGenresScroll = () => {
+    if (genresScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = genresScrollRef.current;
+      setShowLeftScroll(scrollLeft > 0);
+      setShowRightScroll(Math.ceil(scrollLeft + clientWidth) < scrollWidth);
+    }
+  };
+
+  useEffect(() => {
+    handleGenresScroll();
+    window.addEventListener('resize', handleGenresScroll);
+    return () => window.removeEventListener('resize', handleGenresScroll);
+  }, [genres]);
+
+  const scrollGenres = (direction) => {
+    if (genresScrollRef.current) {
+      const amount = direction === 'left' ? -250 : 250;
+      genresScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      setTimeout(handleGenresScroll, 300);
+    }
+  };
 
   const filteredRelatedBundles = useMemo(() => {
     const others = allBundlesList.filter((item) => item.id !== bundle.id);

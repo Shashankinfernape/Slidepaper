@@ -6467,10 +6467,7 @@ h1, h2, h3, h4, h5, h6 {
   }
   
   /* Right side single grid (related bundles) phone view sizes */
-  .bundle-card--unified-grid {
-    width: 93%;
-    margin: 0 auto;
-  }
+
   .bundle-card--unified-grid .cinematic-details-overlay {
     bottom: 0.35rem;
     left: 0.4rem;
