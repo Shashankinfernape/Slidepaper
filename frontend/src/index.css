@@ -383,28 +383,32 @@ h1, h2, h3, h4, h5, h6 {
 .wallpaper-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  column-gap: 1rem;
+  row-gap: 0.55rem;
   margin-top: 1.5rem;
 }
 
 @media (max-width: 1200px) {
   .wallpaper-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    column-gap: 1rem;
+    row-gap: 0.55rem;
   }
 }
 
 @media (max-width: 900px) {
   .wallpaper-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    column-gap: 0.75rem;
+    row-gap: 0.4rem;
   }
 }
 
 @media (max-width: 600px) {
   .wallpaper-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    column-gap: 1rem;
+    row-gap: 0.55rem;
   }
 
   /* Mobile grid handled by uniform padding from global class */
