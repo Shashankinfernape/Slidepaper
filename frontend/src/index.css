@@ -3855,7 +3855,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-page {
-  margin-top: -0.35rem !important;
+  margin-top: 0.6rem !important;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
