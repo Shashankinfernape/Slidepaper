@@ -4881,27 +4881,16 @@ h1, h2, h3, h4, h5, h6 {
     width: 100%;
     flex: 1;
     max-width: 100%;
+    height: 58px !important;
   }
 
   .apple-download-action-btn {
-    width: auto;
-    min-width: 240px;
-    margin: 0.25rem auto 0 auto;
+    width: 100%;
+    margin-top: 0.5rem;
   }
 
   .youtube-pill-divider {
     height: 2.2rem;
-  }
-}
-
-@media (max-width: 600px) {
-  .left-bundles-grid, .unified-bundles-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  /* Two-line ratio picker on phone: icon on top, label below */
-  .apple-picker-container {
-    height: 58px !important;
   }
 
   .apple-picker-option {
@@ -4924,6 +4913,12 @@ h1, h2, h3, h4, h5, h6 {
     overflow: visible !important;
     text-overflow: unset !important;
     text-align: center !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .left-bundles-grid, .unified-bundles-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -6377,6 +6372,7 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 10px !important;
     flex-shrink: 1;
     min-width: 0;
+    margin-left: auto;
   }
   .responsive-subscribe-btn {
     padding: 0.4rem 0.6rem;
@@ -6384,5 +6380,21 @@ h1, h2, h3, h4, h5, h6 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  
+  /* Right side single grid (related bundles) phone view sizes */
+  .bundle-card--unified-grid .cinematic-details-overlay {
+    bottom: 0.35rem;
+    left: 0.4rem;
+    right: 0.4rem;
+  }
+  .bundle-card--unified-grid .cinematic-card-title {
+    font-size: 0.9rem !important;
+  }
+  .bundle-card--unified-grid .cinematic-meta-row {
+    font-size: 0.65rem !important;
+  }
+  .bundle-card--unified-grid .cinematic-meta-divider {
+    height: 0.65rem;
   }
 }
