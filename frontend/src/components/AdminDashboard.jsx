@@ -1364,7 +1364,18 @@ export default function AdminDashboard({ onBack, logout }) {
                 : bundles
               )
               .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-              .map((bundle) => (
+              .map((bundle) => {
+                const coverIdx = bundle.coverIndex || 0;
+                const wallpapersList = bundle.wallpapers || bundle.images || [];
+                const coverObj = wallpapersList[coverIdx] || wallpapersList[0];
+                const previewSrc = bundle.coverUrl || 
+                                   (coverObj ? (coverObj.previewUrl || coverObj.url || (typeof coverObj === 'string' ? coverObj : '')) : '') ||
+                                   bundle.previewUrl || 
+                                   bundle.url || 
+                                   'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=300';
+                const totalWallpapers = wallpapersList.length;
+
+                return (
                 <div 
                   key={bundle.id}  
                   className={`admin-card admin-bundle-row ${animatingDeleteId === bundle.id ? 'animating-delete' : ''}`} 
@@ -1377,86 +1388,95 @@ export default function AdminDashboard({ onBack, logout }) {
                     setBundleTags((bundle.tags || []).join(', '));
                     setBundleIncludes((bundle.includes || []).join(', '));
                     setBundleRatio(bundle.ratio || (bundle.orientation === 'landscape' ? '16:9' : '9:16'));
-                    setMediaItems((bundle.images || []).map(img => ({ type: 'existing', data: img, id: img.url })));
+                    setMediaItems(wallpapersList.map(img => ({ type: 'existing', data: img, id: img.url || img.previewUrl || img })));
                     setActiveTab('upload');
                   }}
                   style={{ 
-                    padding: '1.25rem', 
+                    padding: '1.25rem 1.5rem', 
                     background: 'var(--bg-primary)', 
-                    borderRadius: '12px', 
+                    borderRadius: '14px', 
                     border: '1px solid var(--border-color)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '1.5rem',
                     cursor: 'pointer',
-                    transition: 'border-color 0.2s ease'
+                    transition: 'all 0.2s ease'
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                     <img 
-                      src={bundle.images && bundle.images[bundle.coverIndex || 0] ? bundle.images[bundle.coverIndex || 0].url : 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=100'} 
+                      src={previewSrc} 
                       alt={bundle.name} 
-                      style={{ width: '100px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=100'; }}
+                      style={{ 
+                        width: bundle.orientation === 'portrait' ? '70px' : '150px', 
+                        height: bundle.orientation === 'portrait' ? '95px' : '85px', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px', 
+                        border: '1px solid var(--border-color)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
+                      onError={(e) => { 
+                        e.target.src = 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=300'; 
+                      }}
                     />
                     <div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{bundle.name}</h4>
-                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: '0.15rem' }}>
-                        {bundle.type} • {bundle.images ? bundle.images.length : 0} Wallpapers • Creator: <strong style={{ color: 'var(--text-primary)' }}>{bundle.author?.name || 'Unknown'}</strong>
+                      <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>{bundle.name}</h4>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', display: 'block', marginTop: '0.35rem' }}>
+                        {bundle.orientation === 'portrait' ? 'Mobile' : 'Landscape'} Wallpaper Pack • <strong style={{ color: 'var(--text-primary)' }}>{totalWallpapers} Wallpapers</strong> • Creator: <strong style={{ color: 'var(--text-primary)' }}>{bundle.author?.name || 'Unknown'}</strong>
                       </span>
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                    <div style={{ display: 'flex', gap: '2rem', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', gap: '2rem', fontSize: '0.92rem' }}>
                       <div style={{ textAlign: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Views</span>
-                        <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.views || 0}</span>
+                        <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.85rem' }}>Views</span>
+                        <span style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: '2px', display: 'block', color: 'var(--text-primary)' }}>{bundle.stats?.views || 0}</span>
                       </div>
                       <div style={{ textAlign: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Downloads</span>
-                        <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.downloads || 0}</span>
+                        <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.85rem' }}>Downloads</span>
+                        <span style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: '2px', display: 'block', color: 'var(--text-primary)' }}>{bundle.stats?.downloads || 0}</span>
                       </div>
                       <div style={{ textAlign: 'center' }}>
-                        <span style={{ color: 'var(--text-secondary)', display: 'block' }}>Likes</span>
-                        <span style={{ fontWeight: 600, marginTop: '2px', display: 'block' }}>{bundle.stats?.likes || 0}</span>
+                        <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.85rem' }}>Likes</span>
+                        <span style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: '2px', display: 'block', color: 'var(--text-primary)' }}>{bundle.stats?.likes || 0}</span>
                       </div>
                     </div>
 
                     {bundle.isHero ? (
                       <span style={{
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
+                        padding: '8px 14px',
+                        fontSize: '0.85rem',
                         fontWeight: 600,
                         background: 'rgba(66, 133, 244, 0.1)',
                         color: 'var(--color-google-blue)',
-                        border: '1px solid rgba(66, 133, 244, 0.2)',
-                        borderRadius: '6px',
+                        border: '1px solid rgba(66, 133, 244, 0.25)',
+                        borderRadius: '8px',
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px'
+                        gap: '6px'
                       }}>
-                        <Check size={14} /> Pinned Hero
+                        <Check size={16} /> Pinned Hero
                       </span>
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleSetHeroBundle(bundle.id, bundle.name); }}
                         className="admin-btn secondary"
                         style={{
-                          padding: '8px 12px',
+                          padding: '8px 14px',
                           border: '1px solid var(--border-color)',
                           background: 'var(--bg-primary)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          borderRadius: '6px',
-                          fontWeight: 500,
+                          borderRadius: '8px',
+                          fontWeight: 600,
                           transition: 'all 0.2s ease',
-                          fontSize: '0.78rem'
+                          fontSize: '0.85rem'
                         }}
                       >
                         Pin as Hero
@@ -1475,7 +1495,7 @@ export default function AdminDashboard({ onBack, logout }) {
                       }}
                       className="admin-btn secondary"
                       style={{ 
-                        padding: '8px 12px', 
+                        padding: '8px 14px', 
                         color: confirmDeleteId === bundle.id ? '#fff' : '#ff4444', 
                         border: confirmDeleteId === bundle.id ? '1px solid #ef4444' : '1px solid rgba(255, 68, 68, 0.2)',
                         background: confirmDeleteId === bundle.id ? '#ef4444' : 'rgba(255, 68, 68, 0.05)',
@@ -1483,9 +1503,10 @@ export default function AdminDashboard({ onBack, logout }) {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        borderRadius: '6px',
-                        fontWeight: 500,
-                        transition: 'all 0.2s ease'
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        transition: 'all 0.2s ease',
+                        fontSize: '0.85rem'
                       }}
                       onMouseEnter={(e) => { 
                         if (confirmDeleteId !== bundle.id) e.currentTarget.style.background = 'rgba(255, 68, 68, 0.12)'; 
