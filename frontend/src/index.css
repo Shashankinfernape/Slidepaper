@@ -3923,6 +3923,10 @@ h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }
 
+.bundle-card--watch-hero .stack-container {
+  padding: 0 !important;
+}
+
 .bundle-auth-popup {
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
 }
