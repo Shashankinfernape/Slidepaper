@@ -2354,9 +2354,25 @@ app.get('/api/authors/:authorUid/subscribers-list', async (req, res) => {
       .select('uid displayName email photoURL joined')
       .lean();
 
-    const subscribers = rawSubscribers.map(sub => ({
-      ...sub,
-      email: sub.email || (sub.uid.includes('@') ? sub.uid : 'No email provided')
+    // Map profiles and backfill missing emails if subscriber document was created without email
+    const subscribers = await Promise.all(rawSubscribers.map(async (sub) => {
+      let email = sub.email;
+      if (!email || email === 'No email provided') {
+        if (sub.uid && sub.uid.includes('@')) {
+          email = sub.uid;
+        } else {
+          // Attempt secondary lookup by displayName if UID was generated without email
+          const match = await User.findOne({ 
+            $or: [{ uid: sub.uid }, { displayName: sub.displayName }],
+            email: { $exists: true, $ne: '' }
+          }).select('email').lean();
+          if (match && match.email) email = match.email;
+        }
+      }
+      return {
+        ...sub,
+        email: email || 'No email provided'
+      };
     }));
 
     return res.status(200).json({ success: true, subscribers });
