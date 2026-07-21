@@ -937,6 +937,29 @@ function AppContent() {
         )}
       </main>
 
+      {/* Publisher & Policy Footer required for Google AdSense compliance */}
+      <footer className="publisher-footer" style={{ borderTop: '1px solid var(--border-color)', marginTop: '3rem', padding: '2.5rem 1.5rem', background: 'var(--bg-surface)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
+            <div style={{ maxWidth: '480px' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Slidepapers</h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                Slidepapers is a curated wallpaper continuity hub providing ultra-high-definition 4K &amp; HD wallpaper sets tailored for desktop (16:9) and mobile (9:16) devices.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.85rem' }}>
+              <button onClick={() => setLegalModalType('privacy')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>Privacy Policy</button>
+              <button onClick={() => setLegalModalType('terms')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>Terms of Service</button>
+              <button onClick={() => setLegalModalType('dmca')} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}>DMCA &amp; Content</button>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+            <span>&copy; {new Date().getFullYear()} Slidepapers. All rights reserved.</span>
+            <span>Ca-Pub: ca-pub-6764886759571309</span>
+          </div>
+        </div>
+      </footer>
+
 
       {/* Legal & Compliance Modal */}
       {legalModalType && (

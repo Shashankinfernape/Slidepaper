@@ -32,14 +32,14 @@ export default function GoogleAd({ type = 'leaderboard', client, slot }) {
   }, [adClient, adSlot]);
 
   // Real Google AdSense unit (when Client ID is configured)
-  if (adClient && adSlot) {
+  if (adClient) {
     return (
-      <div className={`ad-wrapper ad-wrapper-${type}`} style={{ margin: '1rem 0', width: '100%', overflow: 'hidden' }}>
+      <div className={`ad-wrapper ad-wrapper-${type}`} style={{ margin: '1rem 0', width: '100%', overflow: 'hidden', textAlign: 'center' }}>
         <ins
           className="adsbygoogle"
           style={{ display: 'block' }}
           data-ad-client={adClient}
-          data-ad-slot={adSlot}
+          {...(adSlot ? { 'data-ad-slot': adSlot } : {})}
           data-ad-format="auto"
           data-full-width-responsive="true"
         />
@@ -47,33 +47,5 @@ export default function GoogleAd({ type = 'leaderboard', client, slot }) {
     );
   }
 
-  // Development / Demo Mode Placeholder UI (when environment variables are not set)
-  if (type === 'leaderboard') {
-    return (
-      <div className="ad-slot-leaderboard" style={{ marginTop: '1.5rem' }}>
-        <span className="ad-label">Sponsored</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div className="ad-accent-bar"></div>
-          <span style={{ fontWeight: 600, letterSpacing: '0.05em' }}>GOOGLE ADSENSE BANNER</span>
-          <div className="ad-accent-bar"></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="ad-slot-in-grid">
-      <span className="ad-label">Sponsored Ad</span>
-      <div className="ad-accent-bar" style={{ width: '60px' }}></div>
-      <h3 className="ad-title">
-        Looking for Custom Themes?
-      </h3>
-      <p className="ad-desc">
-        Discover curated designer accessories and workspace gear that match your screens.
-      </p>
-      <button className="ad-cta-btn" onClick={() => window.open('https://google.com', '_blank')}>
-        Learn More
-      </button>
-    </div>
-  );
+  return null;
 }
