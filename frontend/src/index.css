@@ -4803,7 +4803,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .responsive-bundle-title {
-    font-size: 1.15rem !important;
+    font-size: clamp(1.15rem, 0.6rem + 1.2vw, 1.55rem) !important;
   }
 
   .bundle-author-banner {
@@ -6257,7 +6257,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.75rem;
+  font-size: clamp(0.75rem, 0.5rem + 0.4vw, 0.95rem);
   flex-wrap: nowrap;
   white-space: nowrap;
 }
@@ -6460,7 +6460,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.75rem;
+  font-size: clamp(0.75rem, 0.5rem + 0.4vw, 0.95rem);
   flex-wrap: nowrap;
   white-space: nowrap;
 }
