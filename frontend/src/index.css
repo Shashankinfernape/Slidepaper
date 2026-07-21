@@ -4498,6 +4498,7 @@ h1, h2, h3, h4, h5, h6 {
   margin-top: 0 !important;
   margin-bottom: 0.85rem;
   width: 100%;
+  min-width: 0;
 }
 
 .sidebar-genres-header {
@@ -4778,6 +4779,12 @@ h1, h2, h3, h4, h5, h6 {
   .sidebar-empty-note {
     grid-column: span 1;
   }
+  
+  .bundle-card--unified-grid,
+  .sidebar-genres-header-container {
+    width: 93%;
+    margin: 0 auto;
+  }
 }
 
 /* Sidebar ad slot optimization */
@@ -4882,7 +4889,8 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .bundle-card--watch-hero .stack-wrapper {
-    width: 96%;
+    width: 93%;
+    margin: 0 auto;
   }
 
   /* Percent-based layout cascades from global to prevent clipping */
