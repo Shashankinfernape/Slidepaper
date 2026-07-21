@@ -183,6 +183,45 @@ export default function BundleDetailPage({
   const [customRatioWidth, setCustomRatioWidth] = useState(isPortrait ? '9' : '16');
   const [customRatioHeight, setCustomRatioHeight] = useState(isPortrait ? '16' : '9');
 
+  const pickerTabsRef = useRef(null);
+  const [canScrollPickerRight, setCanScrollPickerRight] = useState(false);
+  const [canScrollPickerLeft, setCanScrollPickerLeft] = useState(false);
+
+  const handlePickerScroll = () => {
+    if (pickerTabsRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = pickerTabsRef.current;
+      setCanScrollPickerRight(scrollLeft + clientWidth < scrollWidth - 2);
+      setCanScrollPickerLeft(scrollLeft > 2);
+    }
+  };
+
+  useEffect(() => {
+    handlePickerScroll();
+    const currentRef = pickerTabsRef.current;
+    if (currentRef) {
+      currentRef.addEventListener('scroll', handlePickerScroll);
+    }
+    window.addEventListener('resize', handlePickerScroll);
+    return () => {
+      if (currentRef) {
+        currentRef.removeEventListener('scroll', handlePickerScroll);
+      }
+      window.removeEventListener('resize', handlePickerScroll);
+    };
+  }, [allOptions]);
+
+  const scrollPickerRight = () => {
+    if (pickerTabsRef.current) {
+      pickerTabsRef.current.scrollBy({ left: 150, behavior: 'smooth' });
+    }
+  };
+
+  const scrollPickerLeft = () => {
+    if (pickerTabsRef.current) {
+      pickerTabsRef.current.scrollBy({ left: -150, behavior: 'smooth' });
+    }
+  };
+
   // Reset selected option and custom ratio inputs when bundle changes
   useEffect(() => {
     if (presets.length > 0) {
@@ -717,8 +756,19 @@ export default function BundleDetailPage({
  
             <div className="apple-download-panel" style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
               {supportsLandscapeDownloads ? (
-                  <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`}>
-                    <div className="apple-picker-container">
+                  <div className={`apple-picker-wrapper ${selectedDownloadId === 'custom' ? 'has-custom' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+                    {canScrollPickerLeft && (
+                      <div className="genre-scroll-left-overlay" style={{ borderRadius: '9999px' }}>
+                        <button className="genre-scroll-left-btn" onClick={scrollPickerLeft}>
+                          <ChevronLeft size={20} />
+                        </button>
+                      </div>
+                    )}
+                    
+                    <div className="apple-picker-container" ref={pickerTabsRef} style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
+                      <style dangerouslySetInnerHTML={{__html: `
+                        .apple-picker-container::-webkit-scrollbar { display: none; }
+                      `}} />
                       {activeIndex !== -1 && allOptions.length > 0 && (
                         <div
                           className="apple-picker-indicator"
@@ -742,6 +792,14 @@ export default function BundleDetailPage({
                         </button>
                       ))}
                     </div>
+
+                    {canScrollPickerRight && (
+                      <div className="genre-scroll-right-overlay" style={{ borderRadius: '9999px' }}>
+                        <button className="genre-scroll-right-btn" onClick={scrollPickerRight}>
+                          <ChevronRight size={20} />
+                        </button>
+                      </div>
+                    )}
 
                     {selectedDownloadId === 'custom' && (
                       <div className="apple-custom-input-group">

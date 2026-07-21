@@ -1789,7 +1789,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .genre-scroll-right-btn, .genre-scroll-left-btn {
   pointer-events: auto;
-  background: var(--bg-secondary);
+  background: transparent;
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -1799,7 +1799,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   color: var(--text-primary);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: none;
   transition: all 0.2s ease;
 }
 
@@ -1812,7 +1812,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .genre-scroll-right-btn:hover, .genre-scroll-left-btn:hover {
-  background: var(--border-color);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .genre-scroll-right-btn:hover, [data-theme="light"] .genre-scroll-left-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .genre-tab-btn {
