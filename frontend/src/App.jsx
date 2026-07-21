@@ -609,7 +609,21 @@ function AppContent() {
       const { scrollLeft, scrollWidth, clientWidth } = genreTabsRef.current;
       // Buffer of 2px to handle fractional scroll values
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
-      setCanScrollLeft(scrollLeft > 2);
+      setCanScrollLeft(scrollLeft > 1);
+    }
+  };
+
+  const scrollGenresRight = () => {
+    if (genreTabsRef.current) {
+      genreTabsRef.current.scrollBy({ left: 180, behavior: 'smooth' });
+      setTimeout(handleGenreScroll, 350);
+    }
+  };
+
+  const scrollGenresLeft = () => {
+    if (genreTabsRef.current) {
+      genreTabsRef.current.scrollBy({ left: -180, behavior: 'smooth' });
+      setTimeout(handleGenreScroll, 350);
     }
   };
 
@@ -869,7 +883,7 @@ function AppContent() {
                 </div>
               )}
               
-              <div className="genre-tabs" ref={genreTabsRef}>
+              <div className="genre-tabs" ref={genreTabsRef} onScroll={handleGenreScroll}>
                 {genres.map((genre) => (
                   <button
                     key={genre}
