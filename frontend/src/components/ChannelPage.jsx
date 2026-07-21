@@ -46,8 +46,10 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   }, [channel, user]);
 
   // Extract isOwnChannel outside to conditionally show admin tabs
-  const isOwnChannel = (targetUid && (userProfile?.uid === targetUid || user?.uid === targetUid)) ||
-                       (!targetUid && (userProfile?.email === channel?.email || userProfile?.uid === 'admin-mock-999'));
+  const isOwnChannel = Boolean(
+    (targetUid && ((userProfile?.uid && userProfile.uid === targetUid) || (user?.uid && user.uid === targetUid))) ||
+    (channel?.email && ((userProfile?.email && userProfile.email.toLowerCase() === channel.email.toLowerCase()) || (user?.email && user.email.toLowerCase() === channel.email.toLowerCase())))
+  );
 
   // Resolve live profile parity (matches userProfile when viewing own channel)
   const resolvedProfile = useMemo(() => {

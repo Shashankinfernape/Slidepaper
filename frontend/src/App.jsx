@@ -511,7 +511,10 @@ function AppContent() {
           if (matchedBundle && matchedBundle.author) {
             setActiveChannel(matchedBundle.author);
           } else {
-            setActiveChannel({ uid: channelId, displayName: channelId, name: channelId });
+            // Clean up raw database UID string if URL uses UID (e.g. /channel/lhjdk8l8ps...)
+            const isRawUid = channelId.length > 20 && !channelId.includes(' ');
+            const cleanFallbackName = isRawUid ? 'Creator' : channelId;
+            setActiveChannel({ uid: channelId, displayName: cleanFallbackName, name: cleanFallbackName });
           }
           setCurrentView('channel');
         }
