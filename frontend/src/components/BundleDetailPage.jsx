@@ -155,10 +155,10 @@ export default function BundleDetailPage({
       });
     }
 
-    // Always ensure 'Original' option exists!
-    const hasOriginal = filtered.some(p => p.id === 'original');
-    if (!hasOriginal) {
-      const nativeRatio = bundle.ratio && bundle.ratio.includes(':') ? bundle.ratio : null;
+    // Always ensure 'Original' option exists and has native ratio in label!
+    const nativeRatio = bundle.ratio && bundle.ratio.includes(':') ? bundle.ratio : null;
+    const originalIdx = filtered.findIndex(p => p.id === 'original');
+    if (originalIdx === -1) {
       filtered.unshift({
         id: 'original',
         label: nativeRatio ? `Original • ${nativeRatio}` : 'Original',
@@ -167,6 +167,12 @@ export default function BundleDetailPage({
         size: 'Full Size ZIP',
         formats: ['PNG', 'JPG']
       });
+    } else {
+      // Patch the label to always include native ratio
+      filtered[originalIdx] = {
+        ...filtered[originalIdx],
+        label: nativeRatio ? `Original • ${nativeRatio}` : 'Original',
+      };
     }
 
     return filtered;
