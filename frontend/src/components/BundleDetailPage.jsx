@@ -651,10 +651,10 @@ export default function BundleDetailPage({
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.78rem', flexWrap: 'wrap' }}>
+                    <div className="responsive-author-stats" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
                       <span>•</span>
-                      <span>{formatSubscribers(subscribersCount)} subscribers</span>
+                      <span>{formatSubscribers(subscribersCount)}</span>
                       <span>•</span>
                       <span>{resolvedAuthorProfile.totalBundles || 1} wallpapers</span>
                       <span>•</span>

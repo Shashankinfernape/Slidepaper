@@ -6319,6 +6319,10 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 8px;
 }
+.responsive-author-stats {
+  gap: 8px;
+  font-size: 0.78rem;
+}
 
 .responsive-subscribe-btn {
   padding: 0.7rem 1.5rem;
@@ -6357,6 +6361,12 @@ h1, h2, h3, h4, h5, h6 {
     gap: 5px;
     font-size: 0.62rem;
     flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+  .responsive-author-stats {
+    gap: 4px;
+    font-size: 0.6rem;
+    flex-wrap: nowrap !important;
     white-space: nowrap;
   }
   .responsive-bundle-title {
