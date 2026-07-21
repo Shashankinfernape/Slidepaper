@@ -70,9 +70,14 @@ function timeAgo(dateString) {
   return `${diffInYears} year${diffInYears === 1 ? '' : 's'} ago`;
 }
 
-function getOptionIcon(optionId) {
+function getOptionIcon(optionId, isLandscape = true) {
   const id = optionId.toLowerCase();
-  if (id.includes('desktop') || id.includes('ultrawide') || id.includes('triple') || id.includes('landscape') || id.includes('original')) {
+  
+  if (id.includes('original')) {
+    return isLandscape ? <Monitor size={14} style={{ marginRight: '6px', flexShrink: 0 }} /> : <Smartphone size={14} style={{ marginRight: '6px', flexShrink: 0 }} />;
+  }
+
+  if (id.includes('desktop') || id.includes('ultrawide') || id.includes('triple') || id.includes('landscape')) {
     return <Monitor size={14} style={{ marginRight: '6px', flexShrink: 0 }} />;
   }
   if (id.includes('mobile') || id.includes('phone') || id.includes('portrait')) {
@@ -557,7 +562,7 @@ export default function BundleDetailPage({
         });
       }
     });
-    return ['All', ...Array.from(uniqueTags)];
+    return ['All', 'Desktop', 'Mobile', ...Array.from(uniqueTags)];
   }, [allBundlesList]);
 
   const genresScrollRef = useRef(null);
@@ -589,7 +594,9 @@ export default function BundleDetailPage({
   const filteredRelatedBundles = useMemo(() => {
     const others = allBundlesList.filter((item) => item.id !== bundle.id);
     if (selectedSidebarGenre === 'All') return others;
-    return others.filter((item) => item.tags.includes(selectedSidebarGenre));
+    if (selectedSidebarGenre === 'Desktop') return others.filter((item) => item.orientation === 'landscape');
+    if (selectedSidebarGenre === 'Mobile') return others.filter((item) => item.orientation === 'portrait');
+    return others.filter((item) => item.tags && item.tags.includes(selectedSidebarGenre));
   }, [bundle.id, selectedSidebarGenre, allBundlesList]);
 
   const activeIndex = useMemo(() => {
@@ -798,7 +805,7 @@ export default function BundleDetailPage({
                             setDownloadState('idle');
                           }}
                         >
-                          {getOptionIcon(option.id)}
+                          {getOptionIcon(option.id, bundle.orientation === 'landscape')}
                           <span>{option.label}</span>
                         </button>
                       ))}
@@ -899,6 +906,8 @@ export default function BundleDetailPage({
                 className={`sidebar-genre-tab ${selectedSidebarGenre === genre ? 'active' : ''}`}
                 onClick={() => setSelectedSidebarGenre(genre)}
               >
+                {genre === 'Desktop' && <Monitor size={14} style={{ marginRight: '6px' }} />}
+                {genre === 'Mobile' && <Smartphone size={14} style={{ marginRight: '6px' }} />}
                 {genre}
               </button>
             ))}

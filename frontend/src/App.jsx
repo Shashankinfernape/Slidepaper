@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  ChevronDown, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle
+  ChevronDown, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
@@ -601,7 +601,7 @@ function AppContent() {
         });
       }
     });
-    return ['All', ...Array.from(uniqueTags)];
+    return ['All', 'Desktop', 'Mobile', ...Array.from(uniqueTags)];
   }, [bundles]);
 
   const handleGenreScroll = () => {
@@ -642,9 +642,16 @@ function AppContent() {
 
   // Filter wallpaper bundles by search query and selected genre
   const filteredBundles = bundles.filter((bundle) => {
-    const matchesGenre =
-      selectedGenre === 'All' ||
-      (bundle.tags && bundle.tags.includes(selectedGenre));
+    let matchesGenre = false;
+    if (selectedGenre === 'All') {
+      matchesGenre = true;
+    } else if (selectedGenre === 'Desktop') {
+      matchesGenre = bundle.orientation === 'landscape';
+    } else if (selectedGenre === 'Mobile') {
+      matchesGenre = bundle.orientation === 'portrait';
+    } else {
+      matchesGenre = bundle.tags && bundle.tags.includes(selectedGenre);
+    }
 
     const matchesSearch =
       bundle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -869,6 +876,8 @@ function AppContent() {
                     className={`genre-tab-btn ${selectedGenre === genre ? 'active' : ''}`}
                     onClick={() => setSelectedGenre(genre)}
                   >
+                    {genre === 'Desktop' && <Monitor size={14} style={{ marginRight: '6px' }} />}
+                    {genre === 'Mobile' && <Smartphone size={14} style={{ marginRight: '6px' }} />}
                     {genre}
                   </button>
                 ))}
