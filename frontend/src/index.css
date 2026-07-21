@@ -3904,7 +3904,8 @@ h1, h2, h3, h4, h5, h6 {
   gap: 1.25rem;
   min-width: 0;
   overflow: visible;
-  margin-top: 0.95rem; /* Matches the genre tab gap + slightly more for hover */
+  margin-top: 2.4rem; /* Push down to match genre tabs */
+  margin-bottom: -2.4rem; /* Prevent row height expansion so genre tabs don't move further down */
 }
 
 .bundle-youtube-main > *:not(.bundle-youtube-hero) {
