@@ -687,7 +687,7 @@ export default function BundleDetailPage({
                       <span>{formatSubscribers(subscribersCount)}</span>
                       <span>•</span>
                       <span>{resolvedAuthorProfile.totalBundles || 1} wallpapers</span>
-                      <div className="responsive-subscribe-container" style={{ marginLeft: '1rem' }}>
+                      <div className="responsive-subscribe-container" style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}>
                         <button
                           className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                           style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
