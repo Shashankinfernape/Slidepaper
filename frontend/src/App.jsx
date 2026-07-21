@@ -499,9 +499,20 @@ function AppContent() {
           }
         }
       } else if (path.startsWith('/channel/')) {
-        const channelId = path.split('/channel/')[1];
+        const channelId = decodeURIComponent(path.split('/channel/')[1]);
         if (channelId) {
-          setActiveChannel({ uid: channelId, name: channelId });
+          const channelIdLower = channelId.toLowerCase();
+          const matchedBundle = bundles.find(b => 
+            String(b.author?.uid || '').toLowerCase() === channelIdLower ||
+            String(b.author?.name || '').toLowerCase() === channelIdLower ||
+            String(b.author?.displayName || '').toLowerCase() === channelIdLower ||
+            String(b.author?.handle || '').toLowerCase() === channelIdLower
+          );
+          if (matchedBundle && matchedBundle.author) {
+            setActiveChannel(matchedBundle.author);
+          } else {
+            setActiveChannel({ uid: channelId, displayName: channelId, name: channelId });
+          }
           setCurrentView('channel');
         }
       } else if (path.startsWith('/privacy')) {

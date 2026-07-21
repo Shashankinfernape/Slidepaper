@@ -24,7 +24,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   const isSubscribed = targetUid ? subscriptions.includes(targetUid) : false;
   
   const [subscribeAnimEnabled, setSubscribeAnimEnabled] = useState(false);
-  const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 68400);
+  const [subscribersCount, setSubscribersCount] = useState(channel?.subscribers || 0);
   const [activeTab, setActiveTab] = useState('wallpapers'); // 'wallpapers' | 'monetization'
 
   // Fetch remote author profile if needed
@@ -54,20 +54,31 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
     const live = isOwnChannel ? userProfile : null;
     const remote = remoteAuthor || {};
 
+    // Check if any bundle in bundles array has author info for this creator
+    const targetSlug = String(channel?.uid || channel?.displayName || channel?.name || '').toLowerCase();
+    const bundleAuthorMatch = (bundles || []).find(b => {
+      const bUid = String(b.author?.uid || '').toLowerCase();
+      const bName = String(b.author?.name || b.author?.displayName || '').toLowerCase();
+      return (bUid && bUid === targetSlug) || (bName && bName === targetSlug);
+    })?.author || {};
+
+    const finalName = live?.displayName || remote.displayName || channel?.displayName || channel?.name || bundleAuthorMatch.displayName || bundleAuthorMatch.name || 'Creator';
+
     return {
+      ...bundleAuthorMatch,
       ...channel,
       ...remote,
       ...(live || {}),
-      displayName: live?.displayName || remote.displayName || channel?.displayName || channel?.name || 'Creator Studio',
-      photoURL: live?.photoURL || remote.photoURL || channel?.photoURL || channel?.avatar,
-      about: live?.about !== undefined ? live.about : (remote.about !== undefined ? remote.about : (channel?.about || '')),
-      bannerURL: live?.bannerURL || remote.bannerURL || channel?.bannerURL || '',
-      youtubeUrl: live?.youtubeUrl || remote.youtubeUrl || channel?.youtubeUrl || '',
-      instagramUrl: live?.instagramUrl || remote.instagramUrl || channel?.instagramUrl || '',
-      twitterUrl: live?.twitterUrl || remote.twitterUrl || channel?.twitterUrl || '',
-      joined: live?.joined || remote.joined || channel?.joined || null,
+      displayName: finalName,
+      photoURL: live?.photoURL || remote.photoURL || channel?.photoURL || channel?.avatar || bundleAuthorMatch.photoURL || bundleAuthorMatch.avatar,
+      about: live?.about !== undefined ? live.about : (remote.about !== undefined ? remote.about : (channel?.about || bundleAuthorMatch.about || '')),
+      bannerURL: live?.bannerURL || remote.bannerURL || channel?.bannerURL || bundleAuthorMatch.bannerURL || '',
+      youtubeUrl: live?.youtubeUrl || remote.youtubeUrl || channel?.youtubeUrl || bundleAuthorMatch.youtubeUrl || '',
+      instagramUrl: live?.instagramUrl || remote.instagramUrl || channel?.instagramUrl || bundleAuthorMatch.instagramUrl || '',
+      twitterUrl: live?.twitterUrl || remote.twitterUrl || channel?.twitterUrl || bundleAuthorMatch.twitterUrl || '',
+      joined: live?.joined || remote.joined || channel?.joined || bundleAuthorMatch.joined || null,
     };
-  }, [channel, remoteAuthor, userProfile, user]);
+  }, [channel, remoteAuthor, userProfile, user, bundles, isOwnChannel]);
 
   const channelName = resolvedProfile.displayName;
   const avatarUrl = getProxiedImageUrl(resolvedProfile.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
@@ -77,16 +88,32 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   // Filter wallpapers uploaded specifically by this creator
   const creatorBundles = useMemo(() => {
     if (!bundles || bundles.length === 0) return [];
+
+    const targetUid = String(resolvedProfile?.uid || channel?.uid || '').toLowerCase();
+    const targetName = String(resolvedProfile?.displayName || channel?.displayName || channel?.name || channelName || '').toLowerCase();
+    const targetEmail = String(resolvedProfile?.email || channel?.email || '').toLowerCase();
+
     return bundles.filter(b => {
-      if (resolvedProfile?.uid && b.author?.uid) {
-        return b.author.uid === resolvedProfile.uid;
-      }
-      if (resolvedProfile?.email && b.author?.email) {
-        return b.author.email.toLowerCase() === resolvedProfile.email.toLowerCase();
-      }
-      return b.author?.name === channelName;
+      const bUid = String(b.author?.uid || '').toLowerCase();
+      const bName = String(b.author?.name || b.author?.displayName || '').toLowerCase();
+      const bEmail = String(b.author?.email || '').toLowerCase();
+
+      // 1. Direct UID match
+      if (targetUid && bUid && targetUid === bUid) return true;
+
+      // 2. Direct Email match
+      if (targetEmail && bEmail && targetEmail === bEmail) return true;
+
+      // 3. Direct Name match
+      if (targetName && bName && targetName === bName) return true;
+
+      // 4. Flexible URL fallback match (if targetUid or targetName matches author name/uid)
+      if (targetUid && (bName === targetUid || bUid === targetUid)) return true;
+      if (targetName && (bUid === targetName || bName === targetName)) return true;
+
+      return false;
     });
-  }, [bundles, resolvedProfile, channelName]);
+  }, [bundles, resolvedProfile, channelName, channel]);
 
   const displayBundles = creatorBundles;
 
