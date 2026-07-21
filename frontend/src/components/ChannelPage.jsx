@@ -64,7 +64,9 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
       return (bUid && bUid === targetSlug) || (bName && bName === targetSlug);
     })?.author || {};
 
-    const finalName = live?.displayName || remote.displayName || channel?.displayName || channel?.name || bundleAuthorMatch.displayName || bundleAuthorMatch.name || 'Creator';
+    const hasRealName = Boolean(live?.displayName || remote.displayName || (channel?.displayName && channel.displayName !== 'Creator') || (channel?.name && channel.name !== 'Creator') || bundleAuthorMatch.displayName || bundleAuthorMatch.name);
+
+    const finalName = live?.displayName || remote.displayName || (channel?.displayName && channel.displayName !== 'Creator' ? channel.displayName : null) || (channel?.name && channel.name !== 'Creator' ? channel.name : null) || bundleAuthorMatch.displayName || bundleAuthorMatch.name || 'Creator';
 
     return {
       ...bundleAuthorMatch,
@@ -72,6 +74,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
       ...remote,
       ...(live || {}),
       displayName: finalName,
+      isPlaceholderName: !hasRealName,
       photoURL: live?.photoURL || remote.photoURL || channel?.photoURL || channel?.avatar || bundleAuthorMatch.photoURL || bundleAuthorMatch.avatar,
       about: live?.about !== undefined ? live.about : (remote.about !== undefined ? remote.about : (channel?.about || bundleAuthorMatch.about || '')),
       bannerURL: live?.bannerURL || remote.bannerURL || channel?.bannerURL || bundleAuthorMatch.bannerURL || '',
@@ -151,6 +154,23 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
   const formattedJoined = resolvedProfile.joined
     ? new Date(resolvedProfile.joined).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     : 'June 2026';
+
+  const isResolving = resolvedProfile.isPlaceholderName && (!bundles || bundles.length === 0);
+
+  if (isResolving) {
+    return (
+      <div className="youtube-channel-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', padding: '2rem 0' }}>
+        <div style={{ width: '100%', height: '200px', borderRadius: '18px', background: 'var(--bg-secondary)', opacity: 0.5, animation: 'pulse 1.5s infinite' }} />
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '0 1rem' }}>
+          <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'var(--bg-secondary)', opacity: 0.5 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ width: '180px', height: '24px', borderRadius: '6px', background: 'var(--bg-secondary)', opacity: 0.5 }} />
+            <div style={{ width: '120px', height: '16px', borderRadius: '4px', background: 'var(--bg-secondary)', opacity: 0.3 }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="youtube-channel-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
