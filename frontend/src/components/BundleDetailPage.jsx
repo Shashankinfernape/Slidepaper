@@ -620,7 +620,7 @@ export default function BundleDetailPage({
           </div>
 
           <div className="bundle-youtube-info">
-            <div className="bundle-youtube-title-row responsive-title-row" style={{ width: '100%', padding: '0 0.25rem' }}>
+            <div className="bundle-youtube-title-row responsive-title-row" style={{ width: '100%', padding: '0 0.65rem' }}>
               <div className="responsive-title-group" style={{ display: 'flex', flexDirection: 'column' }}>
                 <h1 className="bundle-youtube-title responsive-bundle-title" style={{ margin: 0 }}>{bundle.name}</h1>
                 
