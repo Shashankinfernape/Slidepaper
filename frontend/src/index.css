@@ -3904,6 +3904,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 1.25rem;
   min-width: 0;
   overflow: visible;
+  margin-top: 0.95rem; /* Matches the genre tab gap + slightly more for hover */
 }
 
 .bundle-youtube-main > *:not(.bundle-youtube-hero) {
@@ -3948,7 +3949,7 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 !important;
   border-radius: 0 !important;
   overflow: visible !important;
-  margin-top: 0.95rem !important;
+  margin-top: 0 !important;
 }
 
 .bundle-youtube-info {
@@ -4578,10 +4579,11 @@ h1, h2, h3, h4, h5, h6 {
 /* Dynamic Genre filter bar at the top of recommendations */
 .sidebar-genres-header-container {
   grid-column: span 2;
+  align-self: end;
   position: relative;
   display: flex;
   align-items: center;
-  margin-top: 0.85rem !important;
+  margin-top: 0 !important;
   margin-bottom: 0.85rem;
   width: 100%;
   min-width: 0;
