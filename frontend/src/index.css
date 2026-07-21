@@ -4801,6 +4801,30 @@ h1, h2, h3, h4, h5, h6 {
   .genre-scroll-gradient {
     display: none !important;
   }
+
+  .bundle-author-banner {
+    height: 70px;
+  }
+  .responsive-channel-header {
+    margin-top: -35px;
+    gap: 0.5rem !important;
+    flex-wrap: nowrap !important;
+  }
+  .bundle-author-avatar {
+    width: 72px;
+    height: 72px;
+    border-width: 2px;
+  }
+  .bundle-author-meta-container {
+    margin-top: 10px;
+    min-width: 0 !important;
+  }
+  .bundle-author-title {
+    font-size: 1.25rem;
+  }
+  .bundle-author-stats {
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 1100px) and (orientation: portrait), (max-width: 650px) {
