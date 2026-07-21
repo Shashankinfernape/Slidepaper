@@ -2323,7 +2323,13 @@ app.get('/api/authors/:authorUid/status', async (req, res) => {
 app.get('/api/authors/:authorUid/subscribers-list', async (req, res) => {
   const { authorUid } = req.params;
   try {
-    const author = await User.findOne({ uid: authorUid });
+    const author = await User.findOne({
+      $or: [
+        { uid: authorUid },
+        { displayName: new RegExp(`^${authorUid}$`, 'i') },
+        { email: authorUid.toLowerCase() }
+      ]
+    });
     if (!author) {
       return res.status(404).json({ error: 'Author not found' });
     }
