@@ -3855,7 +3855,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-page {
-  margin-top: 0.6rem !important;
+  margin-top: 0.3rem !important;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -3953,7 +3953,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bundle-youtube-info {
-  margin-top: -0.95rem !important;
+  margin-top: -1.2rem !important;
   padding: 0 0 0.15rem 0;
   display: flex;
   flex-direction: column;
@@ -4585,7 +4585,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   margin-top: 0 !important;
-  margin-bottom: 0.6rem !important;
+  margin-bottom: 0.3rem !important;
   width: 100%;
   min-width: 0;
 }
