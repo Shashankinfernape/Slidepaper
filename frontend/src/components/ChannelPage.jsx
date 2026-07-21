@@ -139,7 +139,12 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         await fetch(`${API_URL}/api/authors/${resolvedTargetUid}/subscribe`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: user.uid })
+          body: JSON.stringify({ 
+            uid: user.uid,
+            email: user.email || userProfile?.email,
+            displayName: user.displayName || userProfile?.displayName,
+            photoURL: user.photoURL || userProfile?.photoURL
+          })
         });
       } catch (_) {}
     }
