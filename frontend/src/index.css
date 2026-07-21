@@ -3904,8 +3904,6 @@ h1, h2, h3, h4, h5, h6 {
   gap: 1.25rem;
   min-width: 0;
   overflow: visible;
-  margin-top: 2.4rem; /* Push down to match genre tabs */
-  margin-bottom: -2.4rem; /* Prevent row height expansion so genre tabs don't move further down */
 }
 
 .bundle-youtube-main > *:not(.bundle-youtube-hero) {
@@ -4580,7 +4578,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Dynamic Genre filter bar at the top of recommendations */
 .sidebar-genres-header-container {
   grid-column: span 2;
-  align-self: end;
+  align-self: start;
   position: relative;
   display: flex;
   align-items: center;
