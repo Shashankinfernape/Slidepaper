@@ -704,9 +704,9 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flex: 1, alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', minWidth: '260px' }}>
-                    <div className="bundle-author-meta-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'nowrap', minWidth: 0 }}>
+                    <div className="bundle-author-meta-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
                       <h1 
                         className="bundle-author-title"
                         style={{ margin: 0, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', cursor: 'pointer' }}
@@ -721,7 +721,7 @@ export default function BundleDetailPage({
                       </span>
                     </div>
 
-                    <div className="responsive-author-stats" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                    <div className="responsive-author-stats" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
                       <span>•</span>
                       <span>{formatSubscribers(subscribersCount)}</span>

@@ -6235,6 +6235,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 .bundle-author-title {
   font-size: 1.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .responsive-title-row {
   display: flex;
@@ -6433,6 +6436,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 .bundle-author-title {
   font-size: 1.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .responsive-title-row {
   display: flex;
