@@ -872,13 +872,14 @@ export default function BundleDetailPage({
         </div>
 
         {/* The top right sidebar genre filters */}
-        <div className="sidebar-genres-header-container">
+        <div className="sidebar-genres-header-container genre-tabs-container-wrapper" style={{ position: 'relative', overflow: 'hidden' }}>
           {showLeftScroll && (
-            <button className="genre-scroll-btn left" onClick={() => scrollGenres('left')}>
-              <ChevronLeft size={20} />
-            </button>
+            <div className="genre-scroll-left-overlay">
+              <button className="genre-scroll-left-btn" onClick={() => scrollGenres('left')}>
+                <ChevronLeft size={20} />
+              </button>
+            </div>
           )}
-          {showLeftScroll && <div className="genre-scroll-gradient left" />}
           
           <div className="sidebar-genres-header" ref={genresScrollRef} onScroll={handleGenresScroll}>
             {genres.map((genre) => (
@@ -892,11 +893,12 @@ export default function BundleDetailPage({
             ))}
           </div>
 
-          {showRightScroll && <div className="genre-scroll-gradient right" />}
           {showRightScroll && (
-            <button className="genre-scroll-btn right" onClick={() => scrollGenres('right')}>
-              <ChevronRight size={20} />
-            </button>
+            <div className="genre-scroll-right-overlay">
+              <button className="genre-scroll-right-btn" onClick={() => scrollGenres('right')}>
+                <ChevronRight size={20} />
+              </button>
+            </div>
           )}
         </div>
 
