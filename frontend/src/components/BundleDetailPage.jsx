@@ -665,7 +665,8 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div className="bundle-author-meta-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px' }}>
+                  <div style={{ display: 'flex', flex: 1, alignItems: 'flex-end', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', minWidth: '260px' }}>
+                    <div className="bundle-author-meta-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <h1 
                         className="bundle-author-title"
@@ -709,6 +710,7 @@ export default function BundleDetailPage({
                       )}
                     </button>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
