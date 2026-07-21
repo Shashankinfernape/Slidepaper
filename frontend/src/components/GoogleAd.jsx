@@ -5,8 +5,8 @@ export default function GoogleAd({ type = 'leaderboard', client, slot }) {
   const adClient = client || import.meta.env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-6764886759571309';
   const adSlot = slot || (
     type === 'leaderboard' 
-      ? import.meta.env.VITE_ADSENSE_SLOT_LEADERBOARD 
-      : (type === 'sidebar' ? import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR : import.meta.env.VITE_ADSENSE_SLOT_INGRID)
+      ? (import.meta.env.VITE_ADSENSE_SLOT_LEADERBOARD || '') 
+      : (type === 'sidebar' ? (import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR || '') : (import.meta.env.VITE_ADSENSE_SLOT_INGRID || '7330250129'))
   );
 
   useEffect(() => {
