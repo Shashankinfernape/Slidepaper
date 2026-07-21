@@ -1529,7 +1529,8 @@ export default function AdminDashboard({ onBack, logout }) {
                     </button>
                   </div>
                 </div>
-              })
+              );
+            })
             )}
           </div>
         )}
