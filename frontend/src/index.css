@@ -6574,6 +6574,41 @@ h1, h2, h3, h4, h5, h6 {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  /* Channel Page Dynamic Scaling for Mobile Screens */
+  .channel-banner-container {
+    height: 120px !important;
+    border-radius: 12px !important;
+  }
+  .channel-header-block {
+    margin-top: -2.2rem !important;
+    gap: 0.75rem !important;
+  }
+  .channel-avatar-wrapper {
+    width: 72px !important;
+    height: 72px !important;
+    border-width: 3px !important;
+  }
+  .channel-info-wrapper {
+    margin-top: 1.6rem !important;
+    gap: 0.25rem !important;
+  }
+  .channel-title-heading {
+    font-size: 1.15rem !important;
+  }
+  .channel-meta-subscribe-row {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+  .channel-meta-items {
+    font-size: 0.72rem !important;
+    flex-wrap: wrap !important;
+    white-space: normal !important;
+  }
+  .channel-subscribe-btn {
+    padding: 0.35rem 0.85rem !important;
+    font-size: 0.75rem !important;
+  }
   
   /* Right side single grid (related bundles) phone view sizes */
 

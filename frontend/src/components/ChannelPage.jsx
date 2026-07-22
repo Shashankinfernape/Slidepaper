@@ -181,16 +181,19 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
     <div className="youtube-channel-page" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', position: 'relative' }}>
       
       {/* YouTube Style Channel Banner with integrated Glassmorphic Back Button */}
-      <div style={{
-        width: '100%',
-        height: '200px',
-        borderRadius: '18px',
-        background: bannerUrl ? `url(${bannerUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-        border: '1px solid var(--border-color)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.25)'
-      }}>
+      <div 
+        className="channel-banner-container"
+        style={{
+          width: '100%',
+          height: 'clamp(110px, 18vw, 220px)',
+          borderRadius: '18px',
+          background: bannerUrl ? `url(${bannerUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)'
+        }}
+      >
         {!bannerUrl && (
           <div style={{
             position: 'absolute',
@@ -216,7 +219,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
             WebkitBackdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.2)',
             color: '#ffffff',
-            padding: '0.55rem 1.2rem',
+            padding: '0.45rem 1rem',
             borderRadius: '999px',
             cursor: 'pointer',
             fontWeight: 600,
@@ -233,27 +236,33 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
       </div>
 
       {/* Channel Header Block */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '1.75rem',
-        padding: '0 0.5rem',
-        marginTop: '-2.5rem',
-        flexWrap: 'wrap'
-      }} className="channel-header-block">
+      <div 
+        className="channel-header-block responsive-channel-header"
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 'clamp(1rem, 2.5vw, 1.75rem)',
+          padding: '0 0.5rem',
+          marginTop: 'clamp(-3.5rem, -4vw, -2rem)',
+          flexWrap: 'nowrap'
+        }}
+      >
         
         {/* Channel Avatar */}
-        <div style={{
-          position: 'relative',
-          width: '128px',
-          height: '128px',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          border: '4px solid var(--bg-primary)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-          background: 'var(--bg-secondary)',
-          flexShrink: 0
-        }}>
+        <div 
+          className="channel-avatar-wrapper"
+          style={{
+            position: 'relative',
+            width: 'clamp(72px, 11vw, 128px)',
+            height: 'clamp(72px, 11vw, 128px)',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: '4px solid var(--bg-primary)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            background: 'var(--bg-secondary)',
+            flexShrink: 0
+          }}
+        >
           <img
             src={avatarUrl}
             alt={channelName}
@@ -262,11 +271,19 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           />
         </div>
 
-        {/* Channel Copy & Integrated Compact Profile Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
+        {/* Channel Copy & Integrated Profile Info */}
+        <div 
+          className="channel-info-wrapper"
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: 0, marginTop: 'clamp(1.2rem, 3vw, 2.5rem)' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{channelName}</h1>
+              <h1 
+                className="channel-title-heading"
+                style={{ margin: 0, fontSize: 'clamp(1.2rem, 2.2vw, 1.85rem)', fontWeight: 800, letterSpacing: '-0.5px' }}
+              >
+                {channelName}
+              </h1>
               <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff' }}>
                 <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
@@ -276,8 +293,14 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           </div>
 
           {/* Meta line with aligned Subscribe Action */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
+          <div 
+            className="channel-meta-subscribe-row"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0 }}
+          >
+            <div 
+              className="channel-meta-items"
+              style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 1vw, 10px)', color: 'var(--text-secondary)', fontSize: 'clamp(0.72rem, 1.1vw, 0.86rem)', flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            >
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{handleName}</span>
               <span>•</span>
               <span>{formatSubscribers(subscribersCount)} subscribers</span>
@@ -288,14 +311,15 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
             </div>
 
             {/* Subscribe Action aligned to same bottom line */}
-            <div style={{ flexShrink: 0 }}>
+            <div className="channel-subscribe-action" style={{ flexShrink: 0 }}>
               <button
+                className="channel-subscribe-btn"
                 onClick={handleSubscribeToggle}
                 style={{
-                  padding: '0.5rem 1.4rem',
+                  padding: 'clamp(0.35rem, 0.8vw, 0.5rem) clamp(0.9rem, 1.5vw, 1.4rem)',
                   borderRadius: '999px',
                   fontWeight: 700,
-                  fontSize: '0.88rem',
+                  fontSize: 'clamp(0.75rem, 1vw, 0.88rem)',
                   cursor: 'pointer',
                   border: isSubscribed ? '1px solid var(--border-color)' : 'none',
                   transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
@@ -304,7 +328,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
                   boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px'
                 }}
               >
                 {isSubscribed ? (
