@@ -240,10 +240,10 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         className="channel-header-block responsive-channel-header"
         style={{
           display: 'flex',
-          alignItems: 'flex-start',
-          gap: 'clamp(1rem, 2.5vw, 1.75rem)',
+          alignItems: 'center',
+          gap: 'clamp(0.75rem, 1.8vw, 1.25rem)',
           padding: '0 0.5rem',
-          marginTop: 'clamp(-3.5rem, -4vw, -2rem)',
+          marginTop: 'calc(-1 * clamp(32px, 3.5vw, 44px))',
           flexWrap: 'nowrap'
         }}
       >
@@ -257,7 +257,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
             height: 'clamp(64px, 7vw, 88px)',
             borderRadius: '50%',
             overflow: 'hidden',
-            border: '3px solid var(--bg-primary)',
+            border: '4px solid var(--bg-primary)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             background: 'var(--bg-secondary)',
             flexShrink: 0
@@ -274,7 +274,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         {/* Channel Copy & Integrated Profile Info */}
         <div 
           className="channel-info-wrapper"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.05rem', flex: 1, minWidth: 0, marginTop: 'clamp(0.8rem, 2vw, 1.4rem)' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1, minWidth: 0, marginTop: 'calc(clamp(32px, 3.5vw, 44px) + 0.2rem)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>

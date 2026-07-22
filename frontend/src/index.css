@@ -6577,31 +6577,31 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Channel Page Dynamic Scaling for Mobile Screens */
   .channel-banner-container {
-    height: 120px !important;
+    height: clamp(100px, 26vw, 220px) !important;
     border-radius: 12px !important;
   }
   .channel-header-block {
-    margin-top: -2.2rem !important;
+    margin-top: calc(-1 * clamp(28px, 6vw, 44px)) !important;
     gap: 0.75rem !important;
   }
   .channel-avatar-wrapper {
-    width: 72px !important;
-    height: 72px !important;
+    width: clamp(56px, 14vw, 88px) !important;
+    height: clamp(56px, 14vw, 88px) !important;
     border-width: 3px !important;
   }
   .channel-info-wrapper {
-    margin-top: 1.6rem !important;
-    gap: 0.25rem !important;
+    margin-top: calc(clamp(28px, 6vw, 44px) + 0.1rem) !important;
+    gap: 0.1rem !important;
   }
   .channel-title-heading {
-    font-size: 1.15rem !important;
+    font-size: clamp(1.05rem, 3.5vw, 1.45rem) !important;
   }
   .channel-meta-subscribe-row {
     flex-wrap: wrap !important;
     gap: 0.4rem !important;
   }
   .channel-meta-items {
-    font-size: 0.72rem !important;
+    font-size: clamp(0.68rem, 2.2vw, 0.82rem) !important;
     flex-wrap: wrap !important;
     white-space: normal !important;
   }
