@@ -757,36 +757,33 @@ export default function BundleDetailPage({
                       </span>
                     </div>
 
-                    {/* Meta Stats row with inline Subscribe button */}
-                    <div className="responsive-author-stats-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', width: '100%', flexWrap: 'nowrap', minWidth: 0 }}>
-                      <div className="responsive-author-stats" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
-                        <span>•</span>
-                        <span>{formatSubscribers(subscribersCount)}</span>
-                        <span>•</span>
-                        <span>{resolvedAuthorProfile.totalBundles || 1} wallpapers</span>
-                      </div>
-
-                      <div className="responsive-subscribe-container" style={{ flexShrink: 0 }}>
-                        <button
-                          className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
-                          style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
-                          onClick={() => {
-                            setSubscribeAnimEnabled(true);
-                            runAuthedAction('subscribe to this author', handleSubscribeToggle);
-                          }}
-                        >
-                          {isSubscribed ? (
-                            <>
-                              <Bell size={18} />
-                              <span>Subscribed</span>
-                            </>
-                          ) : (
-                            <span>Subscribe</span>
-                          )}
-                        </button>
-                      </div>
+                    <div className="responsive-author-stats" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>@{resolvedAuthorProfile.displayName ? resolvedAuthorProfile.displayName.toLowerCase().replace(/\s+/g, '') : 'creator'}</span>
+                      <span>•</span>
+                      <span>{formatSubscribers(subscribersCount)}</span>
+                      <span>•</span>
+                      <span>{resolvedAuthorProfile.totalBundles || 1} wallpapers</span>
                     </div>
+                  </div>
+
+                  <div className="responsive-subscribe-container">
+                    <button
+                      className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                      style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                      onClick={() => {
+                        setSubscribeAnimEnabled(true);
+                        runAuthedAction('subscribe to this author', handleSubscribeToggle);
+                      }}
+                    >
+                      {isSubscribed ? (
+                        <>
+                          <Bell size={18} />
+                          <span>Subscribed</span>
+                        </>
+                      ) : (
+                        <span>Subscribe</span>
+                      )}
+                    </button>
                   </div>
                 </div>
                 </div>
