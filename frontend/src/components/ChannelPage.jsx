@@ -274,13 +274,13 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         {/* Channel Copy & Integrated Profile Info */}
         <div 
           className="channel-info-wrapper"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: 0, marginTop: 'clamp(0.8rem, 2vw, 1.4rem)' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.05rem', flex: 1, minWidth: 0, marginTop: 'clamp(0.8rem, 2vw, 1.4rem)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <h1 
                 className="channel-title-heading"
-                style={{ margin: 0, fontSize: 'clamp(1.15rem, 1.6vw, 1.45rem)', fontWeight: 800, letterSpacing: '-0.3px' }}
+                style={{ margin: 0, fontSize: 'clamp(1.15rem, 1.6vw, 1.45rem)', fontWeight: 800, letterSpacing: '-0.3px', lineHeight: '1.1' }}
               >
                 {channelName}
               </h1>
@@ -295,7 +295,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           {/* Meta line with Subscribe Action sitting on exact same line */}
           <div 
             className="channel-meta-subscribe-row"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0 }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0, marginTop: '0' }}
           >
             <div 
               className="channel-meta-items"
