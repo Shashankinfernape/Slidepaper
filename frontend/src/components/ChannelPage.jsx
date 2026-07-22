@@ -295,7 +295,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           {/* Meta line with aligned Subscribe Action */}
           <div 
             className="channel-meta-subscribe-row"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0, marginTop: '0.1rem' }}
+            style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0, marginTop: '0.15rem' }}
           >
             <div 
               className="channel-meta-items"
@@ -309,7 +309,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
             </div>
 
             {/* Subscribe Action aligned to same bottom line */}
-            <div className="channel-subscribe-action" style={{ flexShrink: 0 }}>
+            <div className="channel-subscribe-action" style={{ flexShrink: 0, alignSelf: 'flex-end' }}>
               <button
                 className={`youtube-subscribe-btn channel-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                 style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
@@ -374,7 +374,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
       </div>
 
       {/* Clean Tab Navigation */}
-      <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid var(--border-color)', margin: '0.3rem 0 0.75rem 0' }}>
+      <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid var(--border-color)', margin: '0.75rem 0 1rem 0', width: '100%' }}>
         <button
           onClick={() => setActiveTab('wallpapers')}
           style={{
