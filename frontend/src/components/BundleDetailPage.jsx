@@ -740,7 +740,7 @@ export default function BundleDetailPage({
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flex: 1, alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'nowrap', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'nowrap', minWidth: 0 }}>
                     <div className="bundle-author-meta-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
                       <h1 
@@ -766,7 +766,7 @@ export default function BundleDetailPage({
                     </div>
                   </div>
 
-                  <div className="responsive-subscribe-container" style={{ marginTop: 'auto' }}>
+                  <div className="responsive-subscribe-container">
                     <button
                       className={`youtube-subscribe-btn responsive-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                       style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
