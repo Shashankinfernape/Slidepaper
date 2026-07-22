@@ -253,11 +253,11 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           className="channel-avatar-wrapper"
           style={{
             position: 'relative',
-            width: 'clamp(72px, 11vw, 128px)',
-            height: 'clamp(72px, 11vw, 128px)',
+            width: 'clamp(64px, 7vw, 88px)',
+            height: 'clamp(64px, 7vw, 88px)',
             borderRadius: '50%',
             overflow: 'hidden',
-            border: '4px solid var(--bg-primary)',
+            border: '3px solid var(--bg-primary)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             background: 'var(--bg-secondary)',
             flexShrink: 0
@@ -274,17 +274,17 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         {/* Channel Copy & Integrated Profile Info */}
         <div 
           className="channel-info-wrapper"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: 0, marginTop: 'clamp(1.2rem, 3vw, 2.5rem)' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: 0, marginTop: 'clamp(0.8rem, 2vw, 1.4rem)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
               <h1 
                 className="channel-title-heading"
-                style={{ margin: 0, fontSize: 'clamp(1.2rem, 2.2vw, 1.85rem)', fontWeight: 800, letterSpacing: '-0.5px' }}
+                style={{ margin: 0, fontSize: 'clamp(1.15rem, 1.6vw, 1.45rem)', fontWeight: 800, letterSpacing: '-0.3px' }}
               >
                 {channelName}
               </h1>
-              <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff' }}>
+              <span className="verified-badge-circle" title="Verified Creator" style={{ width: '16px', height: '16px', background: '#3b82f6', color: '#fff' }}>
                 <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
                 </svg>
@@ -299,7 +299,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           >
             <div 
               className="channel-meta-items"
-              style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 1vw, 10px)', color: 'var(--text-secondary)', fontSize: 'clamp(0.72rem, 1.1vw, 0.86rem)', flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 'clamp(4px, 0.8vw, 8px)', color: 'var(--text-secondary)', fontSize: 'clamp(0.74rem, 0.95vw, 0.82rem)', flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
             >
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{handleName}</span>
               <span>•</span>
