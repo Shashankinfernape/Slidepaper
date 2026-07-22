@@ -264,24 +264,59 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
 
         {/* Channel Copy & Integrated Compact Profile Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: '260px', marginTop: '2.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{channelName}</h1>
-            <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff' }}>
-              <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
-              </svg>
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: '1.85rem', fontWeight: 800, letterSpacing: '-0.5px' }}>{channelName}</h1>
+              <span className="verified-badge-circle" title="Verified Creator" style={{ width: '18px', height: '18px', background: '#3b82f6', color: '#fff' }}>
+                <svg viewBox="0 0 24 24" className="verified-badge-svg" style={{ width: '100%', height: '100%' }}>
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor" />
+                </svg>
+              </span>
+            </div>
           </div>
 
-          {/* Compact Meta Line along profile */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{handleName}</span>
-            <span>•</span>
-            <span>{formatSubscribers(subscribersCount)} subscribers</span>
-            <span>•</span>
-            <span>{displayBundles.length} wallpapers</span>
-            <span>•</span>
-            <span>Joined {formattedJoined}</span>
+          {/* Meta line with aligned Subscribe Action */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', fontSize: '0.86rem', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{handleName}</span>
+              <span>•</span>
+              <span>{formatSubscribers(subscribersCount)} subscribers</span>
+              <span>•</span>
+              <span>{displayBundles.length} wallpapers</span>
+              <span>•</span>
+              <span>Joined {formattedJoined}</span>
+            </div>
+
+            {/* Subscribe Action aligned to same bottom line */}
+            <div style={{ flexShrink: 0 }}>
+              <button
+                onClick={handleSubscribeToggle}
+                style={{
+                  padding: '0.5rem 1.4rem',
+                  borderRadius: '999px',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  border: isSubscribed ? '1px solid var(--border-color)' : 'none',
+                  transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
+                  background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
+                  color: isSubscribed ? 'var(--text-primary)' : '#000000',
+                  boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isSubscribed ? (
+                  <>
+                    <Check size={16} />
+                    <span>Subscribed</span>
+                  </>
+                ) : (
+                  <span>Subscribe</span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Compact Bio along profile */}
@@ -320,37 +355,6 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
               )}
             </div>
           )}
-        </div>
-
-        {/* YouTube Subscribe Action */}
-        <div style={{ marginTop: '2.5rem', flexShrink: 0 }}>
-          <button
-            onClick={handleSubscribeToggle}
-            style={{
-              padding: '0.75rem 1.8rem',
-              borderRadius: '999px',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: 'pointer',
-              border: isSubscribed ? '1px solid var(--border-color)' : 'none',
-              transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
-              background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
-              color: isSubscribed ? 'var(--text-primary)' : '#000000',
-              boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            {isSubscribed ? (
-              <>
-                <Check size={16} />
-                <span>Subscribed</span>
-              </>
-            ) : (
-              <span>Subscribe</span>
-            )}
-          </button>
         </div>
       </div>
 
