@@ -274,13 +274,13 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
         {/* Channel Copy & Integrated Profile Info */}
         <div 
           className="channel-info-wrapper"
-          style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', flex: 1, minWidth: 0, marginTop: 'clamp(1.2rem, 3vw, 2.5rem)' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', flex: 1, minWidth: 0, marginTop: 'clamp(1.2rem, 3vw, 2.5rem)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <h1 
                 className="channel-title-heading"
-                style={{ margin: 0, fontSize: 'clamp(1.2rem, 2.2vw, 1.85rem)', fontWeight: 800, letterSpacing: '-0.5px' }}
+                style={{ margin: 0, fontSize: 'clamp(1.2rem, 2.2vw, 1.85rem)', fontWeight: 800, letterSpacing: '-0.5px', lineHeight: 1.1 }}
               >
                 {channelName}
               </h1>
@@ -295,7 +295,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           {/* Meta line with aligned Subscribe Action */}
           <div 
             className="channel-meta-subscribe-row"
-            style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0, marginTop: 'auto' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0, marginTop: '0.1rem' }}
           >
             <div 
               className="channel-meta-items"
@@ -309,7 +309,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
             </div>
 
             {/* Subscribe Action aligned to same bottom line */}
-            <div className="channel-subscribe-action" style={{ flexShrink: 0, marginTop: 'auto' }}>
+            <div className="channel-subscribe-action" style={{ flexShrink: 0 }}>
               <button
                 className={`youtube-subscribe-btn channel-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
                 style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
@@ -374,7 +374,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
       </div>
 
       {/* Clean Tab Navigation */}
-      <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid var(--border-color)', margin: '1rem 0 1.5rem 0' }}>
+      <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid var(--border-color)', margin: '0.3rem 0 0.75rem 0' }}>
         <button
           onClick={() => setActiveTab('wallpapers')}
           style={{
