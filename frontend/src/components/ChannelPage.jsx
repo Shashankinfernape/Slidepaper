@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Check, ArrowLeft, DollarSign, Grid } from 'lucide-react';
+import { Check, Bell, ArrowLeft, DollarSign, Grid } from 'lucide-react';
 import WallpaperGrid from './WallpaperGrid';
 import MonetizationDashboard from './MonetizationDashboard';
 import { getProxiedImageUrl } from './AdminDashboard';
@@ -295,7 +295,7 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
           {/* Meta line with aligned Subscribe Action */}
           <div 
             className="channel-meta-subscribe-row"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0 }}
+            style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '0.8rem', flexWrap: 'nowrap', minWidth: 0, marginTop: 'auto' }}
           >
             <div 
               className="channel-meta-items"
@@ -306,34 +306,25 @@ export default function ChannelPage({ channel, bundles = [], onSelectBundle, onB
               <span>{formatSubscribers(subscribersCount)} subscribers</span>
               <span>•</span>
               <span>{displayBundles.length} wallpapers</span>
-              <span>•</span>
-              <span>Joined {formattedJoined}</span>
             </div>
 
             {/* Subscribe Action aligned to same bottom line */}
-            <div className="channel-subscribe-action" style={{ flexShrink: 0 }}>
+            <div className="channel-subscribe-action" style={{ flexShrink: 0, marginTop: 'auto' }}>
               <button
-                className="channel-subscribe-btn"
-                onClick={handleSubscribeToggle}
-                style={{
-                  padding: 'clamp(0.35rem, 0.8vw, 0.5rem) clamp(0.9rem, 1.5vw, 1.4rem)',
-                  borderRadius: '999px',
-                  fontWeight: 700,
-                  fontSize: 'clamp(0.75rem, 1vw, 0.88rem)',
-                  cursor: 'pointer',
-                  border: isSubscribed ? '1px solid var(--border-color)' : 'none',
-                  transition: subscribeAnimEnabled ? 'all 0.2s' : 'none',
-                  background: isSubscribed ? 'var(--bg-secondary)' : '#ffffff',
-                  color: isSubscribed ? 'var(--text-primary)' : '#000000',
-                  boxShadow: isSubscribed ? 'none' : '0 4px 16px rgba(255,255,255,0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
+                className={`youtube-subscribe-btn channel-subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+                style={!subscribeAnimEnabled ? { transition: 'none' } : {}}
+                onClick={() => {
+                  setSubscribeAnimEnabled(true);
+                  if (user && user.uid === resolvedTargetUid) {
+                    alert('You cannot subscribe to yourself!');
+                    return;
+                  }
+                  handleSubscribeToggle();
                 }}
               >
                 {isSubscribed ? (
                   <>
-                    <Check size={16} />
+                    <Bell size={18} />
                     <span>Subscribed</span>
                   </>
                 ) : (
