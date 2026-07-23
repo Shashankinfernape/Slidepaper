@@ -6744,17 +6744,27 @@ h1, h2, h3, h4, h5, h6 {
    MR. BEAN CINEMATIC SPOTLIGHT & BLINKING LOGIN
    ========================================== */
 
-/* Login Button Blinking Animation */
+/* Subtle Letter Glow Blink for Login Button Text */
 .login-blinking-creator {
-  animation: loginFontBlink 0.6s cubic-bezier(0.16, 1, 0.3, 1) 6 alternate !important;
-  box-shadow: 0 0 25px rgba(234, 179, 8, 0.9), 0 0 45px rgba(255, 255, 255, 0.9) !important;
-  border-color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.7) !important;
+  transition: border-color 0.3s ease;
 }
 
-@keyframes loginFontBlink {
-  0% { transform: scale(1); background: var(--text-primary); color: var(--bg-primary); }
-  50% { transform: scale(1.15); background: #fbbf24; color: #000000; filter: brightness(1.4); }
-  100% { transform: scale(1); background: var(--text-primary); color: var(--bg-primary); }
+.login-blinking-creator span {
+  animation: loginLetterGlow 0.5s ease-in-out 6 alternate !important;
+}
+
+@keyframes loginLetterGlow {
+  0% {
+    opacity: 0.65;
+    color: var(--text-primary);
+    text-shadow: none;
+  }
+  100% {
+    opacity: 1;
+    color: #fbbf24;
+    text-shadow: 0 0 8px rgba(251, 191, 36, 0.8), 0 0 16px rgba(251, 191, 36, 0.4);
+  }
 }
 
 /* Floating Login Tooltip Bubble */
