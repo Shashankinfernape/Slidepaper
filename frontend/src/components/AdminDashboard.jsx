@@ -235,7 +235,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [bundles, setBundles] = useState([]);
   const [loadingBundles, setLoadingBundles] = useState(true);
-  const [bundleFilter, setBundleFilter] = useState('all');
+  const [bundleFilter, setBundleFilter] = useState(() => isCreatorMode ? 'mine' : 'all');
   const [driveStatus, setDriveStatus] = useState(null);
   const [loadingDrive, setLoadingDrive] = useState(false);
   const [rebuildingCache, setRebuildingCache] = useState(false);
@@ -704,12 +704,24 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
     }
   }, [activeTab, userProfile?.uid]);
 
-  // Compute aggregate stats from fetched bundles
+  // Compute aggregate stats (scoped to logged-in creator if in creator mode)
+  const myUploadedBundles = React.useMemo(() => {
+    if (!bundles || !bundles.length) return [];
+    if (!user) return [];
+    return bundles.filter(b => 
+      (b.author?.uid && user.uid && String(b.author.uid) === String(user.uid)) ||
+      (b.author?.email && user.email && String(b.author.email).toLowerCase() === String(user.email).toLowerCase()) ||
+      (b.authorId && user.uid && String(b.authorId) === String(user.uid))
+    );
+  }, [bundles, user]);
+
+  const targetBundles = isCreatorMode ? myUploadedBundles : bundles;
+
   const stats = {
-    bundlesCount: bundles.length,
-    totalViews: bundles.reduce((acc, b) => acc + (b.stats?.views || 0), 0),
-    totalLikes: bundles.reduce((acc, b) => acc + (b.stats?.likes || 0), 0),
-    totalDownloads: bundles.reduce((acc, b) => acc + (b.stats?.downloads || 0), 0),
+    bundlesCount: targetBundles.length,
+    totalViews: targetBundles.reduce((acc, b) => acc + (b.stats?.views || 0), 0),
+    totalLikes: targetBundles.reduce((acc, b) => acc + (b.stats?.likes || 0), 0),
+    totalDownloads: targetBundles.reduce((acc, b) => acc + (b.stats?.downloads || 0), 0),
   };
 
   // Drag and Drop handlers
@@ -1221,42 +1233,65 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
               <div className="admin-stat-card">
                 <span className="stat-label">Wallpaper Bundles</span>
                 <span className="stat-value">{stats.bundlesCount}</span>
-                <span className="stat-sub">Active in feed</span>
+                <span className="stat-sub">{isCreatorMode ? 'Your published drops' : 'Active in feed'}</span>
               </div>
               <div className="admin-stat-card">
                 <span className="stat-label">Total Views</span>
                 <span className="stat-value">{new Intl.NumberFormat().format(stats.totalViews)}</span>
-                <span className="stat-sub">Across all bundles</span>
+                <span className="stat-sub">{isCreatorMode ? 'Across your drops' : 'Across all bundles'}</span>
               </div>
               <div className="admin-stat-card">
                 <span className="stat-label">Total Downloads</span>
                 <span className="stat-value">{new Intl.NumberFormat().format(stats.totalDownloads)}</span>
-                <span className="stat-sub">ZIP files processed</span>
+                <span className="stat-sub">{isCreatorMode ? 'Your pack downloads' : 'ZIP files processed'}</span>
               </div>
               <div className="admin-stat-card">
                 <span className="stat-label">Total Likes</span>
                 <span className="stat-value">{new Intl.NumberFormat().format(stats.totalLikes)}</span>
-                <span className="stat-sub">Public upvotes</span>
+                <span className="stat-sub">{isCreatorMode ? 'Your drop upvotes' : 'Public upvotes'}</span>
               </div>
             </div>
 
             {/* Quick Actions Panel */}
             <div className="admin-card" style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 600 }}>Quick Actions</h3>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  onClick={handleRebuildCache} 
-                  disabled={rebuildingCache}
-                  className="admin-btn primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <RefreshCw size={15} className={rebuildingCache ? 'spin' : ''} />
-                  <span>{rebuildingCache ? 'Rebuilding...' : 'Rebuild Zip Cache'}</span>
-                </button>
-                <button onClick={checkDriveStatus} className="admin-btn secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <RefreshCw size={15} />
-                  <span>Refresh System Diagnostics</span>
-                </button>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {isCreatorMode ? (
+                  <>
+                    <button 
+                      onClick={() => setActiveTab('upload')} 
+                      className="admin-btn primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Plus size={15} />
+                      <span>+ Create Wallpaper Bundle</span>
+                    </button>
+                    <button 
+                      onClick={() => { setActiveTab('bundles'); setBundleFilter('mine'); }} 
+                      className="admin-btn secondary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <HardDrive size={15} />
+                      <span>View My Uploads</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={handleRebuildCache} 
+                      disabled={rebuildingCache}
+                      className="admin-btn primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <RefreshCw size={15} className={rebuildingCache ? 'spin' : ''} />
+                      <span>{rebuildingCache ? 'Rebuilding...' : 'Rebuild Zip Cache'}</span>
+                    </button>
+                    <button onClick={checkDriveStatus} className="admin-btn secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <RefreshCw size={15} />
+                      <span>Refresh System Diagnostics</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
