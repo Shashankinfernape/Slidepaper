@@ -549,9 +549,18 @@ function AppContent() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isUnlockingCurator, setIsUnlockingCurator] = useState(false);
+  const [isBlinkingLogin, setIsBlinkingLogin] = useState(false);
+  const [loginTooltipMsg, setLoginTooltipMsg] = useState('');
+  const [mrBeanPhase, setMrBeanPhase] = useState(null); // null | 'darkness' | 'spotlight'
 
   const handleDropClick = () => {
     if (!user) {
+      setIsBlinkingLogin(true);
+      setLoginTooltipMsg('Login to become a creator');
+      setTimeout(() => {
+        setIsBlinkingLogin(false);
+        setLoginTooltipMsg('');
+      }, 4000);
       loginWithGoogle();
       return;
     }
@@ -562,9 +571,13 @@ function AppContent() {
       return;
     }
 
-    // First-time unlock: Candlelight Vignette + Dr. Strange Mystical Portal Ring in Profile Dropdown!
+    // First-time creator unlock: Cinematic Cartoonish Mr. Bean Spotlight Animation!
     setShowProfileMenu(true);
-    setIsUnlockingCurator(true);
+    setMrBeanPhase('darkness'); // Phase 1: Total blackout/darkness for 1s
+
+    setTimeout(() => {
+      setMrBeanPhase('spotlight'); // Phase 2: White circular spotlight beam flashing around profile menu
+    }, 1000);
 
     setTimeout(async () => {
       try {
@@ -580,12 +593,14 @@ function AppContent() {
       } catch (err) {
         console.error('Error activating curator status:', err);
       } finally {
-        setIsUnlockingCurator(false);
+        confetti({ particleCount: 160, spread: 90, origin: { y: 0.2 } });
+        setMrBeanPhase(null);
         setShowProfileMenu(false);
+        // Take them initially to their profile settings page inside Creator Studio!
         setCurrentView('curator');
-        window.history.pushState(null, '', '/curator');
+        window.history.pushState(null, '', '/curator/profile');
       }
-    }, 1800);
+    }, 2800);
   };
 
   // Refs for closing dropdowns when clicking outside
@@ -913,11 +928,31 @@ function AppContent() {
               )}
             </div>
           ) : (
-            <button className="auth-btn-google" onClick={loginWithGoogle}>
-              <span>Login</span>
-            </button>
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              {loginTooltipMsg && (
+                <div className="login-creator-tooltip-bubble">
+                  ✨ {loginTooltipMsg}
+                </div>
+              )}
+              <button 
+                className={`auth-btn-google ${isBlinkingLogin ? 'login-blinking-creator' : ''}`} 
+                onClick={loginWithGoogle}
+              >
+                <span>Login</span>
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Cartoonish Mr. Bean Cinematic Spotlight Overlays */}
+        {mrBeanPhase === 'darkness' && (
+          <div className="mrbean-darkness-backdrop" />
+        )}
+        {mrBeanPhase === 'spotlight' && (
+          <div className="mrbean-spotlight-container">
+            <div className="mrbean-spotlight-circle" />
+          </div>
+        )}
 
         {/* Genre Tabs Bar (Only on feed view) */}
         {currentView === 'feed' && (

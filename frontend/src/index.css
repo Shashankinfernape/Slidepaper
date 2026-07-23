@@ -6740,6 +6740,98 @@ h1, h2, h3, h4, h5, h6 {
   100% { opacity: 1; transform: scale(1.05); }
 }
 
+/* ==========================================
+   MR. BEAN CINEMATIC SPOTLIGHT & BLINKING LOGIN
+   ========================================== */
+
+/* Login Button Blinking Animation */
+.login-blinking-creator {
+  animation: loginFontBlink 0.6s cubic-bezier(0.16, 1, 0.3, 1) 6 alternate !important;
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.9), 0 0 45px rgba(255, 255, 255, 0.9) !important;
+  border-color: #fbbf24 !important;
+}
+
+@keyframes loginFontBlink {
+  0% { transform: scale(1); background: var(--text-primary); color: var(--bg-primary); }
+  50% { transform: scale(1.15); background: #fbbf24; color: #000000; filter: brightness(1.4); }
+  100% { transform: scale(1); background: var(--text-primary); color: var(--bg-primary); }
+}
+
+/* Floating Login Tooltip Bubble */
+.login-creator-tooltip-bubble {
+  position: absolute;
+  top: 115%;
+  right: 0;
+  white-space: nowrap;
+  background: #fbbf24;
+  color: #000000;
+  font-weight: 800;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.5);
+  animation: tooltipPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 10001;
+}
+
+.login-creator-tooltip-bubble::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #fbbf24;
+}
+
+@keyframes tooltipPop {
+  from { opacity: 0; transform: translateY(-8px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Mr. Bean Cinematic Full-Screen Darkness (Phase 1) */
+.mrbean-darkness-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #000000;
+  animation: mrBeanDarknessFade 0.4s ease-out forwards;
+}
+
+@keyframes mrBeanDarknessFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mr. Bean White Circular Spotlight Light (Phase 2) */
+.mrbean-spotlight-container {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  background: radial-gradient(circle at top right, transparent 80px, rgba(0,0,0,0.96) 240px);
+}
+
+.mrbean-spotlight-circle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 220px;
+  height: 240px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.94), 0 0 60px rgba(255, 255, 255, 1), inset 0 0 40px rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.08);
+  border: 3px solid #ffffff;
+  animation: mrBeanFlashSpotlight 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes mrBeanFlashSpotlight {
+  0% { transform: scale(0.95); opacity: 0.85; filter: drop-shadow(0 0 20px #ffffff); }
+  100% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 50px #ffffff); }
+}
+
 /* Studio & Drop Modals Backdrop */
 .drop-studio-backdrop {
   position: fixed;

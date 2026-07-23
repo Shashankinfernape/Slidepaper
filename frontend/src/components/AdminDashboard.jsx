@@ -217,7 +217,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
         : ['overview', 'drive', 'bundles', 'reviews', 'upload', 'monetize', 'profile', 'subscribers'];
       if (validTabs.includes(tab)) return tab;
     }
-    return 'overview';
+    return isCreatorMode ? 'profile' : 'overview';
   };
   const [activeTab, setActiveTabState] = useState(getInitialTab);
 
