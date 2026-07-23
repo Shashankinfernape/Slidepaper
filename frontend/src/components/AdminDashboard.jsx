@@ -1438,39 +1438,41 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
         {activeTab === 'bundles' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Manage Wallpapers</h3>
-              <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--bg-primary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <button
-                  onClick={() => setBundleFilter('all')}
-                  style={{
-                    padding: '0.35rem 0.8rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: bundleFilter === 'all' ? 'var(--bg-primary)' : 'transparent',
-                    color: bundleFilter === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  All Creators ({bundles.length})
-                </button>
-                <button
-                  onClick={() => setBundleFilter('mine')}
-                  style={{
-                    padding: '0.35rem 0.8rem',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: bundleFilter === 'mine' ? 'var(--bg-primary)' : 'transparent',
-                    color: bundleFilter === 'mine' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  My Uploads ({bundles.filter(b => (user?.uid && b.author?.uid === user.uid) || (user?.email && b.author?.email === user.email)).length})
-                </button>
-              </div>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>{isCreatorMode ? 'My Wallpaper Drops' : 'Manage Wallpapers'}</h3>
+              {!isCreatorMode && (
+                <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--bg-primary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <button
+                    onClick={() => setBundleFilter('all')}
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: bundleFilter === 'all' ? 'var(--bg-primary)' : 'transparent',
+                      color: bundleFilter === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    All Creators ({bundles.length})
+                  </button>
+                  <button
+                    onClick={() => setBundleFilter('mine')}
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: bundleFilter === 'mine' ? 'var(--bg-primary)' : 'transparent',
+                      color: bundleFilter === 'mine' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    My Uploads ({myUploadedBundles.length})
+                  </button>
+                </div>
+              )}
             </div>
 
             {loadingBundles ? (
@@ -1478,8 +1480,8 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                 <div className="download-spinner-tiny" style={{ width: '20px', height: '20px' }}></div>
               </div>
             ) : (
-              (bundleFilter === 'mine' 
-                ? bundles.filter(b => (user?.uid && b.author?.uid === user.uid) || (user?.email && b.author?.email === user.email))
+              (isCreatorMode || bundleFilter === 'mine' 
+                ? myUploadedBundles
                 : bundles
               )
               .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
