@@ -555,12 +555,6 @@ function AppContent() {
 
   const handleDropClick = () => {
     if (!user) {
-      setIsBlinkingLogin(true);
-      setLoginTooltipMsg('Login required to become a creator');
-      setTimeout(() => {
-        setIsBlinkingLogin(false);
-        setLoginTooltipMsg('');
-      }, 4000);
       loginWithGoogle();
       return;
     }
@@ -928,19 +922,9 @@ function AppContent() {
               )}
             </div>
           ) : (
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              {loginTooltipMsg && (
-                <div className="login-creator-tooltip-bubble">
-                  {loginTooltipMsg}
-                </div>
-              )}
-              <button 
-                className={`auth-btn-google ${isBlinkingLogin ? 'login-blinking-creator' : ''}`} 
-                onClick={loginWithGoogle}
-              >
-                <span>Login</span>
-              </button>
-            </div>
+            <button className="auth-btn-google" onClick={loginWithGoogle}>
+              <span>Login</span>
+            </button>
           )}
         </div>
 
