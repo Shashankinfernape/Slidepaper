@@ -556,7 +556,7 @@ function AppContent() {
   const handleDropClick = () => {
     if (!user) {
       setIsBlinkingLogin(true);
-      setLoginTooltipMsg('Login to become a creator');
+      setLoginTooltipMsg('Login required to become a creator');
       setTimeout(() => {
         setIsBlinkingLogin(false);
         setLoginTooltipMsg('');
@@ -931,7 +931,7 @@ function AppContent() {
             <div style={{ position: 'relative', display: 'inline-block' }}>
               {loginTooltipMsg && (
                 <div className="login-creator-tooltip-bubble">
-                  ✨ {loginTooltipMsg}
+                  {loginTooltipMsg}
                 </div>
               )}
               <button 
