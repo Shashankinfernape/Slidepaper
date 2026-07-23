@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X, Users
+  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X, Users, Clock, MessageSquare, Eye
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import DraggableGrid from './common/DraggableGrid';
 import { useAuth } from '../context/AuthContext';
 import MonetizationDashboard from './MonetizationDashboard';
 import TransferHUD from './TransferHUD';
+import BundleDetailPage from './BundleDetailPage';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -240,6 +241,57 @@ export default function AdminDashboard({ onBack, logout }) {
   const [subscribersList, setSubscribersList] = useState([]);
   const [loadingSubscribers, setLoadingSubscribers] = useState(false);
   const [viewingSubscriberImage, setViewingSubscriberImage] = useState(null);
+
+  // Pending Drops Review States
+  const [pendingDrops, setPendingDrops] = useState([]);
+  const [loadingPendingDrops, setLoadingPendingDrops] = useState(false);
+  const [reviewingDrop, setReviewingDrop] = useState(null);
+  const [adminNoteInput, setAdminNoteInput] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchPendingDrops = async () => {
+    setLoadingPendingDrops(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/pending-drops`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setPendingDrops(data.bundles || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending drops:', err);
+    } finally {
+      setLoadingPendingDrops(false);
+    }
+  };
+
+  const handleReviewAction = async (bundleId, action) => {
+    setSubmittingReview(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/review-drop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bundleId,
+          action,
+          adminNote: adminNoteInput.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(action === 'approve' ? 'Drop Approved & Published!' : 'Drop Rejected with feedback note.');
+        setPendingDrops(prev => prev.filter(b => b.id !== bundleId));
+        setReviewingDrop(null);
+        setAdminNoteInput('');
+        fetchBundles();
+      } else {
+        showToast('Review action failed.', 'error');
+      }
+    } catch (err) {
+      showToast('Error completing review.', 'error');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Form states for uploading new bundle
   const [bundleName, setBundleName] = useState('');
@@ -626,6 +678,7 @@ export default function AdminDashboard({ onBack, logout }) {
   useEffect(() => {
     fetchBundles();
     checkDriveStatus();
+    fetchPendingDrops();
   }, []);
 
   // Fetch subscribers when tab is active
@@ -1031,6 +1084,22 @@ export default function AdminDashboard({ onBack, logout }) {
             >
               <HardDrive size={16} style={{ flexShrink: 0 }} />
               <span>Bundles Manager</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('reviews'); setIsSidebarOpen(false); fetchPendingDrops(); }}
+              className={`admin-nav-item ${activeTab === 'reviews' ? 'active' : ''}`}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clock size={16} style={{ flexShrink: 0 }} />
+                <span>Pending Drops</span>
+              </div>
+              {pendingDrops.length > 0 && (
+                <span style={{ background: 'var(--color-google-yellow)', color: '#000000', borderRadius: '9999px', padding: '0.1rem 0.55rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                  {pendingDrops.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => { 
@@ -2157,6 +2226,143 @@ export default function AdminDashboard({ onBack, logout }) {
                   border: '4px solid var(--border-color)'
                 }} 
               />
+            </div>
+          </div>
+        )}
+        {activeTab === 'reviews' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Pending Drop Requests ({pendingDrops.length})</h3>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Review wallpaper quality, aspect ratios, and send feedback notes to creators.</p>
+              </div>
+              <button className="admin-btn secondary" onClick={fetchPendingDrops}>
+                <RefreshCw size={14} className={loadingPendingDrops ? 'spin-icon' : ''} />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {loadingPendingDrops ? (
+              <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-secondary)' }}>
+                <RefreshCw className="spin-icon" size={24} style={{ marginBottom: '0.5rem' }} />
+                <p style={{ fontSize: '0.85rem' }}>Fetching pending drops...</p>
+              </div>
+            ) : pendingDrops.length === 0 ? (
+              <div style={{ padding: '3rem 1.5rem', textAlign: 'center', background: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                <CheckCircle2 size={36} style={{ color: '#10b981', marginBottom: '0.5rem' }} />
+                <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-primary)', fontSize: '1.05rem' }}>No Pending Drops!</h4>
+                <p style={{ margin: 0, fontSize: '0.85rem' }}>All submitted wallpaper collections have been reviewed.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                {pendingDrops.map((drop) => {
+                  const coverImg = drop.images && drop.images[drop.coverIndex || 0] ? (drop.images[drop.coverIndex || 0].previewUrl || drop.images[drop.coverIndex || 0].url) : '';
+                  return (
+                    <div 
+                      key={drop.id}
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                    >
+                      <div style={{ position: 'relative', height: '160px', background: '#000000', cursor: 'pointer' }} onClick={() => setReviewingDrop(drop)}>
+                        {coverImg ? (
+                          <img src={coverImg} alt={drop.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No Cover</div>
+                        )}
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.75)', padding: '0.2rem 0.6rem', borderRadius: '9999px', fontSize: '0.72rem', color: '#ffffff', fontWeight: 600 }}>
+                          {drop.type || 'Desktop'}
+                        </div>
+                      </div>
+
+                      <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                        <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>{drop.name}</h4>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <User size={13} />
+                          <span>By {drop.author?.name || 'Creator'} ({drop.author?.email || 'N/A'})</span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {drop.images?.length || 0} Wallpapers • {new Date(drop.createdAt || Date.now()).toLocaleDateString()}
+                        </div>
+
+                        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            className="admin-btn primary" 
+                            onClick={() => setReviewingDrop(drop)}
+                            style={{ flex: 1, padding: '0.45rem', fontSize: '0.8rem', fontWeight: 700, justifyContent: 'center', background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
+                          >
+                            Inspect & Review Drop
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Middle Bundle Review Modal with exact BundleDetailPage Layout & Admin Feedback Controls */}
+        {reviewingDrop && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <div style={{ width: 'min(100%, 58rem)', maxHeight: '92vh', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)' }}>
+              {/* Modal Header */}
+              <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <Clock size={18} style={{ color: 'var(--color-google-yellow)' }} />
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Reviewing Drop: {reviewingDrop.name}
+                  </h3>
+                </div>
+                <button onClick={() => setReviewingDrop(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.35rem' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Middle Preview View (Embedded BundleDetailPage) */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+                <BundleDetailPage
+                  bundle={reviewingDrop}
+                  onBack={() => setReviewingDrop(null)}
+                  onOpenBundle={() => {}}
+                  onOpenChannel={() => {}}
+                  user={user}
+                  bundles={[reviewingDrop]}
+                />
+              </div>
+
+              {/* Admin Decision & Messaging Panel */}
+              <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-color)', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <MessageSquare size={14} />
+                    <span>Admin Feedback Message to Creator (Optional):</span>
+                  </label>
+                  <textarea
+                    rows="2"
+                    placeholder="Type message to creator (e.g. 'Approved! Great collection' or 'Rejected: Image resolution is too low')..."
+                    value={adminNoteInput}
+                    onChange={(e) => setAdminNoteInput(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'var(--font-body)', fontSize: '0.82rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => handleReviewAction(reviewingDrop.id, 'reject')}
+                    disabled={submittingReview}
+                    style={{ padding: '0.55rem 1.25rem', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}
+                  >
+                    ❌ Reject Drop
+                  </button>
+                  <button
+                    onClick={() => handleReviewAction(reviewingDrop.id, 'approve')}
+                    disabled={submittingReview}
+                    style={{ padding: '0.55rem 1.5rem', borderRadius: '10px', border: 'none', background: '#10b981', color: '#ffffff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }}
+                  >
+                    ✅ Approve & Publish
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

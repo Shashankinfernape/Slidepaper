@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Plus, Check, Image as ImageIcon, Sparkles, AlertCircle } from 'lucide-react';
+import { X, Upload, Plus, Check, AlertCircle, Clock } from 'lucide-react';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 if (
@@ -19,10 +19,11 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
   const [category, setCategory] = useState('Desktop');
   const [orientation, setOrientation] = useState('Horizontal');
   const [coverIndex, setCoverIndex] = useState(0);
-  const [images, setImages] = useState([]); // Array of { previewUrl, url, label }
+  const [images, setImages] = useState([]);
   const [customImageUrl, setCustomImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successBanner, setSuccessBanner] = useState(false);
 
   if (!isOpen) return null;
 
@@ -73,7 +74,7 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
       return;
     }
     if (images.length === 0) {
-      setError('Please add at least 1 wallpaper image to your drop.');
+      setError('Please add at least 1 wallpaper image.');
       setStep(1);
       return;
     }
@@ -108,14 +109,21 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
         throw new Error(data.error || 'Failed to publish drop');
       }
 
-      console.log('[Drop Studio] Drop published successfully:', data.bundle);
-      if (onDropPublished) {
-        onDropPublished(data.bundle);
-      }
-      onClose();
+      setSuccessBanner(true);
+      setTimeout(() => {
+        if (onDropPublished) {
+          onDropPublished(data.bundle);
+        }
+        onClose();
+        setSuccessBanner(false);
+        setStep(1);
+        setTitle('');
+        setDescription('');
+        setImages([]);
+      }, 2000);
     } catch (err) {
       console.error('[Drop Studio] Publish failed:', err);
-      setError(err.message || 'Failed to publish drop');
+      setError(err.message || 'Failed to submit drop');
     } finally {
       setLoading(false);
     }
@@ -123,225 +131,250 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
 
   return (
     <div className="drop-studio-backdrop">
-      <div className="drop-studio-modal">
+      <div className="drop-studio-modal" style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)', borderRadius: '20px' }}>
         {/* Header */}
-        <div className="drop-studio-header">
+        <div className="drop-studio-header" style={{ borderBottom: '1px solid var(--border-color)', padding: '1.2rem 1.5rem' }}>
           <div className="header-title-badge">
-            <Sparkles size={18} className="sparkle-icon" />
-            <h2>Publish New Drop</h2>
+            <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              Submit Wallpaper Drop
+            </h2>
           </div>
           <button className="close-btn" onClick={onClose} title="Close Studio">
             <X size={20} />
           </button>
         </div>
 
-        {error && (
-          <div className="drop-studio-error">
-            <AlertCircle size={16} />
-            <span>{error}</span>
+        {/* Success Banner */}
+        {successBanner ? (
+          <div style={{ padding: '3rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid var(--color-google-yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-google-yellow)' }}>
+              <Clock size={28} />
+            </div>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>Drop Submitted!</h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-google-yellow)', fontWeight: 600, maxWidth: '320px', lineHeight: 1.4 }}>
+              Your bundle has been submitted and will be published after review.
+            </p>
           </div>
-        )}
+        ) : (
+          <>
+            {error && (
+              <div className="drop-studio-error">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
 
-        {/* Step Indicator */}
-        <div className="drop-studio-steps">
-          <div className={`step-pill ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>
-            <span>1. Media Upload ({images.length})</span>
-          </div>
-          <div className={`step-pill ${step === 2 ? 'active' : ''}`} onClick={() => images.length > 0 && setStep(2)}>
-            <span>2. Details & Category</span>
-          </div>
-          <div className={`step-pill ${step === 3 ? 'active' : ''}`} onClick={() => title.trim() && images.length > 0 && setStep(3)}>
-            <span>3. Cover & Publish</span>
-          </div>
-        </div>
-
-        {/* Step 1: Upload Images */}
-        {step === 1 && (
-          <div className="studio-step-content">
-            <div className="upload-dropzone">
-              <input 
-                type="file" 
-                multiple 
-                accept="image/*" 
-                onChange={handleFileUpload} 
-                className="file-input-hidden" 
-                id="wallpaper-file-input"
-              />
-              <label htmlFor="wallpaper-file-input" className="upload-label">
-                <Upload size={32} className="upload-icon" />
-                <span className="primary-text">Click or drag images to upload</span>
-                <span className="secondary-text">Supports JPG, PNG, WebP (High Resolution)</span>
-              </label>
+            {/* Step Indicator */}
+            <div className="drop-studio-steps" style={{ borderBottom: '1px solid var(--border-color)' }}>
+              <div className={`step-pill ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>
+                <span>1. Media ({images.length})</span>
+              </div>
+              <div className={`step-pill ${step === 2 ? 'active' : ''}`} onClick={() => images.length > 0 && setStep(2)}>
+                <span>2. Category & Details</span>
+              </div>
+              <div className={`step-pill ${step === 3 ? 'active' : ''}`} onClick={() => title.trim() && images.length > 0 && setStep(3)}>
+                <span>3. Cover & Submit</span>
+              </div>
             </div>
 
-            <div className="url-input-row">
-              <input
-                type="text"
-                placeholder="Or paste image URL (https://...)"
-                value={customImageUrl}
-                onChange={(e) => setCustomImageUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddUrlImage()}
-                className="url-input"
-              />
-              <button className="add-url-btn" onClick={handleAddUrlImage}>
-                <Plus size={16} />
-                <span>Add Image</span>
-              </button>
-            </div>
+            {/* Step 1: Upload Images */}
+            {step === 1 && (
+              <div className="studio-step-content">
+                <div className="upload-dropzone" style={{ border: '2px dashed var(--border-color)', background: 'var(--bg-surface)' }}>
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*" 
+                    onChange={handleFileUpload} 
+                    className="file-input-hidden" 
+                    id="wallpaper-file-input"
+                  />
+                  <label htmlFor="wallpaper-file-input" className="upload-label">
+                    <Upload size={32} style={{ color: 'var(--text-secondary)' }} />
+                    <span className="primary-text" style={{ color: 'var(--text-primary)' }}>Click or drag images to upload</span>
+                    <span className="secondary-text" style={{ color: 'var(--text-secondary)' }}>Supports JPG, PNG, WebP (Ultra HD)</span>
+                  </label>
+                </div>
 
-            {/* Thumbnail Preview Grid */}
-            <div className="preview-thumbnails-grid">
-              {images.map((img, index) => (
-                <div key={index} className="thumbnail-card">
-                  <img src={img.previewUrl} alt={img.label} className="thumb-img" />
-                  <button 
-                    className="remove-thumb-btn"
-                    onClick={() => handleRemoveImage(index)}
-                    title="Remove image"
-                  >
-                    <X size={14} />
-                  </button>
+                <div className="url-input-row">
                   <input
                     type="text"
-                    value={img.label}
-                    onChange={(e) => {
-                      const newLabel = e.target.value;
-                      setImages(prev => prev.map((item, idx) => idx === index ? { ...item, label: newLabel } : item));
-                    }}
-                    className="thumb-label-input"
+                    placeholder="Or paste image URL (https://...)"
+                    value={customImageUrl}
+                    onChange={(e) => setCustomImageUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddUrlImage()}
+                    className="url-input"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                  />
+                  <button 
+                    className="add-url-btn" 
+                    onClick={handleAddUrlImage}
+                    style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
+                  >
+                    <Plus size={16} />
+                    <span>Add Image</span>
+                  </button>
+                </div>
+
+                {/* Thumbnails */}
+                <div className="preview-thumbnails-grid">
+                  {images.map((img, index) => (
+                    <div key={index} className="thumbnail-card" style={{ border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
+                      <img src={img.previewUrl} alt={img.label} className="thumb-img" />
+                      <button 
+                        className="remove-thumb-btn"
+                        onClick={() => handleRemoveImage(index)}
+                        title="Remove image"
+                      >
+                        <X size={14} />
+                      </button>
+                      <input
+                        type="text"
+                        value={img.label}
+                        onChange={(e) => {
+                          const newLabel = e.target.value;
+                          setImages(prev => prev.map((item, idx) => idx === index ? { ...item, label: newLabel } : item));
+                        }}
+                        className="thumb-label-input"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Metadata Details */}
+            {step === 2 && (
+              <div className="studio-step-content form-layout">
+                <div className="form-group">
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Drop Title *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Minimalist Tokyo 4K Collection"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="studio-input"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
                   />
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Step 2: Metadata Details */}
-        {step === 2 && (
-          <div className="studio-step-content form-layout">
-            <div className="form-group">
-              <label className="form-label">Drop Title *</label>
-              <input
-                type="text"
-                placeholder="e.g. Cyberpunk Tokyo 4K Collection"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="studio-input"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Description</label>
-              <textarea
-                rows="3"
-                placeholder="Describe your wallpaper collection, theme, or aesthetics..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="studio-textarea"
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group half">
-                <label className="form-label">Category / Genre</label>
-                <select 
-                  value={category} 
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="studio-select"
-                >
-                  <option value="Desktop">Desktop Wallpapers</option>
-                  <option value="Mobile">Mobile Wallpapers</option>
-                  <option value="Anime">Anime & Manga</option>
-                  <option value="Aesthetic">Aesthetic & Minimalist</option>
-                  <option value="Gaming">Gaming & Cyberpunk</option>
-                  <option value="Nature">Nature & Scenery</option>
-                </select>
-              </div>
-
-              <div className="form-group half">
-                <label className="form-label">Default Orientation</label>
-                <select 
-                  value={orientation} 
-                  onChange={(e) => setOrientation(e.target.value)}
-                  className="studio-select"
-                >
-                  <option value="Horizontal">Horizontal (16:9 / 21:9)</option>
-                  <option value="Vertical">Vertical (9:16 / 3:4)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Select Cover & Publish */}
-        {step === 3 && (
-          <div className="studio-step-content">
-            <p className="step-description">Select which wallpaper image to display as the primary cover card:</p>
-
-            <div className="cover-selector-grid">
-              {images.map((img, index) => (
-                <div 
-                  key={index} 
-                  className={`cover-option-card ${coverIndex === index ? 'selected' : ''}`}
-                  onClick={() => setCoverIndex(index)}
-                >
-                  <img src={img.previewUrl} alt={img.label} />
-                  {coverIndex === index && (
-                    <div className="selected-badge">
-                      <Check size={16} />
-                      <span>Cover Image</span>
-                    </div>
-                  )}
+                <div className="form-group">
+                  <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Description</label>
+                  <textarea
+                    rows="3"
+                    placeholder="Describe your wallpaper collection, theme, or aesthetics..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="studio-textarea"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                  />
                 </div>
-              ))}
-            </div>
 
-            <div className="drop-summary-box">
-              <h3>Drop Summary</h3>
-              <p><strong>Title:</strong> {title}</p>
-              <p><strong>Wallpapers Count:</strong> {images.length} High-Res Items</p>
-              <p><strong>Category:</strong> {category} ({orientation})</p>
-              <p><strong>Curator:</strong> {user?.displayName || 'Curator'}</p>
+                <div className="form-row">
+                  <div className="form-group half">
+                    <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Category / Genre</label>
+                    <select 
+                      value={category} 
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="studio-select"
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                    >
+                      <option value="Desktop">Desktop Wallpapers</option>
+                      <option value="Mobile">Mobile Wallpapers</option>
+                      <option value="Anime">Anime & Manga</option>
+                      <option value="Aesthetic">Aesthetic & Minimalist</option>
+                      <option value="Gaming">Gaming & Cyberpunk</option>
+                      <option value="Nature">Nature & Scenery</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group half">
+                    <label className="form-label" style={{ color: 'var(--text-secondary)' }}>Orientation</label>
+                    <select 
+                      value={orientation} 
+                      onChange={(e) => setOrientation(e.target.value)}
+                      className="studio-select"
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                    >
+                      <option value="Horizontal">Horizontal (16:9 / 21:9)</option>
+                      <option value="Vertical">Vertical (9:16 / 3:4)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Cover Selection & Submit */}
+            {step === 3 && (
+              <div className="studio-step-content">
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Select primary cover image:</p>
+
+                <div className="cover-selector-grid">
+                  {images.map((img, index) => (
+                    <div 
+                      key={index} 
+                      className={`cover-option-card ${coverIndex === index ? 'selected' : ''}`}
+                      onClick={() => setCoverIndex(index)}
+                      style={{ border: coverIndex === index ? '2px solid var(--text-primary)' : '2px solid transparent' }}
+                    >
+                      <img src={img.previewUrl} alt={img.label} />
+                      {coverIndex === index && (
+                        <div className="selected-badge" style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
+                          <Check size={14} />
+                          <span>Cover</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</p>
+                  <p style={{ margin: '0.2rem 0 0 0' }}>{images.length} Wallpapers • {category} ({orientation})</p>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Actions */}
+            <div className="drop-studio-footer" style={{ borderTop: '1px solid var(--border-color)' }}>
+              {step > 1 && (
+                <button className="back-btn" onClick={() => setStep(step - 1)} disabled={loading}>
+                  Back
+                </button>
+              )}
+
+              {step < 3 ? (
+                <button 
+                  className="next-btn" 
+                  onClick={() => {
+                    if (images.length === 0) {
+                      setError('Please add at least 1 image.');
+                      return;
+                    }
+                    if (step === 2 && !title.trim()) {
+                      setError('Drop title is required.');
+                      return;
+                    }
+                    setError('');
+                    setStep(step + 1);
+                  }}
+                  style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
+                >
+                  Continue
+                </button>
+              ) : (
+                <button 
+                  className="publish-drop-btn" 
+                  onClick={handlePublishDrop}
+                  disabled={loading}
+                  style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
+                >
+                  {loading ? 'Submitting Drop...' : 'Submit for Review'}
+                </button>
+              )}
             </div>
-          </div>
+          </>
         )}
-
-        {/* Footer Actions */}
-        <div className="drop-studio-footer">
-          {step > 1 && (
-            <button className="back-btn" onClick={() => setStep(step - 1)} disabled={loading}>
-              Back
-            </button>
-          )}
-
-          {step < 3 ? (
-            <button 
-              className="next-btn" 
-              onClick={() => {
-                if (images.length === 0) {
-                  setError('Please add at least 1 image.');
-                  return;
-                }
-                if (step === 2 && !title.trim()) {
-                  setError('Drop title is required.');
-                  return;
-                }
-                setError('');
-                setStep(step + 1);
-              }}
-            >
-              Continue
-            </button>
-          ) : (
-            <button 
-              className="publish-drop-btn" 
-              onClick={handlePublishDrop}
-              disabled={loading}
-            >
-              {loading ? 'Publishing Drop...' : '🚀 Publish Drop Now'}
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );

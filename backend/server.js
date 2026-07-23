@@ -78,6 +78,9 @@ const bundleSchema = new mongoose.Schema({
     subscribers: { type: Number, default: 0 }
   },
   isHero: { type: Boolean, default: false },
+  status: { type: String, enum: ['published', 'pending_review', 'rejected', 'draft'], default: 'pending_review' },
+  adminNote: { type: String, default: '' },
+  reviewedAt: { type: Date },
   ratioCaches: { type: Map, of: String, default: {} },
   ratioCacheSizes: { type: Map, of: Number, default: {} }
 }, { timestamps: true });
@@ -1239,7 +1242,13 @@ app.get('/api/drive-status', async (req, res) => {
 // Endpoint: Fetch all wallpaper bundles (sorted alphabetically)
 app.get('/api/bundles', async (req, res) => {
   try {
-    const bundles = await Bundle.find({});
+    const bundles = await Bundle.find({
+      $or: [
+        { status: 'published' },
+        { status: { $exists: false } },
+        { status: null }
+      ]
+    });
     // Alphanumeric name sort (natural sort)
     bundles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
     return res.status(200).json(bundles);
@@ -2659,6 +2668,54 @@ app.post('/api/admin/approve-curator', async (req, res) => {
     return res.status(200).json({ success: true, user });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to process application' });
+  }
+});
+
+// Endpoint: Admin fetch pending drops awaiting review
+app.get('/api/admin/pending-drops', async (req, res) => {
+  try {
+    const pendingBundles = await Bundle.find({ status: 'pending_review' }).sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, bundles: pendingBundles });
+  } catch (err) {
+    console.error('Error fetching pending drops for admin:', err);
+    return res.status(500).json({ error: 'Failed to fetch pending drops' });
+  }
+});
+
+// Endpoint: Admin Approve or Reject Drop with optional Feedback Message
+app.post('/api/admin/review-drop', async (req, res) => {
+  const { bundleId, action, adminNote } = req.body;
+  if (!bundleId || !action) {
+    return res.status(400).json({ error: 'Missing bundleId or action parameter' });
+  }
+
+  try {
+    const bundle = await Bundle.findOne({ id: bundleId });
+    if (!bundle) {
+      return res.status(404).json({ error: 'Wallpaper bundle not found' });
+    }
+
+    if (action === 'approve') {
+      bundle.status = 'published';
+    } else if (action === 'reject') {
+      bundle.status = 'rejected';
+    } else {
+      return res.status(400).json({ error: 'Invalid action parameter. Must be "approve" or "reject".' });
+    }
+
+    bundle.adminNote = adminNote || '';
+    bundle.reviewedAt = new Date();
+    await bundle.save();
+
+    console.log(`[Admin Review] Bundle ${bundleId} review completed (${action}). Admin Note: "${adminNote || 'None'}"`);
+
+    // Backup
+    saveBundlesToDrive();
+
+    return res.status(200).json({ success: true, bundle });
+  } catch (err) {
+    console.error('Error processing drop review:', err);
+    return res.status(500).json({ error: 'Failed to complete review' });
   }
 });
 
