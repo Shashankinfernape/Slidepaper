@@ -37,17 +37,17 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState('all');
 
-  // Form states for Upload Drop tab (1:1 with Admin Dashboard Upload)
+  // Form states for Upload Drop tab (1:1 literal match with AdminDashboard upload)
   const [bundleName, setBundleName] = useState('');
   const [bundleDescription, setBundleDescription] = useState('');
   const [bundleOrientation, setBundleOrientation] = useState('landscape');
-  const [bundleType, setBundleType] = useState('Desktop');
+  const [bundleType, setBundleType] = useState('');
   const [bundleTags, setBundleTags] = useState('');
   const [bundleIncludes, setBundleIncludes] = useState('');
   const [bundleRatio, setBundleRatio] = useState('16:9');
-  const [coverIndex, setCoverIndex] = useState(0);
-  const [mediaItems, setMediaItems] = useState([]); // [{ type: 'file'|'url', file, url, label }]
-  const [customImageUrl, setCustomImageUrl] = useState('');
+  const [customRatioW, setCustomRatioW] = useState('16');
+  const [customRatioH, setCustomRatioH] = useState('9');
+  const [mediaItems, setMediaItems] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [showUploadHud, setShowUploadHud] = useState(false);
   const [uploadMetrics, setUploadMetrics] = useState({
@@ -60,7 +60,7 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
   });
   const fileInputRef = useRef(null);
 
-  // Profile Edit States
+  // Form states for Profile
   const [editedDisplayName, setEditedDisplayName] = useState(userProfile?.displayName || user?.displayName || '');
   const [editedAbout, setEditedAbout] = useState(userProfile?.about || '');
   const [editedYoutube, setEditedYoutube] = useState(userProfile?.youtubeUrl || '');
@@ -111,121 +111,163 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
     }
   };
 
-  const handleFileUpload = (e) => {
+  // Upload File handler (1:1 with AdminDashboard)
+  const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
+    if (!files.length) return;
     const newItems = files.map(file => ({
-      type: 'file',
-      file,
-      url: URL.createObjectURL(file),
-      label: file.name.replace(/\.[^/.]+$/, '')
+      type: 'new',
+      id: Math.random().toString(36).substring(7),
+      data: file,
+      name: file.name,
+      size: file.size,
+      preview: URL.createObjectURL(file)
     }));
-
     setMediaItems(prev => [...prev, ...newItems]);
   };
 
-  const handleAddUrlImage = () => {
-    if (!customImageUrl.trim()) return;
-    setMediaItems(prev => [
-      ...prev,
-      {
-        type: 'url',
-        url: customImageUrl.trim(),
-        label: `Wallpaper #${prev.length + 1}`
-      }
-    ]);
-    setCustomImageUrl('');
+  const removeMediaItem = (id) => {
+    setMediaItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleRemoveMedia = (indexToRemove) => {
-    setMediaItems(prev => prev.filter((_, i) => i !== indexToRemove));
-    if (coverIndex >= mediaItems.length - 1) {
-      setCoverIndex(Math.max(0, mediaItems.length - 2));
-    }
-  };
-
-  const handlePublishDrop = async (e) => {
+  const handleSubmitBundle = async (e) => {
     e.preventDefault();
-    if (!bundleName.trim()) {
-      showToast('Please provide a drop title.', 'error');
-      return;
-    }
+    const submitter = e.nativeEvent?.submitter;
+    const rect = submitter ? submitter.getBoundingClientRect() : null;
+
     if (mediaItems.length === 0) {
-      showToast('Please add at least 1 wallpaper image.', 'error');
+      showToast('Please upload at least one wallpaper image.', 'error');
       return;
     }
 
     setUploading(true);
+
+    const formData = new FormData();
+    formData.append('name', bundleName);
+    formData.append('description', bundleDescription);
+    formData.append('orientation', bundleOrientation);
+    const finalRatio = bundleRatio === 'custom' ? `${customRatioW}:${customRatioH}` : bundleRatio;
+    formData.append('ratio', finalRatio);
+    formData.append('type', bundleType || (bundleOrientation === 'landscape' ? 'Landscape Wallpaper Pack' : 'Vertical Mobile Pack'));
+    formData.append('tags', bundleTags);
+    formData.append('includes', bundleIncludes);
+    
+    mediaItems.forEach((m) => {
+      if (m.data) formData.append('images', m.data);
+    });
+
+    if (user) {
+      formData.append('authorId', user.uid);
+      formData.append('authorName', userProfile?.displayName || user.displayName || user.email);
+      if (userProfile?.photoURL || user.photoURL) {
+        formData.append('authorAvatar', userProfile?.photoURL || user.photoURL);
+      }
+      if (user.email) {
+        formData.append('authorEmail', user.email);
+      }
+    }
+
     setShowUploadHud(true);
     setUploadMetrics({
       progress: 0,
-      speedMbps: 2.5,
-      transferredMB: 0.5,
-      totalMB: mediaItems.length * 3.5,
-      etaSeconds: 4,
-      stage: 'Preparing high-res wallpaper drop...'
+      speedMbps: 0,
+      transferredMB: 0,
+      totalMB: 0,
+      etaSeconds: 0,
+      stage: 'Initiating transfer to backend...'
     });
 
-    try {
-      // Process images for API payload
-      const imagesPayload = mediaItems.map(item => ({
-        url: item.url,
-        previewUrl: item.url,
-        label: item.label || 'Wallpaper'
-      }));
+    let startTime = Date.now();
 
-      const res = await fetch(`${API_URL}/api/curator/bundles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: user?.uid,
-          name: bundleName.trim(),
-          description: bundleDescription.trim(),
-          type: bundleType,
-          orientation: bundleOrientation,
-          ratioOptions: bundleOrientation === 'vertical' ? ['9:16', '3:4'] : ['16:9', '21:9', '16:10'],
-          coverIndex,
-          images: imagesPayload,
-          author: {
-            uid: user?.uid || 'anonymous',
-            name: userProfile?.displayName || user?.displayName || 'Creator',
-            avatar: userProfile?.photoURL || user?.photoURL || '',
-            email: user?.email || ''
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_URL}/api/curator/bundles`);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const currentTime = Date.now();
+          const elapsedTimeInSeconds = (currentTime - startTime) / 1000;
+          const transferredMB = event.loaded / (1024 * 1024);
+          const totalMB = event.total / (1024 * 1024);
+          const progress = Math.round((event.loaded / event.total) * 100);
+          const speedMbps = elapsedTimeInSeconds > 0 ? ((event.loaded * 8) / (1024 * 1024 * elapsedTimeInSeconds)).toFixed(1) : 0;
+          const remainingBytes = event.total - event.loaded;
+          const bytesPerSecond = elapsedTimeInSeconds > 0 ? event.loaded / elapsedTimeInSeconds : 0;
+          const etaSeconds = bytesPerSecond > 0 ? Math.round(remainingBytes / bytesPerSecond) : 0;
+
+          setUploadMetrics({
+            progress,
+            speedMbps,
+            transferredMB: transferredMB.toFixed(1),
+            totalMB: totalMB.toFixed(1),
+            etaSeconds,
+            stage: progress < 100 ? 'Uploading wallpapers to server...' : 'Processing and generating ZIP archives...'
+          });
+        }
+      };
+
+      await new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setUploadMetrics(prev => ({
+              ...prev,
+              progress: 100,
+              stage: 'Upload complete! Submitted for review.'
+            }));
+            setTimeout(() => {
+              setShowUploadHud(false);
+              resolve();
+            }, 1500);
+          } else {
+            let errorMessage = 'Failed to publish wallpaper bundle.';
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              errorMessage = errorData.error || errorMessage;
+            } catch (_) {}
+            setShowUploadHud(false);
+            reject(new Error(errorMessage));
           }
-        })
+        };
+
+        xhr.onerror = () => {
+          setShowUploadHud(false);
+          reject(new Error('Network error during bundle upload.'));
+        };
+
+        xhr.send(formData);
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to submit drop');
+      if (rect) {
+        const x = (rect.left + rect.width / 2) / window.innerWidth;
+        const y = (rect.top + rect.height / 2) / window.innerHeight;
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { x, y },
+          startVelocity: 35,
+          colors: ['#ffffff', '#888888', '#aaaaaa']
+        });
+      } else {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       }
 
-      setUploadMetrics({
-        progress: 100,
-        speedMbps: 0,
-        transferredMB: mediaItems.length * 3.5,
-        totalMB: mediaItems.length * 3.5,
-        etaSeconds: 0,
-        stage: 'Submitted for Admin Review!'
-      });
+      showToast('Your bundle has been submitted and will be published after review.', 'success');
+      
+      // Reset form & Navigate to My Bundles
+      setBundleName('');
+      setBundleDescription('');
+      setBundleOrientation('landscape');
+      setBundleRatio('16:9');
+      setBundleType('');
+      setBundleTags('');
+      setBundleIncludes('');
+      setMediaItems([]);
 
-      setTimeout(() => {
-        setShowUploadHud(false);
-        showToast('Your bundle has been submitted and will be published after review.', 'success');
-        
-        // Reset Form & Navigate to My Drops tab
-        setBundleName('');
-        setBundleDescription('');
-        setMediaItems([]);
-        setCoverIndex(0);
-        fetchCreatorData();
-        setActiveTab('drops');
-      }, 1200);
-    } catch (err) {
-      console.error('[Creator Studio] Drop upload failed:', err);
-      setShowUploadHud(false);
-      showToast(err.message || 'Failed to submit drop', 'error');
+      fetchCreatorData();
+      setActiveTab('bundles');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      showToast(`Publishing failed: ${error.message}`, 'error');
     } finally {
       setUploading(false);
     }
@@ -253,7 +295,7 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
         const data = await res.json();
         if (data.success && data.user) {
           updateUserProfileState(data.user);
-          showToast('Creator profile updated!', 'success');
+          showToast('Creator profile updated successfully!', 'success');
         }
       }
     } catch (err) {
@@ -274,22 +316,31 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      {/* Toast Banner */}
+      {/* Toast Notification Element (1:1 with AdminDashboard) */}
       {toast && (
         <div style={{
           position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(20, 20, 20, 0.95)', color: '#fff',
-          padding: '12px 24px', borderRadius: '8px', zIndex: 9999,
-          border: '1px solid rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', gap: '8px',
-          fontWeight: 600, fontSize: '0.85rem'
+          background: 'rgba(20, 20, 20, 0.95)',
+          color: '#fff',
+          padding: '12px 24px', 
+          borderRadius: '8px', 
+          zIndex: 9999,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)', 
+          animation: 'toast-pop-fade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 500,
+          fontSize: '0.85rem'
         }}>
           {toast.type === 'error' ? <AlertCircle size={16} color="#ef4444" /> : <CheckCircle2 size={16} color="#10b981" />}
           {toast.message}
         </div>
       )}
 
-      {/* Upload Transfer Progress HUD */}
+      {/* Transfer HUD for Uploads */}
       {showUploadHud && (
         <TransferHUD 
           isOpen={showUploadHud}
@@ -298,7 +349,15 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
         />
       )}
 
-      {/* Main Creator Studio Layout — 1:1 Parity with AdminDashboard */}
+      {/* Sidebar backdrop overlay */}
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="admin-sidebar-backdrop"
+        />
+      )}
+
+      {/* EXACT SAME CONTAINER AS ADMIN DASHBOARD */}
       <div className="admin-dashboard-container" style={{
         display: 'flex',
         minHeight: '85vh',
@@ -310,19 +369,20 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
         marginTop: '1rem',
         position: 'relative'
       }}>
-        {/* Sidebar Navigation */}
+        {/* Sidebar navigation — 1:1 match with AdminDashboard */}
         <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <div className="admin-sidebar-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={20} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Creator Studio</h2>
+              <Shield size={20} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.5px', margin: 0, whiteSpace: 'nowrap' }}>Studio</h2>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'none' }}
-              className="admin-sidebar-close"
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'flex', lineHeight: 1 }}
             >
-              <X size={18} />
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
 
@@ -332,447 +392,373 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
               className={`admin-nav-item ${activeTab === 'overview' ? 'active' : ''}`}
             >
               <BarChart2 size={16} style={{ flexShrink: 0 }} />
-              <span>Overview & Analytics</span>
+              <span>Overview</span>
             </button>
-
             <button
-              onClick={() => { setActiveTab('upload'); setIsSidebarOpen(false); }}
+              onClick={() => { setActiveTab('bundles'); setIsSidebarOpen(false); fetchCreatorData(); }}
+              className={`admin-nav-item ${activeTab === 'bundles' ? 'active' : ''}`}
+            >
+              <HardDrive size={16} style={{ flexShrink: 0 }} />
+              <span>Bundles Manager</span>
+            </button>
+            <button
+              onClick={() => { 
+                setActiveTab('upload'); 
+                setIsSidebarOpen(false); 
+                setBundleName('');
+                setBundleDescription('');
+                setBundleOrientation('landscape');
+                setBundleRatio('16:9');
+                setBundleType('');
+                setBundleTags('');
+                setBundleIncludes('');
+                setMediaItems([]);
+              }}
               className={`admin-nav-item ${activeTab === 'upload' ? 'active' : ''}`}
             >
               <Plus size={16} style={{ flexShrink: 0 }} />
-              <span>+ Drop Wallpaper Pack</span>
+              <span>Create Bundle</span>
             </button>
-
-            <button
-              onClick={() => { setActiveTab('drops'); setIsSidebarOpen(false); fetchCreatorData(); }}
-              className={`admin-nav-item ${activeTab === 'drops' ? 'active' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Folder size={16} style={{ flexShrink: 0 }} />
-                <span>My Wallpaper Drops</span>
-              </div>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '0.1rem 0.5rem', borderRadius: '9999px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-color)' }}>
-                {myBundles.length}
-              </span>
-            </button>
-
             <button
               onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
             >
               <User size={16} style={{ flexShrink: 0 }} />
-              <span>Creator Profile</span>
+              <span>Profile Settings</span>
             </button>
-
-            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button
-                onClick={onBack}
-                className="admin-nav-item"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                <ArrowLeft size={16} />
-                <span>Back to Feed</span>
-              </button>
-            </div>
           </nav>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+            <button onClick={onBack} className="admin-nav-item" style={{ border: '1px solid var(--border-color)' }}>
+              <ArrowLeft size={16} style={{ flexShrink: 0 }} />
+              <span>Back to Site</span>
+            </button>
+            <button onClick={logout} className="admin-nav-item logout" style={{ color: '#ef4444' }}>
+              <LogOut size={16} style={{ flexShrink: 0 }} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </aside>
 
-        {/* Main Content Area */}
-        <main className="admin-main-content" style={{ flex: 1, padding: '1.5rem 2rem', overflowY: 'auto' }}>
-          {/* Top Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+        {/* Main Dashboard Content — 1:1 match with AdminDashboard layout */}
+        <main style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', minWidth: 0 }}>
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>Creator Studio</span>
-                <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.55rem', borderRadius: '9999px', background: 'rgba(234, 179, 8, 0.15)', border: '1px solid var(--color-google-yellow)', color: 'var(--color-google-yellow)', fontWeight: 700 }}>
-                  Verified Creator
-                </span>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0 }}>
+                {activeTab === 'overview' && 'Creator Studio'}
+                {activeTab === 'bundles' && 'Bundles Manager'}
+                {activeTab === 'upload' && 'Publish New Bundle'}
+                {activeTab === 'profile' && 'Creator Profile Settings'}
               </h1>
-              <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                {activeTab === 'overview' && 'View your wallpaper drop metrics, downloads, and subscriber stats.'}
-                {activeTab === 'upload' && 'Upload and submit a new high-resolution wallpaper drop.'}
-                {activeTab === 'drops' && 'Manage your wallpaper collections, track review statuses, and admin feedback.'}
-                {activeTab === 'profile' && 'Update your channel display name, avatar, bio, and social media presence.'}
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.25rem' }}>
+                {activeTab === 'overview' && 'Metrics, views, downloads, and subscriber stats'}
+                {activeTab === 'bundles' && 'List, edit, and manage your published wallpaper sets'}
+                {activeTab === 'upload' && 'Upload high-resolution wallpaper sets for review'}
+                {activeTab === 'profile' && 'Customize display name, channel about details, and socials'}
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button className="admin-btn secondary" onClick={fetchCreatorData} title="Refresh Studio">
-                <RefreshCw size={15} className={loading ? 'spin-icon' : ''} />
+            {/* Right-side hamburger */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="admin-hamburger"
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="M3 12h18M3 6h18M3 18h18" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </button>
-              {activeTab !== 'upload' && (
-                <button 
-                  className="admin-btn primary" 
-                  onClick={() => setActiveTab('upload')}
-                  style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: 700 }}
-                >
-                  <Plus size={16} />
-                  <span>+ Drop Pack</span>
-                </button>
-              )}
             </div>
-          </div>
+          </header>
 
-          {/* TAB 1: OVERVIEW & ANALYTICS */}
+          {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div className="admin-stat-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Drops</span>
-                    <Folder size={18} style={{ color: 'var(--text-secondary)' }} />
-                  </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{stats.totalDrops}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="admin-stats-grid">
+                <div className="admin-stat-card">
+                  <span className="stat-label">Total Drops</span>
+                  <span className="stat-value">{stats.totalDrops}</span>
+                  <span className="stat-sub">Active bundles</span>
                 </div>
-
-                <div className="admin-stat-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Views</span>
-                    <Eye size={18} style={{ color: 'var(--text-secondary)' }} />
-                  </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{stats.totalViews.toLocaleString()}</div>
+                <div className="admin-stat-card">
+                  <span className="stat-label">Total Views</span>
+                  <span className="stat-value">{new Intl.NumberFormat().format(stats.totalViews)}</span>
+                  <span className="stat-sub">Across all packs</span>
                 </div>
-
-                <div className="admin-stat-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Total Downloads</span>
-                    <Download size={18} style={{ color: 'var(--text-secondary)' }} />
-                  </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{stats.totalDownloads.toLocaleString()}</div>
+                <div className="admin-stat-card">
+                  <span className="stat-label">Total Downloads</span>
+                  <span className="stat-value">{new Intl.NumberFormat().format(stats.totalDownloads)}</span>
+                  <span className="stat-sub">ZIP files requested</span>
                 </div>
-
-                <div className="admin-stat-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Subscribers</span>
-                    <Users size={18} style={{ color: 'var(--text-secondary)' }} />
-                  </div>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 800 }}>{stats.subscribers.toLocaleString()}</div>
+                <div className="admin-stat-card">
+                  <span className="stat-label">Subscribers</span>
+                  <span className="stat-value">{new Intl.NumberFormat().format(stats.subscribers)}</span>
+                  <span className="stat-sub">Channel members</span>
                 </div>
               </div>
 
-              {/* Quick Actions Card */}
-              <div className="admin-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '1.5rem' }}>
-                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 700 }}>Ready for a new drop?</h3>
-                <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Upload high-resolution 4K wallpaper collections for Desktop (16:9) or Mobile (9:16). Your drop will be published following quality review.
-                </p>
-                <button 
-                  className="admin-btn primary" 
-                  onClick={() => setActiveTab('upload')}
-                  style={{ padding: '0.6rem 1.4rem', borderRadius: '9999px', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: 750 }}
-                >
-                  <Plus size={16} />
-                  <span>Create Wallpaper Drop</span>
-                </button>
+              <div className="admin-card" style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 600 }}>Quick Actions</h3>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => setActiveTab('upload')} 
+                    className="admin-btn primary"
+                  >
+                    <Plus size={16} /> Create Bundle
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('bundles')} 
+                    className="admin-btn secondary"
+                  >
+                    <HardDrive size={16} /> View My Bundles
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: DROP WALLPAPER PACK (1:1 EMBEDDED UPLOAD PAGE) */}
-          {activeTab === 'upload' && (
-            <div className="admin-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '1.75rem' }}>
-              <h2 style={{ margin: '0 0 1.25rem 0', fontSize: '1.2rem', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-                Drop New Wallpaper Pack
-              </h2>
-
-              <form onSubmit={handlePublishDrop} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {/* Drag & Drop Upload Zone */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                    1. Upload Wallpaper Images *
-                  </label>
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ border: '2px dashed var(--border-color)', background: 'var(--bg-primary)', borderRadius: '14px', padding: '2.25rem 1rem', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.2s' }}
+          {/* TAB 2: BUNDLES MANAGER (1:1 with AdminDashboard) */}
+          {activeTab === 'bundles' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Manage Wallpapers</h3>
+                <div style={{ display: 'flex', gap: '0.4rem', background: 'var(--bg-primary)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <button
+                    onClick={() => setFilterTab('all')}
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: filterTab === 'all' ? 'var(--bg-primary)' : 'transparent',
+                      color: filterTab === 'all' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
                   >
-                    <input 
-                      type="file" 
-                      multiple 
-                      accept="image/*" 
-                      ref={fileInputRef}
-                      onChange={handleFileUpload} 
-                      style={{ display: 'none' }}
-                    />
-                    <Upload size={36} style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }} />
-                    <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>Click or Drag High-Res Images Here</p>
-                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Supports Ultra HD JPG, PNG, WebP</p>
-                  </div>
+                    All ({myBundles.length})
+                  </button>
+                  <button
+                    onClick={() => setFilterTab('published')}
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: filterTab === 'published' ? 'var(--bg-primary)' : 'transparent',
+                      color: filterTab === 'published' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Published ({myBundles.filter(b => (b.status || 'published') === 'published').length})
+                  </button>
+                  <button
+                    onClick={() => setFilterTab('pending')}
+                    style={{
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: filterTab === 'pending' ? 'var(--bg-primary)' : 'transparent',
+                      color: filterTab === 'pending' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Pending ({myBundles.filter(b => b.status === 'pending_review').length})
+                  </button>
+                </div>
+              </div>
 
-                  {/* URL Input Row */}
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                    <input
-                      type="text"
-                      placeholder="Or paste direct image URL (https://...)"
-                      value={customImageUrl}
-                      onChange={(e) => setCustomImageUrl(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddUrlImage(); } }}
-                      className="admin-modal-input"
-                      style={{ flex: 1 }}
-                    />
-                    <button type="button" className="admin-btn secondary" onClick={handleAddUrlImage}>
-                      <Plus size={15} />
-                      <span>Add Image</span>
-                    </button>
-                  </div>
+              {filteredBundles.length === 0 ? (
+                <div className="admin-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <Folder size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+                  <p>No wallpaper bundles found in this category.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {filteredBundles.map(bundle => (
+                    <div key={bundle.id} className="admin-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ position: 'relative', height: '150px', borderRadius: '8px', overflow: 'hidden', background: '#000' }}>
+                        {bundle.images && bundle.images[0] ? (
+                          <img src={bundle.images[0].previewUrl || bundle.images[0].url} alt={bundle.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>No Image</div>
+                        )}
+                        <span style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.75)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', color: '#fff' }}>
+                          {bundle.orientation === 'landscape' ? 'Horizontal' : 'Vertical'}
+                        </span>
+                      </div>
 
-                  {/* Thumbnails Grid & Cover Selector */}
-                  {mediaItems.length > 0 && (
-                    <div style={{ marginTop: '1.25rem' }}>
-                      <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-                        Uploaded Images ({mediaItems.length}) • Click thumbnail to select Cover Image:
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.85rem' }}>
-                        {mediaItems.map((item, index) => (
-                          <div 
-                            key={index} 
-                            onClick={() => setCoverIndex(index)}
-                            style={{ position: 'relative', height: '110px', borderRadius: '10px', overflow: 'hidden', border: coverIndex === index ? '2px solid var(--text-primary)' : '1px solid var(--border-color)', cursor: 'pointer' }}
-                          >
-                            <img src={item.url} alt={item.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            {coverIndex === index && (
-                              <div style={{ position: 'absolute', top: '6px', left: '6px', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontSize: '0.68rem', fontWeight: 800, padding: '0.15rem 0.45rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '2px' }}>
-                                <Check size={10} /> Cover
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleRemoveMedia(index); }}
-                              style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(0,0,0,0.75)', border: 'none', color: '#ffffff', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
+                      <div>
+                        <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem', fontWeight: 600 }}>{bundle.name}</h4>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {bundle.description || 'No description'}
+                        </p>
+                      </div>
+
+                      {bundle.adminNote && (
+                        <div style={{ padding: '0.5rem', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '6px', border: '1px solid rgba(234, 179, 8, 0.25)', fontSize: '0.75rem', color: 'var(--color-google-yellow)' }}>
+                          <strong>Admin Note:</strong> {bundle.adminNote}
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{bundle.images?.length || 0} Wallpapers</span>
+                        <button onClick={() => handleDeleteBundle(bundle.id)} className="admin-btn secondary" style={{ color: '#ef4444', padding: '4px 8px' }}>
+                          <Trash2 size={14} /> Delete
+                        </button>
                       </div>
                     </div>
-                  )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: CREATE BUNDLE (1:1 LITERAL MATCH WITH ADMIN DASHBOARD UPLOAD FORM) */}
+          {activeTab === 'upload' && (
+            <div className="admin-card" style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+              <form onSubmit={handleSubmitBundle} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Bundle Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={bundleName}
+                    onChange={(e) => setBundleName(e.target.value)}
+                    placeholder="e.g. Cyberpunk 2077 Night City Pack"
+                    className="admin-modal-input"
+                  />
                 </div>
 
-                {/* Form Fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                      Drop Title *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Cyberpunk Neon Tokyo 4K Pack"
-                      value={bundleName}
-                      onChange={(e) => setBundleName(e.target.value)}
-                      className="admin-modal-input"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                      Category / Genre
-                    </label>
-                    <select 
-                      value={bundleType} 
-                      onChange={(e) => setBundleType(e.target.value)}
-                      className="admin-modal-input"
-                    >
-                      <option value="Desktop">Desktop Wallpapers</option>
-                      <option value="Mobile">Mobile Wallpapers</option>
-                      <option value="Anime">Anime & Manga</option>
-                      <option value="Aesthetic">Aesthetic & Minimalist</option>
-                      <option value="Gaming">Gaming & Cyberpunk</option>
-                      <option value="Nature">Nature & Scenery</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                      Orientation
-                    </label>
-                    <select 
-                      value={bundleOrientation} 
-                      onChange={(e) => setBundleOrientation(e.target.value)}
-                      className="admin-modal-input"
-                    >
-                      <option value="landscape">Horizontal (16:9 / 21:9)</option>
-                      <option value="vertical">Vertical (9:16 / 3:4)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                      Primary Aspect Ratio
-                    </label>
-                    <input
-                      type="text"
-                      value={bundleRatio}
-                      onChange={(e) => setBundleRatio(e.target.value)}
-                      className="admin-modal-input"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                    Description & Details
-                  </label>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Description</label>
                   <textarea
                     rows="3"
-                    placeholder="Describe your wallpaper collection theme..."
                     value={bundleDescription}
                     onChange={(e) => setBundleDescription(e.target.value)}
+                    placeholder="Brief overview of this wallpaper set..."
                     className="admin-modal-input"
                     style={{ height: 'auto' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-                  <button 
-                    type="submit" 
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Orientation</label>
+                    <select
+                      value={bundleOrientation}
+                      onChange={(e) => setBundleOrientation(e.target.value)}
+                      className="admin-modal-input"
+                    >
+                      <option value="landscape">Landscape / Desktop (16:9)</option>
+                      <option value="portrait">Portrait / Mobile (9:16)</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Aspect Ratio</label>
+                    <select
+                      value={bundleRatio}
+                      onChange={(e) => setBundleRatio(e.target.value)}
+                      className="admin-modal-input"
+                    >
+                      {bundleOrientation === 'landscape' ? (
+                        <>
+                          <option value="16:9">16:9 Standard Widescreen</option>
+                          <option value="21:9">21:9 Ultrawide</option>
+                          <option value="16:10">16:10 Display</option>
+                          <option value="32:9">32:9 Super Ultrawide</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="9:16">9:16 Mobile Vertical</option>
+                          <option value="9:19.5">9:19.5 Modern Phone</option>
+                          <option value="3:4">3:4 Tablet / iPad</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Category Tag</label>
+                    <input
+                      type="text"
+                      value={bundleType}
+                      onChange={(e) => setBundleType(e.target.value)}
+                      placeholder="e.g. Gaming, Anime, Minimalist"
+                      className="admin-modal-input"
+                    />
+                  </div>
+                </div>
+
+                {/* Upload Drag & Drop Zone (1:1 with Admin Dashboard) */}
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Wallpaper Images *</label>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      border: '2px dashed var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '2rem',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: 'var(--bg-primary)'
+                    }}
+                  >
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      style={{ display: 'none' }}
+                    />
+                    <Upload size={32} style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }} />
+                    <p style={{ margin: 0, fontWeight: 600 }}>Click to browse or drag wallpaper files here</p>
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>JPG, PNG, WebP ultra-high resolution</p>
+                  </div>
+
+                  {mediaItems.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
+                      {mediaItems.map(item => (
+                        <div key={item.id} style={{ position: 'relative', height: '80px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                          <img src={item.preview} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button
+                            type="button"
+                            onClick={() => removeMediaItem(item.id)}
+                            style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.75)', border: 'none', color: '#fff', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                  <button
+                    type="submit"
                     disabled={uploading}
                     className="admin-btn primary"
-                    style={{ padding: '0.75rem 2rem', borderRadius: '9999px', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: 800, fontSize: '0.9rem' }}
+                    style={{ padding: '0.65rem 1.75rem' }}
                   >
-                    {uploading ? 'Submitting Drop...' : 'Submit Drop for Review'}
+                    {uploading ? 'Publishing...' : 'Publish Bundle'}
                   </button>
                 </div>
               </form>
             </div>
           )}
 
-          {/* TAB 3: MY WALLPAPER DROPS */}
-          {activeTab === 'drops' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* Filter Tabs */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={() => setFilterTab('all')}
-                  style={{ padding: '0.4rem 0.9rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--border-color)', background: filterTab === 'all' ? 'var(--text-primary)' : 'var(--bg-surface)', color: filterTab === 'all' ? 'var(--bg-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}
-                >
-                  All Drops ({myBundles.length})
-                </button>
-                <button 
-                  onClick={() => setFilterTab('published')}
-                  style={{ padding: '0.4rem 0.9rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--border-color)', background: filterTab === 'published' ? 'var(--text-primary)' : 'var(--bg-surface)', color: filterTab === 'published' ? 'var(--bg-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}
-                >
-                  Published ({myBundles.filter(b => (b.status || 'published') === 'published').length})
-                </button>
-                <button 
-                  onClick={() => setFilterTab('pending')}
-                  style={{ padding: '0.4rem 0.9rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--border-color)', background: filterTab === 'pending' ? 'var(--text-primary)' : 'var(--bg-surface)', color: filterTab === 'pending' ? 'var(--bg-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}
-                >
-                  Pending Review ({myBundles.filter(b => b.status === 'pending_review').length})
-                </button>
-                <button 
-                  onClick={() => setFilterTab('rejected')}
-                  style={{ padding: '0.4rem 0.9rem', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--border-color)', background: filterTab === 'rejected' ? 'var(--text-primary)' : 'var(--bg-surface)', color: filterTab === 'rejected' ? 'var(--bg-primary)' : 'var(--text-secondary)', cursor: 'pointer' }}
-                >
-                  Rejected ({myBundles.filter(b => b.status === 'rejected').length})
-                </button>
-              </div>
-
-              {filteredBundles.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem 1rem', background: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                  <Folder size={40} style={{ opacity: 0.5, marginBottom: '0.5rem' }} />
-                  <h3 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-primary)' }}>No Wallpaper Drops Found</h3>
-                  <p style={{ fontSize: '0.85rem', margin: 0 }}>Click "+ Drop Pack" in the sidebar to release your collection.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
-                  {filteredBundles.map((bundle) => {
-                    const bStatus = bundle.status || 'published';
-                    const coverImg = bundle.images && bundle.images[bundle.coverIndex || 0] ? (bundle.images[bundle.coverIndex || 0].previewUrl || bundle.images[bundle.coverIndex || 0].url) : '';
-
-                    return (
-                      <div 
-                        key={bundle.id}
-                        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-                      >
-                        <div style={{ position: 'relative', height: '160px', background: '#000000', cursor: 'pointer' }} onClick={() => onSelectBundle && onSelectBundle(bundle)}>
-                          {coverImg ? (
-                            <img src={coverImg} alt={bundle.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>No Cover</div>
-                          )}
-
-                          <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
-                            {bStatus === 'published' && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(16, 185, 129, 0.9)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '9999px' }}>
-                                <CheckCircle2 size={12} /> Published
-                              </span>
-                            )}
-                            {bStatus === 'pending_review' && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(234, 179, 8, 0.95)', color: '#000000', fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '9999px' }}>
-                                <Clock size={12} /> Pending Review
-                              </span>
-                            )}
-                            {bStatus === 'rejected' && (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(239, 68, 68, 0.9)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: '9999px' }}>
-                                <AlertCircle size={12} /> Rejected
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                          <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {bundle.name}
-                          </h3>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            {bundle.type || 'Desktop'} • {bundle.images?.length || 0} Wallpapers
-                          </div>
-
-                          {bStatus === 'pending_review' && (
-                            <div style={{ padding: '0.5rem 0.75rem', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.25)', fontSize: '0.75rem', color: 'var(--color-google-yellow)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <Clock size={13} style={{ flexShrink: 0 }} />
-                              <span>Submitted. Will be published after review.</span>
-                            </div>
-                          )}
-
-                          {bundle.adminNote && (
-                            <div style={{ padding: '0.55rem 0.75rem', borderRadius: '8px', background: bStatus === 'rejected' ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-surface-elevated)', border: `1px solid ${bStatus === 'rejected' ? 'rgba(239, 68, 68, 0.3)' : 'var(--border-color)'}`, fontSize: '0.75rem', color: bStatus === 'rejected' ? '#ef4444' : 'var(--text-primary)' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, marginBottom: '0.15rem' }}>
-                                <MessageSquare size={12} />
-                                <span>Admin Note:</span>
-                              </div>
-                              <p style={{ margin: 0, opacity: 0.95, lineHeight: 1.35 }}>{bundle.adminNote}</p>
-                            </div>
-                          )}
-
-                          <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                              <span><Eye size={12} style={{ display: 'inline', marginRight: '3px' }} />{bundle.stats?.views || 0}</span>
-                              <span><Download size={12} style={{ display: 'inline', marginRight: '3px' }} />{bundle.stats?.downloads || 0}</span>
-                            </div>
-                            <button 
-                              onClick={() => handleDeleteBundle(bundle.id)}
-                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
-                              title="Delete drop"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: CREATOR PROFILE */}
+          {/* TAB 4: PROFILE SETTINGS */}
           {activeTab === 'profile' && (
-            <div className="admin-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '1.75rem' }}>
-              <h2 style={{ margin: '0 0 1.25rem 0', fontSize: '1.2rem', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-                Creator Channel Profile
-              </h2>
-
-              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '600px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                    Channel / Display Name
-                  </label>
+            <div className="admin-card" style={{ padding: '1.5rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', maxWidth: '600px' }}>
+              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Display / Creator Name</label>
                   <input
                     type="text"
                     value={editedDisplayName}
@@ -781,43 +767,36 @@ export default function CreatorDashboard({ user, onBack, onSelectBundle }) {
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-                    Creator Bio / About
-                  </label>
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Channel About Bio</label>
                   <textarea
                     rows="3"
                     value={editedAbout}
                     onChange={(e) => setEditedAbout(e.target.value)}
-                    placeholder="Tell your subscribers about your artwork & wallpapers..."
+                    placeholder="Bio details for your channel..."
                     className="admin-modal-input"
                     style={{ height: 'auto' }}
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>YouTube Channel URL</label>
-                    <input type="text" value={editedYoutube} onChange={(e) => setEditedYoutube(e.target.value)} className="admin-modal-input" placeholder="https://youtube.com/..." />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">YouTube URL</label>
+                    <input type="text" value={editedYoutube} onChange={(e) => setEditedYoutube(e.target.value)} className="admin-modal-input" />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>Instagram Handle</label>
-                    <input type="text" value={editedInstagram} onChange={(e) => setEditedInstagram(e.target.value)} className="admin-modal-input" placeholder="https://instagram.com/..." />
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Instagram Handle</label>
+                    <input type="text" value={editedInstagram} onChange={(e) => setEditedInstagram(e.target.value)} className="admin-modal-input" />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>Twitter / X Handle</label>
-                    <input type="text" value={editedTwitter} onChange={(e) => setEditedTwitter(e.target.value)} className="admin-modal-input" placeholder="https://x.com/..." />
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Twitter / X Handle</label>
+                    <input type="text" value={editedTwitter} onChange={(e) => setEditedTwitter(e.target.value)} className="admin-modal-input" />
                   </div>
                 </div>
 
-                <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-                  <button 
-                    type="submit" 
-                    disabled={savingProfile}
-                    className="admin-btn primary"
-                    style={{ padding: '0.65rem 1.75rem', borderRadius: '9999px', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontWeight: 750 }}
-                  >
-                    {savingProfile ? 'Saving Changes...' : 'Save Creator Profile'}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button type="submit" disabled={savingProfile} className="admin-btn primary">
+                    {savingProfile ? 'Saving...' : 'Save Profile'}
                   </button>
                 </div>
               </form>
