@@ -6804,45 +6804,29 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Mr. Bean Cinematic Full-Screen Darkness (Phase 1) */
-.mrbean-darkness-backdrop {
+/* Translucent Dim Backdrop (Screen remains translucent blur visible underneath) */
+.creator-translucent-dim {
   position: fixed;
   inset: 0;
-  z-index: 99999;
-  background: #000000;
-  animation: mrBeanDarknessFade 0.4s ease-out forwards;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  animation: fadeInTranslucent 0.3s ease-out forwards;
 }
 
-@keyframes mrBeanDarknessFade {
+@keyframes fadeInTranslucent {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-/* Mr. Bean White Circular Spotlight Light (Phase 2) */
-.mrbean-spotlight-container {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  pointer-events: none;
-  background: radial-gradient(circle at top right, transparent 80px, rgba(0,0,0,0.96) 240px);
-}
-
-.mrbean-spotlight-circle {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 220px;
-  height: 240px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.94), 0 0 60px rgba(255, 255, 255, 1), inset 0 0 40px rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.08);
-  border: 3px solid #ffffff;
-  animation: mrBeanFlashSpotlight 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes mrBeanFlashSpotlight {
-  0% { transform: scale(0.95); opacity: 0.85; filter: drop-shadow(0 0 20px #ffffff); }
-  100% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 50px #ffffff); }
+/* Static, Beautiful Rectangular Highlight Box Around Creator's Dashboard Menu Item */
+.creator-rectangular-highlight {
+  position: relative !important;
+  z-index: 10000 !important;
+  border: 2px solid var(--text-primary) !important;
+  border-radius: 10px !important;
+  background: var(--bg-surface) !important;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.1) !important;
 }
 
 /* Studio & Drop Modals Backdrop */

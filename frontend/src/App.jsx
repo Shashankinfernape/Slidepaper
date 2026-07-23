@@ -549,9 +549,6 @@ function AppContent() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isUnlockingCurator, setIsUnlockingCurator] = useState(false);
-  const [isBlinkingLogin, setIsBlinkingLogin] = useState(false);
-  const [loginTooltipMsg, setLoginTooltipMsg] = useState('');
-  const [mrBeanPhase, setMrBeanPhase] = useState(null); // null | 'darkness' | 'spotlight'
 
   const handleDropClick = () => {
     if (!user) {
@@ -565,13 +562,9 @@ function AppContent() {
       return;
     }
 
-    // First-time creator unlock: Cinematic Cartoonish Mr. Bean Spotlight Animation!
+    // First-time creator unlock: Translucent dimming + Rectangular highlight box in Profile Dropdown!
     setShowProfileMenu(true);
-    setMrBeanPhase('darkness'); // Phase 1: Total blackout/darkness for 1s
-
-    setTimeout(() => {
-      setMrBeanPhase('spotlight'); // Phase 2: White circular spotlight beam flashing around profile menu
-    }, 1000);
+    setIsUnlockingCurator(true);
 
     setTimeout(async () => {
       try {
@@ -585,16 +578,16 @@ function AppContent() {
           updateUserProfileState(data.user);
         }
       } catch (err) {
-        console.error('Error activating curator status:', err);
+        console.error('Error activating creator status:', err);
       } finally {
-        confetti({ particleCount: 160, spread: 90, origin: { y: 0.2 } });
-        setMrBeanPhase(null);
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.2 } });
+        setIsUnlockingCurator(false);
         setShowProfileMenu(false);
-        // Take them initially to their profile settings page inside Creator Studio!
+        // Initially take creator directly to their Profile Settings page inside Creator's Dashboard!
         setCurrentView('curator');
         window.history.pushState(null, '', '/curator/profile');
       }
-    }, 2800);
+    }, 1800);
   };
 
   // Refs for closing dropdowns when clicking outside
@@ -883,31 +876,24 @@ function AppContent() {
                       </span>
                     )}
                   </div>
-                  <div 
-                    className={`dropdown-item ${isUnlockingCurator ? 'dr-strange-portal-item' : ''}`}
-                    onClick={() => { 
-                      if (isUnlockingCurator) return;
-                      setShowProfileMenu(false);
-                      if (isCurator) {
+                  {/* Creator's Dashboard Option — ONLY exists if user is already a creator OR is unlocking for the first time */}
+                  {(isCurator || isUnlockingCurator) && (
+                    <div 
+                      className={`dropdown-item ${isUnlockingCurator ? 'creator-rectangular-highlight' : ''}`}
+                      onClick={() => { 
+                        if (isUnlockingCurator) return;
+                        setShowProfileMenu(false);
                         setCurrentView('curator'); 
                         window.history.pushState(null, '', '/curator'); 
-                      } else {
-                        handleDropClick();
-                      }
-                    }} 
-                    style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', position: 'relative' }}
-                  >
-                    {isUnlockingCurator && (
-                      <>
-                        <div className="dr-strange-portal-ring"></div>
-                        <div className="dr-strange-sparks"></div>
-                      </>
-                    )}
-                    <span style={{ fontWeight: 700, color: isUnlockingCurator ? 'var(--color-google-yellow)' : 'var(--text-primary)' }}>
-                      {isUnlockingCurator ? 'Unlocking Creator Access...' : isCurator ? 'Creator Studio' : 'Become a Curator'}
-                    </span>
-                    <Sparkles size={15} style={{ color: 'var(--color-google-yellow)', animation: isUnlockingCurator ? 'keyGlowPulse 0.8s infinite' : 'none' }} />
-                  </div>
+                      }} 
+                      style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', position: 'relative' }}
+                    >
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {isUnlockingCurator ? "Unlocking Creator's Dashboard..." : "Creator's Dashboard"}
+                      </span>
+                      <Sparkles size={15} style={{ color: 'var(--color-google-yellow)' }} />
+                    </div>
+                  )}
                   {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
                     <div className="dropdown-item" onClick={() => { setCurrentView('admin'); window.history.pushState(null, '', '/admin'); setShowProfileMenu(false); }} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--color-google-yellow)' }}>Admin Dashboard</span>
@@ -928,14 +914,9 @@ function AppContent() {
           )}
         </div>
 
-        {/* Cartoonish Mr. Bean Cinematic Spotlight Overlays */}
-        {mrBeanPhase === 'darkness' && (
-          <div className="mrbean-darkness-backdrop" />
-        )}
-        {mrBeanPhase === 'spotlight' && (
-          <div className="mrbean-spotlight-container">
-            <div className="mrbean-spotlight-circle" />
-          </div>
+        {/* Translucent Backdrop Overlay during unlock */}
+        {isUnlockingCurator && (
+          <div className="creator-translucent-dim" />
         )}
 
         {/* Genre Tabs Bar (Only on feed view) */}
