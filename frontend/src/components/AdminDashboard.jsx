@@ -197,7 +197,7 @@ function CustomDropdown({ value, onChange, options }) {
   );
 }
 
-export default function AdminDashboard({ onBack, logout }) {
+export default function AdminDashboard({ onBack, logout, isCreatorMode = false }) {
   const { user, userProfile, updateUserProfileState } = useAuth();
   
   // Toast Notification State
@@ -209,9 +209,12 @@ export default function AdminDashboard({ onBack, logout }) {
 
   const getInitialTab = () => {
     const path = window.location.pathname.toLowerCase();
-    if (path.startsWith('/admin/')) {
-      const tab = path.split('/admin/')[1].split('/')[0];
-      const validTabs = ['overview', 'drive', 'bundles', 'upload', 'monetize', 'profile', 'subscribers'];
+    const prefix = isCreatorMode ? '/curator/' : '/admin/';
+    if (path.startsWith(prefix)) {
+      const tab = path.split(prefix)[1].split('/')[0];
+      const validTabs = isCreatorMode
+        ? ['overview', 'bundles', 'upload', 'profile', 'subscribers']
+        : ['overview', 'drive', 'bundles', 'reviews', 'upload', 'monetize', 'profile', 'subscribers'];
       if (validTabs.includes(tab)) return tab;
     }
     return 'overview';
@@ -220,7 +223,8 @@ export default function AdminDashboard({ onBack, logout }) {
 
   const setActiveTab = (tab) => {
     setActiveTabState(tab);
-    window.history.pushState(null, '', `/admin/${tab}`);
+    const prefix = isCreatorMode ? '/curator' : '/admin';
+    window.history.pushState(null, '', `${prefix}/${tab}`);
   };
 
   useEffect(() => {
@@ -1071,13 +1075,17 @@ export default function AdminDashboard({ onBack, logout }) {
               <BarChart2 size={16} style={{ flexShrink: 0 }} />
               <span>Overview</span>
             </button>
-            <button
-              onClick={() => { setActiveTab('drive'); setIsSidebarOpen(false); }}
-              className={`admin-nav-item ${activeTab === 'drive' ? 'active' : ''}`}
-            >
-              <Folder size={16} style={{ flexShrink: 0 }} />
-              <span>Google Drive</span>
-            </button>
+
+            {!isCreatorMode && (
+              <button
+                onClick={() => { setActiveTab('drive'); setIsSidebarOpen(false); }}
+                className={`admin-nav-item ${activeTab === 'drive' ? 'active' : ''}`}
+              >
+                <Folder size={16} style={{ flexShrink: 0 }} />
+                <span>Google Drive</span>
+              </button>
+            )}
+
             <button
               onClick={() => { setActiveTab('bundles'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'bundles' ? 'active' : ''}`}
@@ -1086,21 +1094,24 @@ export default function AdminDashboard({ onBack, logout }) {
               <span>Bundles Manager</span>
             </button>
 
-            <button
-              onClick={() => { setActiveTab('reviews'); setIsSidebarOpen(false); fetchPendingDrops(); }}
-              className={`admin-nav-item ${activeTab === 'reviews' ? 'active' : ''}`}
-              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Clock size={16} style={{ flexShrink: 0 }} />
-                <span>Pending Drops</span>
-              </div>
-              {pendingDrops.length > 0 && (
-                <span style={{ background: 'var(--color-google-yellow)', color: '#000000', borderRadius: '9999px', padding: '0.1rem 0.55rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                  {pendingDrops.length}
-                </span>
-              )}
-            </button>
+            {!isCreatorMode && (
+              <button
+                onClick={() => { setActiveTab('reviews'); setIsSidebarOpen(false); fetchPendingDrops(); }}
+                className={`admin-nav-item ${activeTab === 'reviews' ? 'active' : ''}`}
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Clock size={16} style={{ flexShrink: 0 }} />
+                  <span>Pending Drops</span>
+                </div>
+                {pendingDrops.length > 0 && (
+                  <span style={{ background: 'var(--color-google-yellow)', color: '#000000', borderRadius: '9999px', padding: '0.1rem 0.55rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                    {pendingDrops.length}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button
               onClick={() => { 
                 setActiveTab('upload'); 
@@ -1120,13 +1131,17 @@ export default function AdminDashboard({ onBack, logout }) {
               <Plus size={16} style={{ flexShrink: 0 }} />
               <span>Create Bundle</span>
             </button>
-            <button
-              onClick={() => { setActiveTab('monetize'); setIsSidebarOpen(false); }}
-              className={`admin-nav-item ${activeTab === 'monetize' ? 'active' : ''}`}
-            >
-              <DollarSign size={16} style={{ flexShrink: 0 }} />
-              <span>Monetization</span>
-            </button>
+
+            {!isCreatorMode && (
+              <button
+                onClick={() => { setActiveTab('monetize'); setIsSidebarOpen(false); }}
+                className={`admin-nav-item ${activeTab === 'monetize' ? 'active' : ''}`}
+              >
+                <DollarSign size={16} style={{ flexShrink: 0 }} />
+                <span>Monetization</span>
+              </button>
+            )}
+
             <button
               onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }}
               className={`admin-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
