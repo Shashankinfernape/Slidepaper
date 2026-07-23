@@ -12,8 +12,6 @@ import TransferHUD from './components/TransferHUD';
 import AdminDashboard from './components/AdminDashboard';
 import LegalModal from './components/LegalModal';
 import NotificationDropdown from './components/NotificationDropdown';
-import BundleStudioModal from './components/BundleStudioModal';
-import CuratorApplicationModal from './components/CuratorApplicationModal';
 import CuratorDashboard from './components/CuratorDashboard';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
@@ -548,6 +546,45 @@ function AppContent() {
   // Dropdown UI states
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isUnlockingCurator, setIsUnlockingCurator] = useState(false);
+
+  const handleDropClick = () => {
+    if (!user) {
+      loginWithGoogle();
+      return;
+    }
+
+    if (isCurator) {
+      setCurrentView('curator');
+      window.history.pushState(null, '', '/curator');
+      return;
+    }
+
+    // First-time unlock: Candlelight Vignette + Dr. Strange Mystical Portal Ring in Profile Dropdown!
+    setShowProfileMenu(true);
+    setIsUnlockingCurator(true);
+
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid })
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+          updateUserProfileState(data.user);
+        }
+      } catch (err) {
+        console.error('Error activating curator status:', err);
+      } finally {
+        setIsUnlockingCurator(false);
+        setShowProfileMenu(false);
+        setCurrentView('curator');
+        window.history.pushState(null, '', '/curator');
+      }
+    }, 1800);
+  };
 
   // Refs for closing dropdowns when clicking outside
   const sortRef = useRef(null);
@@ -701,6 +738,9 @@ function AppContent() {
 
   return (
     <div className="webapp-container">
+      {/* Candlelight Dimming Backdrop overlay when unlocking Creator Studio in Profile Menu */}
+      {isUnlockingCurator && <div className="candlelight-dim-backdrop" />}
+
       {/* Sleek Minimalist Header */}
       <header className="header-nav">
         {/* Brand Logo & Search Bar */}
@@ -751,15 +791,7 @@ function AppContent() {
           <button
             className="drop-cta-btn"
             title="Publish a new wallpaper drop"
-            onClick={() => {
-              if (!user) {
-                loginWithGoogle();
-              } else if (isCurator) {
-                setShowDropStudioModal(true);
-              } else {
-                setShowCuratorAppModal(true);
-              }
-            }}
+            onClick={handleDropClick}
           >
             <Plus size={16} className="drop-plus-icon" />
             <span>Drop</span>
@@ -841,22 +873,29 @@ function AppContent() {
                     )}
                   </div>
                   <div 
-                    className="dropdown-item" 
+                    className={`dropdown-item ${isUnlockingCurator ? 'dr-strange-portal-item' : ''}`}
                     onClick={() => { 
+                      if (isUnlockingCurator) return;
                       setShowProfileMenu(false);
                       if (isCurator) {
                         setCurrentView('curator'); 
                         window.history.pushState(null, '', '/curator'); 
                       } else {
-                        setShowCuratorAppModal(true);
+                        handleDropClick();
                       }
                     }} 
-                    style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}
+                    style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', position: 'relative' }}
                   >
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {isCurator ? 'Curator Studio' : 'Become a Curator'}
+                    {isUnlockingCurator && (
+                      <>
+                        <div className="dr-strange-portal-ring"></div>
+                        <div className="dr-strange-sparks"></div>
+                      </>
+                    )}
+                    <span style={{ fontWeight: 700, color: isUnlockingCurator ? 'var(--color-google-yellow)' : 'var(--text-primary)' }}>
+                      {isUnlockingCurator ? 'Unlocking Creator Access...' : isCurator ? 'Creator Studio' : 'Become a Curator'}
                     </span>
-                    <Sparkles size={14} style={{ color: 'var(--color-google-yellow)' }} />
+                    <Sparkles size={15} style={{ color: 'var(--color-google-yellow)', animation: isUnlockingCurator ? 'keyGlowPulse 0.8s infinite' : 'none' }} />
                   </div>
                   {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
                     <div className="dropdown-item" onClick={() => { setCurrentView('admin'); window.history.pushState(null, '', '/admin'); setShowProfileMenu(false); }} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
@@ -1029,27 +1068,6 @@ function AppContent() {
       {legalModalType && (
         <LegalModal type={legalModalType} onClose={() => setLegalModalType(null)} />
       )}
-
-      {/* Drop Studio & Curator Application Modals */}
-      <BundleStudioModal
-        isOpen={showDropStudioModal}
-        onClose={() => setShowDropStudioModal(false)}
-        user={user}
-        onDropPublished={(newBundle) => {
-          setBundles(prev => [newBundle, ...prev]);
-          setCurrentView('feed');
-        }}
-      />
-
-      <CuratorApplicationModal
-        isOpen={showCuratorAppModal}
-        onClose={() => setShowCuratorAppModal(false)}
-        user={user}
-        onActivated={() => {
-          setShowCuratorAppModal(false);
-          setShowDropStudioModal(true);
-        }}
-      />
 
       {/* Secret Admin Login Modal */}
       {showAdminLoginModal && (
