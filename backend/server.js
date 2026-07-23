@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema({
   displayName: String,
   email: String,
   photoURL: String,
+  role: { type: String, enum: ['user', 'curator', 'admin'], default: 'user' },
+  curatorStatus: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
+  portfolioUrl: { type: String, default: '' },
+  applicationReason: { type: String, default: '' },
   subscribers: { type: Number, default: 0 },
   subscriberUids: { type: [String], default: [] },
   about: { type: String, default: '' },
@@ -2494,6 +2498,169 @@ app.post('/api/users/upload-avatar', upload.single('avatar'), async (req, res) =
   }
 });
 
+
+// --- CURATOR & DROP API ENDPOINTS ---
+
+// Endpoint: Apply for Curator Status
+app.post('/api/curator/apply', async (req, res) => {
+  const { uid, portfolioUrl, reason } = req.body;
+  if (!uid) return res.status(400).json({ error: 'Missing UID' });
+
+  try {
+    const user = await User.findOne({ uid });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.curatorStatus = 'pending';
+    user.portfolioUrl = portfolioUrl || user.portfolioUrl || '';
+    user.applicationReason = reason || user.applicationReason || '';
+    await user.save();
+
+    console.log(`[Curator] User ${uid} applied for curator status.`);
+    return res.status(200).json({ success: true, message: 'Application submitted successfully!', user });
+  } catch (err) {
+    console.error('Error applying for curator:', err);
+    return res.status(500).json({ error: 'Failed to submit application' });
+  }
+});
+
+// Endpoint: Instant Curator Activation
+app.post('/api/curator/activate-instant', async (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ error: 'Missing UID' });
+
+  try {
+    let user = await User.findOne({ uid });
+    if (!user) {
+      user = await User.create({ uid, role: 'curator', curatorStatus: 'approved' });
+    } else {
+      user.role = 'curator';
+      user.curatorStatus = 'approved';
+      await user.save();
+    }
+
+    return res.status(200).json({ success: true, message: 'Curator access activated!', user });
+  } catch (err) {
+    console.error('Error activating curator:', err);
+    return res.status(500).json({ error: 'Failed to activate curator access' });
+  }
+});
+
+// Endpoint: Fetch Curator Dashboard Data
+app.get('/api/curator/dashboard/:uid', async (req, res) => {
+  const { uid } = req.params;
+  try {
+    const user = await User.findOne({ uid });
+    const userEmail = user ? user.email : '';
+
+    const bundles = await Bundle.find({
+      $or: [{ 'author.uid': uid }, { 'author.email': userEmail }]
+    }).sort({ createdAt: -1 });
+
+    const totalViews = bundles.reduce((acc, b) => acc + (b.stats?.views || 0), 0);
+    const totalDownloads = bundles.reduce((acc, b) => acc + (b.stats?.downloads || 0), 0);
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        totalDrops: bundles.length,
+        totalViews,
+        totalDownloads,
+        subscribers: user?.subscribers || 0
+      },
+      bundles
+    });
+  } catch (err) {
+    console.error('Error fetching curator dashboard:', err);
+    return res.status(500).json({ error: 'Failed to fetch curator analytics' });
+  }
+});
+
+// Endpoint: Publish New Drop / Bundle
+app.post('/api/curator/bundles', async (req, res) => {
+  const { uid, name, description, type, orientation, ratioOptions, coverIndex, images, author } = req.body;
+  if (!name || !images || images.length === 0) {
+    return res.status(400).json({ error: 'Drop title and at least 1 image are required.' });
+  }
+
+  try {
+    let authorObj = author;
+    if (uid) {
+      const user = await User.findOne({ uid });
+      if (user) {
+        authorObj = {
+          uid: user.uid,
+          name: user.displayName || 'Curator',
+          avatar: user.photoURL || '',
+          email: user.email || ''
+        };
+      }
+    }
+
+    const cleanId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+
+    const formattedImages = images.map((img, i) => ({
+      id: `${cleanId}-${i+1}`,
+      url: typeof img === 'string' ? img : (img.url || img.previewUrl),
+      previewUrl: typeof img === 'string' ? img : (img.previewUrl || img.url),
+      label: (typeof img === 'object' && img.label) ? img.label : `${name} #${i+1}`
+    }));
+
+    const newBundle = new Bundle({
+      id: cleanId,
+      name,
+      description: description || `Curated wallpaper drop by ${authorObj?.name || 'Curator'}`,
+      type: type || 'Desktop',
+      orientation: orientation || 'Horizontal',
+      ratio: '16:9',
+      ratioOptions: ratioOptions || ['16:9', '9:16', '21:9'],
+      coverIndex: coverIndex || 0,
+      images: formattedImages,
+      author: authorObj || { uid: uid || 'anonymous', name: 'Curator', avatar: '' },
+      stats: { views: 0, downloads: 0 }
+    });
+
+    await newBundle.save();
+    console.log(`[Curator] Published new wallpaper drop: ${name} (${cleanId})`);
+
+    // Backup
+    saveBundlesToDrive();
+
+    return res.status(201).json({ success: true, bundle: newBundle });
+  } catch (err) {
+    console.error('Error creating curator drop:', err);
+    return res.status(500).json({ error: 'Failed to publish new drop', details: err.message });
+  }
+});
+
+// Endpoint: Admin fetch pending curator applications
+app.get('/api/admin/curator-applications', async (req, res) => {
+  try {
+    const pendingUsers = await User.find({ curatorStatus: 'pending' });
+    return res.status(200).json({ success: true, applications: pendingUsers });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch curator applications' });
+  }
+});
+
+// Endpoint: Admin approve or reject curator application
+app.post('/api/admin/approve-curator', async (req, res) => {
+  const { uid, status } = req.body;
+  if (!uid || !status) return res.status(400).json({ error: 'Missing uid or status' });
+
+  try {
+    const user = await User.findOne({ uid });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.curatorStatus = status;
+    user.role = (status === 'approved') ? 'curator' : 'user';
+    await user.save();
+
+    console.log(`[Admin] Curator application for ${uid} set to ${status}.`);
+    return res.status(200).json({ success: true, user });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to process application' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Slidepapers backend server running at http://localhost:${PORT}`);

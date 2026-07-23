@@ -364,11 +364,16 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const isCurator = isAdmin || userProfile?.role === 'curator' || userProfile?.role === 'admin' || userProfile?.curatorStatus === 'approved';
+  const userRole = isAdmin ? 'admin' : (userProfile?.role || 'user');
+
   const value = {
     user,
     userProfile,
     updateUserProfileState,
     isAdmin,
+    isCurator,
+    userRole,
     loading,
     loginWithGoogle,
     loginAdminWithGoogle,

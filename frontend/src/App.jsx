@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  ChevronDown, ChevronLeft, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone
+  ChevronDown, ChevronLeft, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone, Plus, Sparkles
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
@@ -12,6 +12,9 @@ import TransferHUD from './components/TransferHUD';
 import AdminDashboard from './components/AdminDashboard';
 import LegalModal from './components/LegalModal';
 import NotificationDropdown from './components/NotificationDropdown';
+import BundleStudioModal from './components/BundleStudioModal';
+import CuratorApplicationModal from './components/CuratorApplicationModal';
+import CuratorDashboard from './components/CuratorDashboard';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -286,8 +289,12 @@ function HeroSection({ onGetStarted, bundles }) {
 }
 
 function AppContent() {
-  const { user, userProfile, isAdmin, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
+  const { user, userProfile, isAdmin, isCurator, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
   
+  // Curator Studio & Drop Modal States
+  const [showDropStudioModal, setShowDropStudioModal] = useState(false);
+  const [showCuratorAppModal, setShowCuratorAppModal] = useState(false);
+
   // Secret admin modal states
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
@@ -740,6 +747,24 @@ function AppContent() {
 
         {/* Right Nav Utilities & Authentication */}
         <div className="header-right">
+          {/* + Drop Button (YouTube / OLX Style Creator CTA) */}
+          <button
+            className="drop-cta-btn"
+            title="Publish a new wallpaper drop"
+            onClick={() => {
+              if (!user) {
+                loginWithGoogle();
+              } else if (isCurator) {
+                setShowDropStudioModal(true);
+              } else {
+                setShowCuratorAppModal(true);
+              }
+            }}
+          >
+            <Plus size={16} className="drop-plus-icon" />
+            <span>Drop</span>
+          </button>
+
           {/* Light/Dark Toggle */}
           <button
             className="theme-toggle-btn"
@@ -815,13 +840,31 @@ function AppContent() {
                       </span>
                     )}
                   </div>
+                  <div 
+                    className="dropdown-item" 
+                    onClick={() => { 
+                      setShowProfileMenu(false);
+                      if (isCurator) {
+                        setCurrentView('curator'); 
+                        window.history.pushState(null, '', '/curator'); 
+                      } else {
+                        setShowCuratorAppModal(true);
+                      }
+                    }} 
+                    style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}
+                  >
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {isCurator ? 'Curator Studio' : 'Become a Curator'}
+                    </span>
+                    <Sparkles size={14} style={{ color: 'var(--color-google-yellow)' }} />
+                  </div>
                   {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
                     <div className="dropdown-item" onClick={() => { setCurrentView('admin'); window.history.pushState(null, '', '/admin'); setShowProfileMenu(false); }} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem' }}>
                       <span style={{ fontWeight: 600, color: 'var(--color-google-yellow)' }}>Admin Dashboard</span>
                       <Shield size={14} style={{ color: 'var(--color-google-yellow)' }} />
                     </div>
                   )}
-                  <div className="dropdown-item" onClick={() => { logout(); setShowProfileMenu(false); if (currentView === 'admin') setCurrentView('landing'); }}>
+                  <div className="dropdown-item" onClick={() => { logout(); setShowProfileMenu(false); if (currentView === 'admin' || currentView === 'curator') setCurrentView('landing'); }}>
                     <span>Sign Out</span>
                     <LogOut size={14} />
                   </div>
@@ -920,6 +963,13 @@ function AppContent() {
             onBack={() => setCurrentView('feed')} 
             logout={() => { logout(); setCurrentView('landing'); }} 
           />
+        ) : currentView === 'curator' ? (
+          <CuratorDashboard
+            user={user}
+            onBack={() => setCurrentView('feed')}
+            onOpenDropStudio={() => setShowDropStudioModal(true)}
+            onSelectBundle={handleOpenBundle}
+          />
         ) : isBundleView ? (
           <BundleDetailPage
             key={activeBundle.id}
@@ -979,6 +1029,27 @@ function AppContent() {
       {legalModalType && (
         <LegalModal type={legalModalType} onClose={() => setLegalModalType(null)} />
       )}
+
+      {/* Drop Studio & Curator Application Modals */}
+      <BundleStudioModal
+        isOpen={showDropStudioModal}
+        onClose={() => setShowDropStudioModal(false)}
+        user={user}
+        onDropPublished={(newBundle) => {
+          setBundles(prev => [newBundle, ...prev]);
+          setCurrentView('feed');
+        }}
+      />
+
+      <CuratorApplicationModal
+        isOpen={showCuratorAppModal}
+        onClose={() => setShowCuratorAppModal(false)}
+        user={user}
+        onActivated={() => {
+          setShowCuratorAppModal(false);
+          setShowDropStudioModal(true);
+        }}
+      />
 
       {/* Secret Admin Login Modal */}
       {showAdminLoginModal && (
