@@ -494,6 +494,8 @@ function AppContent() {
         setCurrentView('feed');
       } else if (path.startsWith('/admin')) {
         setCurrentView('admin');
+      } else if (path.startsWith('/curator')) {
+        setCurrentView('curator');
       } else if (path.startsWith('/bundle/')) {
         const bundleId = path.split('/bundle/')[1];
         if (bundleId && bundles.length > 0) {
@@ -1003,11 +1005,10 @@ function AppContent() {
             logout={() => { logout(); setCurrentView('landing'); }} 
           />
         ) : currentView === 'curator' ? (
-          <CuratorDashboard
-            user={user}
-            onBack={() => setCurrentView('feed')}
-            onOpenDropStudio={() => setShowDropStudioModal(true)}
-            onSelectBundle={handleOpenBundle}
+          <AdminDashboard 
+            onBack={() => setCurrentView('feed')} 
+            logout={() => { logout(); setCurrentView('landing'); }} 
+            isCreatorMode={true}
           />
         ) : isBundleView ? (
           <BundleDetailPage
