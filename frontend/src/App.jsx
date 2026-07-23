@@ -548,7 +548,11 @@ function AppContent() {
   // Dropdown UI states
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isUnlockingCurator, setIsUnlockingCurator] = useState(false);
+  // unlockPhase: null | 'dim' | 'spotlight' | 'reveal' | 'done'
+  const [unlockPhase, setUnlockPhase] = useState(null);
+  const profileBadgeRef = useRef(null);
+
+  const isUnlockingCurator = unlockPhase !== null && unlockPhase !== 'done';
 
   const handleDropClick = () => {
     if (!user) {
@@ -562,10 +566,19 @@ function AppContent() {
       return;
     }
 
-    // First-time creator unlock: Translucent dimming + Rectangular highlight box in Profile Dropdown!
-    setShowProfileMenu(true);
-    setIsUnlockingCurator(true);
+    // Phase 1 — Lights dim (translucent overlay)
+    setUnlockPhase('dim');
 
+    // Phase 2 — Spotlight punches through, profile area glows
+    setTimeout(() => setUnlockPhase('spotlight'), 600);
+
+    // Phase 3 — Open dropdown + reveal the new button with animation
+    setTimeout(() => {
+      setShowProfileMenu(true);
+      setUnlockPhase('reveal');
+    }, 1400);
+
+    // Phase 4 — Activate, confetti, done
     setTimeout(async () => {
       try {
         const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
@@ -574,20 +587,20 @@ function AppContent() {
           body: JSON.stringify({ uid: user.uid })
         });
         const data = await res.json();
-        if (data.success && data.user) {
-          updateUserProfileState(data.user);
-        }
+        if (data.success && data.user) updateUserProfileState(data.user);
       } catch (err) {
-        console.error('Error activating creator status:', err);
+        console.error('Error activating creator:', err);
       } finally {
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.2 } });
-        setIsUnlockingCurator(false);
+        confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
+        setUnlockPhase('done');
         setShowProfileMenu(false);
-        // Initially take creator directly to their Profile Settings page inside Creator's Dashboard!
-        setCurrentView('curator');
-        window.history.pushState(null, '', '/curator/profile');
+        setTimeout(() => {
+          setUnlockPhase(null);
+          setCurrentView('curator');
+          window.history.pushState(null, '', '/curator/profile');
+        }, 600);
       }
-    }, 1800);
+    }, 3400);
   };
 
   // Refs for closing dropdowns when clicking outside
@@ -852,10 +865,18 @@ function AppContent() {
 
           {/* Firebase Authentication controls */}
           {user ? (
-            <div className="dropdown-container header-profile-dropdown" ref={profileRef}>
+            <div
+              className={`dropdown-container header-profile-dropdown${isUnlockingCurator ? ' creator-spotlight-elevated' : ''}`}
+              ref={profileRef}
+            >
+              {/* Spotlight ring around profile badge during unlock */}
+              {(unlockPhase === 'spotlight' || unlockPhase === 'reveal' || unlockPhase === 'done') && (
+                <div className="creator-spotlight-ring" />
+              )}
               <div
                 className="profile-badge"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                ref={profileBadgeRef}
+                onClick={() => !isUnlockingCurator && setShowProfileMenu(!showProfileMenu)}
               >
                 <img
                   src={getProxiedImageUrl(userProfile?.photoURL || user?.photoURL) || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'}
@@ -866,7 +887,7 @@ function AppContent() {
                 />
               </div>
               {showProfileMenu && (
-                <div className="dropdown-menu align-right">
+                <div className={`dropdown-menu align-right${isUnlockingCurator ? ' creator-unlock-dropdown' : ''}`}>
                   <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.25rem' }}>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Logged in as</p>
                     <p style={{ fontSize: '0.8rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</p>
@@ -876,22 +897,20 @@ function AppContent() {
                       </span>
                     )}
                   </div>
-                  {/* Creator's Dashboard Option — ONLY exists if user is already a creator OR is unlocking for the first time */}
+                  {/* Creator's Dashboard — only shown to curators or during first-time reveal */}
                   {(isCurator || isUnlockingCurator) && (
-                    <div 
-                      className={`dropdown-item ${isUnlockingCurator ? 'creator-rectangular-highlight' : ''}`}
-                      onClick={() => { 
+                    <div
+                      className={`dropdown-item${unlockPhase === 'reveal' ? ' creator-btn-reveal' : ''}`}
+                      onClick={() => {
                         if (isUnlockingCurator) return;
                         setShowProfileMenu(false);
-                        setCurrentView('curator'); 
-                        window.history.pushState(null, '', '/curator'); 
-                      }} 
-                      style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', position: 'relative' }}
+                        setCurrentView('curator');
+                        window.history.pushState(null, '', '/curator');
+                      }}
+                      style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', whiteSpace: 'nowrap' }}
                     >
-                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {isUnlockingCurator ? "Unlocking Creator's Dashboard..." : "Creator's Dashboard"}
-                      </span>
-                      <Sparkles size={15} style={{ color: 'var(--color-google-yellow)' }} />
+                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Creator's Dashboard</span>
+                      <Sparkles size={15} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
                     </div>
                   )}
                   {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
@@ -914,9 +933,9 @@ function AppContent() {
           )}
         </div>
 
-        {/* Translucent Backdrop Overlay during unlock */}
-        {isUnlockingCurator && (
-          <div className="creator-translucent-dim" />
+        {/* Cinematic dim backdrop — punches out around elevated profile zone */}
+        {(unlockPhase === 'dim' || unlockPhase === 'spotlight' || unlockPhase === 'reveal' || unlockPhase === 'done') && (
+          <div className={`creator-cinematic-dim${unlockPhase === 'done' ? ' creator-cinematic-dim--out' : ''}`} />
         )}
 
         {/* Genre Tabs Bar (Only on feed view) */}
