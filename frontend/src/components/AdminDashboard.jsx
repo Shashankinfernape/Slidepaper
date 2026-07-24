@@ -1278,7 +1278,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
         </aside>
 
       {/* Main dashboard content */}
-      <main style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', minWidth: 0 }}>
+      <main className="admin-main-content" style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', minWidth: 0 }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0 }}>
@@ -1754,9 +1754,9 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
         )}
 
         {activeTab === 'upload' && (
-          <div className="admin-card" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+          <div className="admin-card admin-upload-card" style={{ padding: '2rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
             <form onSubmit={handleSubmitBundle} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
+              <div className="admin-form-3col-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Bundle Name *</label>
                   <input 
