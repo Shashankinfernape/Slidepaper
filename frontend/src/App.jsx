@@ -567,9 +567,6 @@ function AppContent() {
       return;
     }
 
-    // Set local unlock flag so Creator's Dashboard NEVER vanishes after animation
-    setIsUnlockedLocally(true);
-
     // Activate creator in background (non-blocking!)
     fetch(`${API_URL}/api/curator/activate-instant`, {
       method: 'POST',
@@ -582,7 +579,7 @@ function AppContent() {
     // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
-    // Step 2 (1.0s) — Open profile dropdown showing ONLY Sign Out (holds for 1.2s)
+    // Step 2 (1.0s) — Open profile dropdown showing ONLY Sign Out (holds for 1.2s, NO ghost item!)
     setTimeout(() => {
       setUnlockPhase('spotlight');
       setShowProfileMenu(true);
@@ -595,6 +592,7 @@ function AppContent() {
 
     // Step 4 (5.4s) — 1.0s hold after 2.2s reveal, then turn lights 100% back to normal!
     setTimeout(() => {
+      setIsUnlockedLocally(true); // Permanently unlocked locally after reveal completes!
       setUnlockPhase(null); // Lights turn 100% back to normal!
       setShowProfileMenu(true); // Profile tab STAYS OPEN permanently!
       confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
