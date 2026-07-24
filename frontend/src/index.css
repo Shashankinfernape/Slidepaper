@@ -6810,24 +6810,20 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ============================================
    CINEMATIC CREATOR UNLOCK ANIMATION
-   =================================/* 80% Lights Off Backdrop Overlay */
+   ============================================ */
+
+/* Pure Clean 85% Neutral Black Dimming Backdrop */
 .creator-cinematic-dim {
   position: fixed;
   inset: 0;
   z-index: 9000;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: creatorDimIn 0.4s ease-out forwards;
+  background: rgba(0, 0, 0, 0.85);
+  animation: creatorDimIn 0.35s ease-out forwards;
   pointer-events: none;
 }
 
 .creator-cinematic-dim--out {
-  animation: creatorDimOut 0.4s ease-out forwards !important;
-}
-
-.creator-spotlight-active {
-  background: radial-gradient(circle 260px at calc(100% - 42px) 36px, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(0, 0, 0, 0.88) 100%) !important;
+  animation: creatorDimOut 0.35s ease-out forwards !important;
 }
 
 @keyframes creatorDimIn {
@@ -6846,24 +6842,22 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 9999 !important;
 }
 
-/* Circular Mr. Bean Spotlight Cone around profile icon */
+/* Pure Neutral White Spotlight Ring around profile icon */
 .creator-spotlight-ring {
   position: absolute;
-  inset: -16px;
+  inset: -14px;
   border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.95);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+  border: 2px solid #ffffff;
   box-shadow:
-    0 0 0 8px rgba(255, 255, 255, 0.1),
-    0 0 35px 12px rgba(255, 255, 255, 0.8),
-    0 0 80px 24px rgba(255, 255, 255, 0.35);
-  animation: spotlightBeamHit 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    0 0 0 4px rgba(255, 255, 255, 0.15),
+    0 0 25px 8px rgba(255, 255, 255, 0.6);
+  animation: spotlightBeamHit 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
   z-index: 10000;
 }
 
 @keyframes spotlightBeamHit {
-  0% { transform: scale(0.6); opacity: 0; }
+  0% { transform: scale(0.7); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
 
