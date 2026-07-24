@@ -6687,63 +6687,6 @@ h1, h2, h3, h4, h5, h6 {
   100% { transform: scale(1); box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
 }
 
-/* Doctor Strange Mystical Portal Ring & Candlelight Unlock Styling */
-.candlelight-dim-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background: radial-gradient(ellipse at 85% 5%, rgba(234, 179, 8, 0.22) 0%, rgba(10, 10, 10, 0.94) 60%, rgba(0, 0, 0, 0.98) 100%);
-  backdrop-filter: blur(14px);
-  animation: candleFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.dr-strange-portal-item {
-  position: relative;
-  overflow: visible !important;
-  z-index: 10000 !important;
-  border-radius: 10px;
-}
-
-.dr-strange-portal-ring {
-  position: absolute;
-  inset: -6px;
-  border-radius: 12px;
-  pointer-events: none;
-  background: conic-gradient(
-    from 0deg,
-    #fbbf24 0deg,
-    #f59e0b 60deg,
-    #d97706 120deg,
-    #ef4444 180deg,
-    #f59e0b 240deg,
-    #fbbf24 300deg,
-    #fbbf24 360deg
-  );
-  padding: 2px5px;
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.9), inset 0 0 15px rgba(245, 158, 11, 0.7);
-  animation: drStrangeRotate 1.2s linear infinite, drStrangePulse 1.5s ease-in-out infinite alternate;
-}
-
-.dr-strange-sparks {
-  position: absolute;
-  inset: -12px;
-  border-radius: 16px;
-  pointer-events: none;
-  background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, rgba(245, 158, 11, 0) 70%);
-  filter: drop-shadow(0 0 12px #fbbf24);
-  animation: drStrangePulse 0.8s ease-in-out infinite alternate;
-}
-
-@keyframes drStrangeRotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes drStrangePulse {
-  0% { opacity: 0.75; transform: scale(0.98); }
-  100% { opacity: 1; transform: scale(1.05); }
-}
-
 /* ==========================================
    MR. BEAN CINEMATIC SPOTLIGHT & BLINKING LOGIN
    ========================================== */
@@ -6842,18 +6785,17 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 9999 !important;
 }
 
-/* Pure Neutral White Spotlight Ring around profile icon */
+/* Pure Neutral White Stage Spotlight Beam shining down on profile icon */
 .creator-spotlight-ring {
   position: absolute;
-  inset: -14px;
+  inset: -24px;
   border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow:
-    0 0 0 4px rgba(255, 255, 255, 0.15),
-    0 0 25px 8px rgba(255, 255, 255, 0.6);
-  animation: spotlightBeamHit 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.12) 55%, rgba(255, 255, 255, 0) 100%);
+  box-shadow: 0 0 50px 18px rgba(255, 255, 255, 0.5), inset 0 0 25px 8px rgba(255, 255, 255, 0.35);
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
   pointer-events: none;
   z-index: 10000;
+  animation: spotlightBeamHit 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes spotlightBeamHit {

@@ -754,9 +754,6 @@ function AppContent() {
 
   return (
     <div className="webapp-container">
-      {/* Candlelight Dimming Backdrop overlay when unlocking Creator Studio in Profile Menu */}
-      {isUnlockingCurator && <div className="candlelight-dim-backdrop" />}
-
       {/* Sleek Minimalist Header */}
       <header className="header-nav">
         {/* Brand Logo & Search Bar */}
