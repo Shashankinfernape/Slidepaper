@@ -5673,10 +5673,11 @@ h1, h2, h3, h4, h5, h6 {
   .drop-cta-btn {
     grid-row: 1 !important;
     grid-column: 2 !important;
-    justify-self: center !important;
+    justify-self: end !important;
     align-self: center !important;
     width: auto !important;
     max-width: fit-content !important;
+    margin-right: 0.15rem !important;
   }
 
   .theme-toggle-btn {
