@@ -550,6 +550,7 @@ function AppContent() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   // unlockPhase: null | 'dim' | 'spotlight' | 'reveal' | 'done'
   const [unlockPhase, setUnlockPhase] = useState(null);
+  const [isUnlockedLocally, setIsUnlockedLocally] = useState(false);
   const profileBadgeRef = useRef(null);
 
   const isUnlockingCurator = unlockPhase !== null;
@@ -560,11 +561,14 @@ function AppContent() {
       return;
     }
 
-    if (isCurator) {
+    if (isCurator || isUnlockedLocally) {
       setCurrentView('curator');
       window.history.pushState(null, '', '/curator/profile');
       return;
     }
+
+    // Set local unlock flag so Creator's Dashboard NEVER vanishes after animation
+    setIsUnlockedLocally(true);
 
     // Activate creator in background (non-blocking!)
     fetch(`${API_URL}/api/curator/activate-instant`, {
@@ -578,23 +582,23 @@ function AppContent() {
     // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
-    // Step 2 (0.5s) — Open profile dropdown showing ONLY Sign Out (holds for 0.7s)
+    // Step 2 (1.0s) — Open profile dropdown showing ONLY Sign Out (holds for 1.2s)
     setTimeout(() => {
       setUnlockPhase('spotlight');
       setShowProfileMenu(true);
-    }, 500);
+    }, 1000);
 
-    // Step 3 (1.2s) — Silky 1.6-second smooth fluid reveal of Creator's Dashboard option
+    // Step 3 (2.2s) — Silky 2.2-second slow, cinematic Creator's Dashboard reveal
     setTimeout(() => {
       setUnlockPhase('reveal');
-    }, 1200);
+    }, 2200);
 
-    // Step 4 (2.9s — immediately after 1.6s reveal finishes) — Turn lights 100% back to normal + Keep Dropdown Open as is!
+    // Step 4 (5.4s) — 1.0s hold after 2.2s reveal, then turn lights 100% back to normal!
     setTimeout(() => {
-      setUnlockPhase(null); // Lights back on completely!
-      setShowProfileMenu(true); // Profile tab STAYS OPEN as is!
+      setUnlockPhase(null); // Lights turn 100% back to normal!
+      setShowProfileMenu(true); // Profile tab STAYS OPEN permanently!
       confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
-    }, 2900);
+    }, 5400);
   };
 
   // Refs for closing dropdowns when clicking outside
@@ -876,7 +880,7 @@ function AppContent() {
               {showProfileMenu && (
                 <div className={`dropdown-menu align-right${isUnlockingCurator ? ' creator-unlock-dropdown' : ''}`}>
                   {/* Creator's Dashboard — ONLY shown to non-admin creators or during reveal/done phase */}
-                  {!isAdmin && localStorage.getItem('slidepapers_admin_session') !== 'true' && (isCurator || unlockPhase === 'reveal' || unlockPhase === 'done') && (
+                  {!isAdmin && localStorage.getItem('slidepapers_admin_session') !== 'true' && (isCurator || isUnlockedLocally || unlockPhase === 'reveal' || unlockPhase === 'done') && (
                     <div
                       className={`dropdown-item${unlockPhase === 'reveal' ? ' creator-btn-reveal' : ''}`}
                       onClick={() => {

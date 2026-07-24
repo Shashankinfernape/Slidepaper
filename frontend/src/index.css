@@ -6794,8 +6794,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Premium, ultra-smooth fluid reveal for Creator's Dashboard option */
 .creator-btn-reveal {
-  animation: creatorBtnPopReveal 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)) !important;
+  animation: creatorBtnPopReveal 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)) !important;
   border-radius: 8px !important;
   overflow: hidden;
   will-change: transform, opacity, max-height, filter;
