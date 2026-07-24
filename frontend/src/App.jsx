@@ -578,23 +578,23 @@ function AppContent() {
     // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
-    // Step 2 (0.5s) — Open profile dropdown (showing ONLY Sign Out) & Hold for 0.8s
+    // Step 2 (0.5s) — Open profile dropdown showing ONLY Sign Out (holds for 0.7s)
     setTimeout(() => {
       setUnlockPhase('spotlight');
       setShowProfileMenu(true);
     }, 500);
 
-    // Step 3 (1.3s) — Start 2.0-second slow, cinematic Creator's Dashboard reveal
+    // Step 3 (1.2s) — Silky 1.6-second smooth fluid reveal of Creator's Dashboard option
     setTimeout(() => {
       setUnlockPhase('reveal');
-    }, 1300);
+    }, 1200);
 
-    // Step 4 (3.5s — 0.2s split second after 2.0s reveal finishes) — Lights turn 100% back to normal!
+    // Step 4 (2.9s — immediately after 1.6s reveal finishes) — Turn lights 100% back to normal + Keep Dropdown Open as is!
     setTimeout(() => {
-      setUnlockPhase(null); // Lights turn 100% back to normal!
-      setShowProfileMenu(true); // Keep menu open!
+      setUnlockPhase(null); // Lights back on completely!
+      setShowProfileMenu(true); // Profile tab STAYS OPEN as is!
       confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
-    }, 3500);
+    }, 2900);
   };
 
   // Refs for closing dropdowns when clicking outside
