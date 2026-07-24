@@ -575,12 +575,12 @@ function AppContent() {
       setShowProfileMenu(true);
     }, 500);
 
-    // Step 3 (1.2s) — Smooth slow pop-in of Creator's Dashboard option
+    // Step 3 (1.3s) — Hold Sign Out for a split second (0.8s), then slowly unlock Creator's Dashboard (0.95s pop-in)
     setTimeout(() => {
       setUnlockPhase('reveal');
-    }, 1200);
+    }, 1300);
 
-    // Step 4 (2.4s — 0.5s after pop-in) — Lights back on + Confetti + Keep Dropdown Open!
+    // Step 4 (2.8s) — Hold for a split second (0.55s after pop-in finishes), then turn lights back on + Confetti!
     setTimeout(async () => {
       try {
         const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
@@ -600,7 +600,7 @@ function AppContent() {
           setUnlockPhase(null);
         }, 400);
       }
-    }, 2400);
+    }, 2800);
   };
 
   // Refs for closing dropdowns when clicking outside
