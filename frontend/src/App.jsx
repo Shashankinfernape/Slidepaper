@@ -566,21 +566,21 @@ function AppContent() {
       return;
     }
 
-    // Step 1 (0.0s) — 80% Lights Off
+    // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
-    // Step 2 (0.5s) — Spotlight Hits Profile Area & Open Profile Menu (showing ONLY Sign Out)
+    // Step 2 (0.5s) — 0.5s after lights out, open profile dropdown (showing ONLY Sign Out)
     setTimeout(() => {
       setUnlockPhase('spotlight');
       setShowProfileMenu(true);
     }, 500);
 
-    // Step 3 (1.0s) — Creator's Dashboard Button Feature Reveal
+    // Step 3 (1.2s) — Smooth slow pop-in of Creator's Dashboard option
     setTimeout(() => {
       setUnlockPhase('reveal');
-    }, 1000);
+    }, 1200);
 
-    // Step 4 (1.5s) — Lights Back On + Confetti
+    // Step 4 (2.4s — 0.5s after pop-in) — Lights back on + Confetti + Keep Dropdown Open!
     setTimeout(async () => {
       try {
         const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
@@ -595,11 +595,12 @@ function AppContent() {
       } finally {
         confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
         setUnlockPhase('done');
+        setShowProfileMenu(true); // Keep menu open!
         setTimeout(() => {
           setUnlockPhase(null);
-        }, 500);
+        }, 400);
       }
-    }, 1500);
+    }, 2400);
   };
 
   // Refs for closing dropdowns when clicking outside
@@ -608,14 +609,14 @@ function AppContent() {
 
   // Close menus when clicking outside
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = (event) => {
       if (sortRef.current && !sortRef.current.contains(event.target)) {
         setShowSortMenu(false);
       }
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowProfileMenu(false);
       }
-    }
+    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -865,10 +866,6 @@ function AppContent() {
               className={`dropdown-container header-profile-dropdown${isUnlockingCurator ? ' creator-spotlight-elevated' : ''}`}
               ref={profileRef}
             >
-              {/* Spotlight ring around profile badge during unlock */}
-              {(unlockPhase === 'spotlight' || unlockPhase === 'reveal' || unlockPhase === 'done') && (
-                <div className="creator-spotlight-ring" />
-              )}
               <div
                 className="profile-badge"
                 ref={profileBadgeRef}
