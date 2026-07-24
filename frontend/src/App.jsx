@@ -552,7 +552,7 @@ function AppContent() {
   const [unlockPhase, setUnlockPhase] = useState(null);
   const profileBadgeRef = useRef(null);
 
-  const isUnlockingCurator = unlockPhase !== null && unlockPhase !== 'done';
+  const isUnlockingCurator = unlockPhase !== null;
 
   const handleDropClick = () => {
     if (!user) {
@@ -569,18 +569,18 @@ function AppContent() {
     // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
-    // Step 2 (0.5s) — 0.5s after lights out, open profile dropdown (showing ONLY Sign Out)
+    // Step 2 (0.5s) — Open profile dropdown (showing ONLY Sign Out) & Hold for 0.8s
     setTimeout(() => {
       setUnlockPhase('spotlight');
       setShowProfileMenu(true);
     }, 500);
 
-    // Step 3 (1.3s) — Hold Sign Out for a split second (0.8s), then slowly unlock Creator's Dashboard (0.95s pop-in)
+    // Step 3 (1.3s) — Start 2.0-second slow, cinematic Creator's Dashboard reveal
     setTimeout(() => {
       setUnlockPhase('reveal');
     }, 1300);
 
-    // Step 4 (2.8s) — Hold for a split second (0.55s after pop-in finishes), then turn lights back on + Confetti!
+    // Step 4 (3.5s — 0.2s split second after 2.0s reveal finishes) — Lights turn back on + Confetti!
     setTimeout(async () => {
       try {
         const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
@@ -594,13 +594,13 @@ function AppContent() {
         console.error('Error activating creator:', err);
       } finally {
         confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
-        setUnlockPhase('done');
+        setUnlockPhase('done'); // Triggers 0.4s fade-out overlay animation
         setShowProfileMenu(true); // Keep menu open!
         setTimeout(() => {
-          setUnlockPhase(null);
+          setUnlockPhase(null); // Screen 100% back to normal!
         }, 400);
       }
-    }, 2800);
+    }, 3500);
   };
 
   // Refs for closing dropdowns when clicking outside

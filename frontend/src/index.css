@@ -6794,7 +6794,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Smooth, elegant pop-in reveal for Creator's Dashboard option */
 .creator-btn-reveal {
-  animation: creatorBtnPopReveal 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: creatorBtnPopReveal 2.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)) !important;
   border-radius: 8px !important;
 }
