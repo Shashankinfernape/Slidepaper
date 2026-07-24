@@ -2719,6 +2719,111 @@ app.post('/api/admin/review-drop', async (req, res) => {
   }
 });
 
+// Endpoint: Admin fetch all creators with stats & drop counts
+app.get('/api/admin/creators', async (req, res) => {
+  try {
+    // Find all users who are curators/creators
+    const curatorUsers = await User.find({
+      $or: [{ role: 'curator' }, { curatorStatus: 'approved' }, { isCurator: true }]
+    }).sort({ createdAt: -1 });
+
+    // Also fetch all published/uploaded bundles to aggregate stats per creator
+    const allBundles = await Bundle.find({});
+
+    // Map stats per creator UID or Email
+    const creatorsList = await Promise.all(curatorUsers.map(async (u) => {
+      const userBundles = allBundles.filter(b => 
+        (b.author?.uid && b.author.uid === u.uid) || 
+        (b.author?.email && u.email && b.author.email.toLowerCase() === u.email.toLowerCase())
+      );
+
+      const totalViews = userBundles.reduce((acc, b) => acc + (b.stats?.views || 0), 0);
+      const totalDownloads = userBundles.reduce((acc, b) => acc + (b.stats?.downloads || 0), 0);
+
+      return {
+        uid: u.uid,
+        displayName: u.displayName || u.email?.split('@')[0] || 'Creator',
+        email: u.email || '',
+        photoURL: u.photoURL || '',
+        handle: u.handle || u.displayName?.toLowerCase().replace(/\s+/g, '_') || 'creator',
+        bio: u.bio || '',
+        role: u.role || 'curator',
+        curatorStatus: u.curatorStatus || 'approved',
+        createdAt: u.createdAt,
+        stats: {
+          totalDrops: userBundles.length,
+          totalViews,
+          totalDownloads,
+          subscribers: u.subscribers || 0
+        },
+        bundles: userBundles
+      };
+    }));
+
+    return res.status(200).json({ success: true, creators: creatorsList });
+  } catch (err) {
+    console.error('Error fetching admin creators list:', err);
+    return res.status(500).json({ error: 'Failed to fetch creators list' });
+  }
+});
+
+// Endpoint: Admin send direct notification message to creator
+app.post('/api/admin/creators/:uid/message', async (req, res) => {
+  const { uid } = req.params;
+  const { message, title } = req.body;
+  if (!message) return res.status(400).json({ error: 'Message content is required' });
+
+  try {
+    const user = await User.findOne({ uid });
+    if (!user) return res.status(404).json({ error: 'Creator not found' });
+
+    // Create a new Notification for this creator
+    const newNotif = new Notification({
+      id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      userUid: uid,
+      title: title || 'Message from Slidepapers Admin',
+      message,
+      type: 'admin_message',
+      read: false,
+      createdAt: new Date()
+    });
+    await newNotif.save();
+
+    console.log(`[Admin Message] Sent notification to creator ${uid}: "${message}"`);
+    return res.status(200).json({ success: true, notification: newNotif });
+  } catch (err) {
+    console.error('Error sending message to creator:', err);
+    return res.status(500).json({ error: 'Failed to send message to creator' });
+  }
+});
+
+// Endpoint: Admin delete / revoke creator account & drops
+app.delete('/api/admin/creators/:uid', async (req, res) => {
+  const { uid } = req.params;
+  const { deleteBundles } = req.query;
+
+  try {
+    const user = await User.findOne({ uid });
+    if (user) {
+      user.role = 'user';
+      user.curatorStatus = 'revoked';
+      user.isCurator = false;
+      await user.save();
+    }
+
+    if (deleteBundles === 'true') {
+      await Bundle.deleteMany({ 'author.uid': uid });
+      saveBundlesToDrive();
+    }
+
+    console.log(`[Admin Delete Creator] Revoked creator access for ${uid} (deleteBundles: ${deleteBundles})`);
+    return res.status(200).json({ success: true, message: 'Creator access deleted / revoked' });
+  } catch (err) {
+    console.error('Error deleting creator:', err);
+    return res.status(500).json({ error: 'Failed to delete creator' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Slidepapers backend server running at http://localhost:${PORT}`);
 });

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
-  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X, Users, Clock, MessageSquare, Eye
+  CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X, Users, Clock, MessageSquare, Eye,
+  Sparkles, Send, ExternalLink, ShieldAlert, Search
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import DraggableGrid from './common/DraggableGrid';
@@ -214,7 +215,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
       const tab = path.split(prefix)[1].split('/')[0];
       const validTabs = isCreatorMode
         ? ['overview', 'bundles', 'upload', 'profile', 'subscribers']
-        : ['overview', 'drive', 'bundles', 'reviews', 'upload', 'monetize', 'profile', 'subscribers'];
+        : ['overview', 'drive', 'bundles', 'reviews', 'upload', 'monetize', 'profile', 'subscribers', 'creators'];
       if (validTabs.includes(tab)) return tab;
     }
     return isCreatorMode ? 'profile' : 'overview';
@@ -252,6 +253,91 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
   const [reviewingDrop, setReviewingDrop] = useState(null);
   const [adminNoteInput, setAdminNoteInput] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Creators Management States
+  const [creatorsList, setCreatorsList] = useState([]);
+  const [loadingCreators, setLoadingCreators] = useState(false);
+  const [creatorSearchQuery, setCreatorSearchQuery] = useState('');
+  const [selectedCreator, setSelectedCreator] = useState(null);
+  const [messagingCreator, setMessagingCreator] = useState(null);
+  const [messageTitleInput, setMessageTitleInput] = useState('');
+  const [messageBodyInput, setMessageBodyInput] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [deleteConfirmCreator, setDeleteConfirmCreator] = useState(null);
+  const [deleteCreatorBundlesOption, setDeleteCreatorBundlesOption] = useState(false);
+  const [isDeletingCreator, setIsDeletingCreator] = useState(false);
+
+  const fetchCreators = async () => {
+    setLoadingCreators(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/creators`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setCreatorsList(data.creators || []);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching admin creators list:', err);
+    } finally {
+      setLoadingCreators(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'creators') {
+      fetchCreators();
+    }
+  }, [activeTab]);
+
+  const handleSendMessageToCreator = async () => {
+    if (!messagingCreator || !messageBodyInput.trim()) return;
+    setIsSendingMessage(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/creators/${messagingCreator.uid}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: messageTitleInput || 'Message from Slidepapers Admin',
+          message: messageBodyInput
+        })
+      });
+      if (res.ok) {
+        showToast(`Message sent to ${messagingCreator.displayName || 'Creator'}!`, 'success');
+        setMessagingCreator(null);
+        setMessageTitleInput('');
+        setMessageBodyInput('');
+      } else {
+        showToast('Failed to send message', 'error');
+      }
+    } catch (err) {
+      showToast('Error sending message', 'error');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const handleDeleteCreator = async () => {
+    if (!deleteConfirmCreator?.uid) return;
+    setIsDeletingCreator(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/creators/${deleteConfirmCreator.uid}?deleteBundles=${deleteCreatorBundlesOption}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        showToast('Creator access revoked / deleted', 'success');
+        setCreatorsList(prev => prev.filter(c => c.uid !== deleteConfirmCreator.uid));
+        if (selectedCreator?.uid === deleteConfirmCreator.uid) setSelectedCreator(null);
+        setDeleteConfirmCreator(null);
+      } else {
+        showToast('Failed to delete creator', 'error');
+      }
+    } catch (err) {
+      showToast('Error deleting creator', 'error');
+    } finally {
+      setIsDeletingCreator(false);
+    }
+  };
 
   const fetchPendingDrops = async () => {
     setLoadingPendingDrops(true);
@@ -1168,6 +1254,15 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
               <Users size={16} style={{ flexShrink: 0 }} />
               <span>Subscribers</span>
             </button>
+            {!isCreatorMode && (
+              <button
+                onClick={() => { setActiveTab('creators'); setIsSidebarOpen(false); setSelectedCreator(null); }}
+                className={`admin-nav-item ${activeTab === 'creators' ? 'active' : ''}`}
+              >
+                <Sparkles size={16} style={{ flexShrink: 0 }} />
+                <span>Creators</span>
+              </button>
+            )}
           </nav>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
@@ -1194,6 +1289,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
               {activeTab === 'monetize' && 'Partner Earnings Studio'}
               {activeTab === 'profile' && 'Creator Profile Settings'}
               {activeTab === 'subscribers' && 'Subscriber List'}
+              {activeTab === 'creators' && (selectedCreator ? `Creator Profile: ${selectedCreator.displayName}` : 'Creator Network')}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '0.25rem' }}>
               {activeTab === 'overview' && 'System diagnostics, wallpaper caching and API metrics'}
@@ -1203,6 +1299,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
               {activeTab === 'monetize' && 'YouTube Studio-style revenue sharing, ad metrics, and CPM'}
               {activeTab === 'profile' && 'Customize display name, channel about details, brand accents and socials'}
               {activeTab === 'subscribers' && 'View your channel subscribers and community members'}
+              {activeTab === 'creators' && (selectedCreator ? 'View creator drops, analytics, and manage channel' : 'Manage registered creators, message authors, or remove accounts')}
             </p>
           </div>
 
@@ -2226,6 +2323,382 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Creators Management View */}
+        {activeTab === 'creators' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {selectedCreator ? (
+              /* Creator Detail View (Profile & Bundles) */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <button
+                  onClick={() => setSelectedCreator(null)}
+                  className="btn-secondary"
+                  style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.9rem', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}
+                >
+                  <ArrowLeft size={16} /> Back to Creators List
+                </button>
+
+                {/* Creator Header Profile Card */}
+                <div className="admin-card" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', minWidth: '280px' }}>
+                    <img
+                      src={getProxiedImageUrl(selectedCreator.photoURL) || AVATAR_FALLBACK_URL}
+                      alt={selectedCreator.displayName}
+                      style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-google-yellow)' }}
+                      onError={(e) => { e.currentTarget.src = AVATAR_FALLBACK_URL; }}
+                    />
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700 }}>{selectedCreator.displayName}</h2>
+                        <span className="admin-status-pill green" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>Curator</span>
+                      </div>
+                      <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                        @{selectedCreator.handle || 'creator'} • {selectedCreator.email}
+                      </p>
+                      {selectedCreator.bio && (
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-primary)', fontStyle: 'italic' }}>
+                          "{selectedCreator.bio}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Creator Stats */}
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ textAlign: 'center', padding: '0.5rem 1rem', background: 'var(--bg-secondary)', borderRadius: '10px', minWidth: '90px' }}>
+                      <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-google-yellow)' }}>{selectedCreator.stats?.totalDrops || selectedCreator.bundles?.length || 0}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Drops</p>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '0.5rem 1rem', background: 'var(--bg-secondary)', borderRadius: '10px', minWidth: '90px' }}>
+                      <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-google-blue)' }}>{selectedCreator.stats?.totalViews || 0}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Total Views</p>
+                    </div>
+                    <div style={{ textAlign: 'center', padding: '0.5rem 1rem', background: 'var(--bg-secondary)', borderRadius: '10px', minWidth: '90px' }}>
+                      <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#10b981' }}>{selectedCreator.stats?.subscribers || 0}</p>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Subscribers</p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                      onClick={() => setMessagingCreator(selectedCreator)}
+                      className="btn-secondary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}
+                    >
+                      <MessageSquare size={16} /> Message
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmCreator(selectedCreator)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 1rem', borderRadius: '8px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      <Trash2 size={16} /> Delete / Revoke
+                    </button>
+                  </div>
+                </div>
+
+                {/* Creator's Bundles / Wallpaper Drops Grid */}
+                <div className="admin-card">
+                  <h3 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                    <Folder size={18} className="text-yellow-500" /> Uploaded Wallpaper Drops ({selectedCreator.bundles?.length || 0})
+                  </h3>
+
+                  {(!selectedCreator.bundles || selectedCreator.bundles.length === 0) ? (
+                    <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                      <Folder size={40} style={{ opacity: 0.3, margin: '0 auto 0.75rem auto' }} />
+                      <p>This creator has not published any wallpaper drops yet.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1.25rem' }}>
+                      {selectedCreator.bundles.map(b => (
+                        <div key={b.id} style={{
+                          background: 'var(--bg-secondary)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)',
+                          display: 'flex', flexDirection: 'column'
+                        }}>
+                          <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden' }}>
+                            <img
+                              src={getProxiedImageUrl(b.images?.[b.coverIndex || 0]?.previewUrl || b.images?.[0]?.url || b.coverUrl)}
+                              alt={b.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            <span style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', backdropFilter: 'blur(4px)' }}>
+                              {b.images?.length || 0} wallpapers
+                            </span>
+                          </div>
+                          <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, justifyContent: 'space-between' }}>
+                            <div>
+                              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>{b.name}</h4>
+                              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                {b.description}
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                              <span>👁️ {b.stats?.views || 0} views</span>
+                              <span>⬇️ {b.stats?.downloads || 0} downloads</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Creators List View (First Page) */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Search & Header Bar */}
+                <div className="admin-card" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Sparkles size={22} style={{ color: 'var(--color-google-yellow)' }} />
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Registered Creators ({creatorsList.length})</h2>
+                      <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Manage authors, inspect profiles, send messages, or revoke permissions</p>
+                    </div>
+                  </div>
+
+                  <div style={{ position: 'relative', minWidth: '240px' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search creators by name, handle or email..."
+                      value={creatorSearchQuery}
+                      onChange={(e) => setCreatorSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%', padding: '0.45rem 0.85rem 0.45rem 2.2rem',
+                        background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                        borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.85rem'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {loadingCreators ? (
+                  <div style={{ textAlign: 'center', padding: '3rem' }}>Loading creator network...</div>
+                ) : creatorsList.length === 0 ? (
+                  <div className="admin-card" style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-secondary)' }}>
+                    <Sparkles size={48} style={{ opacity: 0.2, margin: '0 auto 1rem auto' }} />
+                    <h3>No Active Creators Found</h3>
+                    <p style={{ fontSize: '0.88rem' }}>When users unlock Creator Status by clicking +Drop, they will appear here.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                    {creatorsList
+                      .filter(c => 
+                        !creatorSearchQuery || 
+                        c.displayName?.toLowerCase().includes(creatorSearchQuery.toLowerCase()) || 
+                        c.email?.toLowerCase().includes(creatorSearchQuery.toLowerCase()) ||
+                        c.handle?.toLowerCase().includes(creatorSearchQuery.toLowerCase())
+                      )
+                      .map(creator => (
+                        <div key={creator.uid} style={{
+                          background: 'var(--bg-primary)', borderRadius: '14px', border: '1px solid var(--border-color)',
+                          padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem',
+                          boxShadow: '0 4px 14px rgba(0,0,0,0.1)', transition: 'transform 0.2s, border-color 0.2s'
+                        }}>
+                          {/* Creator Card Top Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <img
+                              src={getProxiedImageUrl(creator.photoURL) || AVATAR_FALLBACK_URL}
+                              alt={creator.displayName}
+                              onClick={() => setSelectedCreator(creator)}
+                              style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '2px solid var(--border-color)' }}
+                              onError={(e) => { e.currentTarget.src = AVATAR_FALLBACK_URL; }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <h4
+                                onClick={() => setSelectedCreator(creator)}
+                                style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                              >
+                                {creator.displayName}
+                              </h4>
+                              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                @{creator.handle || 'creator'} • {creator.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Creator Stats Row */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', background: 'var(--bg-secondary)', padding: '0.6rem', borderRadius: '10px', textAlign: 'center' }}>
+                            <div>
+                              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-google-yellow)' }}>{creator.stats?.totalDrops || 0}</p>
+                              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Drops</p>
+                            </div>
+                            <div>
+                              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-google-blue)' }}>{creator.stats?.totalViews || 0}</p>
+                              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Views</p>
+                            </div>
+                            <div>
+                              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#10b981' }}>{creator.stats?.subscribers || 0}</p>
+                              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Subs</p>
+                            </div>
+                          </div>
+
+                          {/* Creator Action Buttons */}
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                            <button
+                              onClick={() => setSelectedCreator(creator)}
+                              style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                                padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                                color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
+                              }}
+                            >
+                              <Eye size={14} /> Profile & Drops
+                            </button>
+                            <button
+                              onClick={() => setMessagingCreator(creator)}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem',
+                                padding: '0.5rem 0.75rem', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+                                color: 'var(--color-google-blue)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
+                              }}
+                              title="Message Creator"
+                            >
+                              <MessageSquare size={14} /> Message
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmCreator(creator)}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: '0.5rem 0.75rem', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                                color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
+                              }}
+                              title="Delete Creator"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Admin Message Modal */}
+        {messagingCreator && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+          }} onClick={() => setMessagingCreator(null)}>
+            <div style={{
+              background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
+              borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '480px',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+            }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <MessageSquare size={18} style={{ color: 'var(--color-google-blue)' }} /> Message {messagingCreator.displayName}
+                </h3>
+                <button onClick={() => setMessagingCreator(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>Subject / Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Creator Update / Account Feedback"
+                    value={messageTitleInput}
+                    onChange={(e) => setMessageTitleInput(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.5rem 0.85rem', background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '0.35rem' }}>Message Body *</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Write a direct message or notification to this creator..."
+                    value={messageBodyInput}
+                    onChange={(e) => setMessageBodyInput(e.target.value)}
+                    style={{
+                      width: '100%', padding: '0.65rem 0.85rem', background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.88rem', resize: 'vertical'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                <button onClick={() => setMessagingCreator(null)} className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMessageToCreator}
+                  disabled={isSendingMessage || !messageBodyInput.trim()}
+                  style={{
+                    padding: '0.5rem 1.2rem', borderRadius: '8px', background: 'var(--color-google-blue)',
+                    color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    opacity: (!messageBodyInput.trim() || isSendingMessage) ? 0.6 : 1
+                  }}
+                >
+                  <Send size={15} /> {isSendingMessage ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Creator Confirmation Modal */}
+        {deleteConfirmCreator && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+          }} onClick={() => setDeleteConfirmCreator(null)}>
+            <div style={{
+              background: 'var(--bg-primary)', border: '1px solid #ef4444',
+              borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '440px',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 20px 50px rgba(239,68,68,0.2)'
+            }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <ShieldAlert size={28} style={{ color: '#ef4444' }} />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Revoke / Delete Creator</h3>
+                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{deleteConfirmCreator.displayName} ({deleteConfirmCreator.email})</p>
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                Are you sure you want to revoke creator permissions for this user? They will no longer be able to access Creator Studio or upload wallpaper drops.
+              </p>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={deleteCreatorBundlesOption}
+                  onChange={(e) => setDeleteCreatorBundlesOption(e.target.checked)}
+                />
+                <span>Also delete all wallpaper drops published by this creator</span>
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                <button onClick={() => setDeleteConfirmCreator(null)} className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteCreator}
+                  disabled={isDeletingCreator}
+                  style={{
+                    padding: '0.5rem 1.2rem', borderRadius: '8px', background: '#ef4444',
+                    color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    opacity: isDeletingCreator ? 0.6 : 1
+                  }}
+                >
+                  <Trash2 size={15} /> {isDeletingCreator ? 'Revoking...' : 'Confirm Revoke & Delete'}
+                </button>
+              </div>
             </div>
           </div>
         )}
