@@ -566,6 +566,15 @@ function AppContent() {
       return;
     }
 
+    // Activate creator in background (non-blocking!)
+    fetch(`${API_URL}/api/curator/activate-instant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: user.uid })
+    }).then(res => res.json()).then(data => {
+      if (data.success && data.user) updateUserProfileState(data.user);
+    }).catch(err => console.error('Error activating creator:', err));
+
     // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
@@ -580,26 +589,11 @@ function AppContent() {
       setUnlockPhase('reveal');
     }, 1300);
 
-    // Step 4 (3.5s — 0.2s split second after 2.0s reveal finishes) — Lights turn back on + Confetti!
-    setTimeout(async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: user.uid })
-        });
-        const data = await res.json();
-        if (data.success && data.user) updateUserProfileState(data.user);
-      } catch (err) {
-        console.error('Error activating creator:', err);
-      } finally {
-        confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
-        setUnlockPhase('done'); // Triggers 0.4s fade-out overlay animation
-        setShowProfileMenu(true); // Keep menu open!
-        setTimeout(() => {
-          setUnlockPhase(null); // Screen 100% back to normal!
-        }, 400);
-      }
+    // Step 4 (3.5s — 0.2s split second after 2.0s reveal finishes) — Lights turn 100% back to normal!
+    setTimeout(() => {
+      setUnlockPhase(null); // Lights turn 100% back to normal!
+      setShowProfileMenu(true); // Keep menu open!
+      confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
     }, 3500);
   };
 
