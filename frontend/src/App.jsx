@@ -562,23 +562,25 @@ function AppContent() {
 
     if (isCurator) {
       setCurrentView('curator');
-      window.history.pushState(null, '', '/curator');
+      window.history.pushState(null, '', '/curator/profile');
       return;
     }
 
-    // Phase 1 — Lights dim (translucent overlay)
+    // Step 1 (0.0s) — 80% Lights Off
     setUnlockPhase('dim');
 
-    // Phase 2 — Spotlight punches through, profile area glows
-    setTimeout(() => setUnlockPhase('spotlight'), 600);
-
-    // Phase 3 — Open dropdown + reveal the new button with animation
+    // Step 2 (0.5s) — Spotlight Hits Profile Area & Open Profile Menu (showing ONLY Sign Out)
     setTimeout(() => {
+      setUnlockPhase('spotlight');
       setShowProfileMenu(true);
-      setUnlockPhase('reveal');
-    }, 1400);
+    }, 500);
 
-    // Phase 4 — Activate, confetti, done
+    // Step 3 (1.0s) — Creator's Dashboard Button Feature Reveal
+    setTimeout(() => {
+      setUnlockPhase('reveal');
+    }, 1000);
+
+    // Step 4 (1.5s) — Lights Back On + Confetti
     setTimeout(async () => {
       try {
         const res = await fetch(`${API_URL}/api/curator/activate-instant`, {
@@ -593,14 +595,11 @@ function AppContent() {
       } finally {
         confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
         setUnlockPhase('done');
-        setShowProfileMenu(false);
         setTimeout(() => {
           setUnlockPhase(null);
-          setCurrentView('curator');
-          window.history.pushState(null, '', '/curator/profile');
-        }, 600);
+        }, 500);
       }
-    }, 3400);
+    }, 1500);
   };
 
   // Refs for closing dropdowns when clicking outside
@@ -888,15 +887,15 @@ function AppContent() {
               </div>
               {showProfileMenu && (
                 <div className={`dropdown-menu align-right${isUnlockingCurator ? ' creator-unlock-dropdown' : ''}`}>
-                  {/* Creator's Dashboard — ONLY shown to non-admin creators or during first-time reveal */}
-                  {!isAdmin && localStorage.getItem('slidepapers_admin_session') !== 'true' && (isCurator || isUnlockingCurator) && (
+                  {/* Creator's Dashboard — ONLY shown to non-admin creators or during reveal/done phase */}
+                  {!isAdmin && localStorage.getItem('slidepapers_admin_session') !== 'true' && (isCurator || unlockPhase === 'reveal' || unlockPhase === 'done') && (
                     <div
                       className={`dropdown-item${unlockPhase === 'reveal' ? ' creator-btn-reveal' : ''}`}
                       onClick={() => {
                         if (isUnlockingCurator) return;
                         setShowProfileMenu(false);
                         setCurrentView('curator');
-                        window.history.pushState(null, '', '/curator');
+                        window.history.pushState(null, '', '/curator/profile');
                       }}
                       style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', whiteSpace: 'nowrap' }}
                     >

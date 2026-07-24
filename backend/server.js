@@ -2727,11 +2727,21 @@ app.get('/api/admin/creators', async (req, res) => {
       $or: [{ role: 'curator' }, { curatorStatus: 'approved' }, { isCurator: true }]
     }).sort({ createdAt: -1 });
 
+    // Deduplicate curator users by Email (or UID if no email)
+    const uniqueMap = new Map();
+    curatorUsers.forEach(u => {
+      const key = u.email ? u.email.trim().toLowerCase() : u.uid;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, u);
+      }
+    });
+    const deduplicatedCurators = Array.from(uniqueMap.values());
+
     // Also fetch all published/uploaded bundles to aggregate stats per creator
     const allBundles = await Bundle.find({});
 
     // Map stats per creator UID or Email
-    const creatorsList = await Promise.all(curatorUsers.map(async (u) => {
+    const creatorsList = await Promise.all(deduplicatedCurators.map(async (u) => {
       const userBundles = allBundles.filter(b => 
         (b.author?.uid && b.author.uid === u.uid) || 
         (b.author?.email && u.email && b.author.email.toLowerCase() === u.email.toLowerCase())
