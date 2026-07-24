@@ -887,8 +887,8 @@ function AppContent() {
                     <div
                       className={`dropdown-item${unlockPhase === 'reveal' ? ' creator-btn-reveal' : ''}`}
                       onClick={() => {
-                        if (isUnlockingCurator) return;
                         setShowProfileMenu(false);
+                        setUnlockPhase(null);
                         setCurrentView('curator');
                         window.history.pushState(null, '', '/curator/profile');
                       }}
