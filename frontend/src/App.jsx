@@ -888,15 +888,6 @@ function AppContent() {
               </div>
               {showProfileMenu && (
                 <div className={`dropdown-menu align-right${isUnlockingCurator ? ' creator-unlock-dropdown' : ''}`}>
-                  <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.25rem' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Logged in as</p>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</p>
-                    {!isFirebaseReal && (
-                      <span style={{ fontSize: '0.65rem', color: 'var(--color-google-yellow)', display: 'block', marginTop: '0.15rem' }}>
-                        Simulated Sandbox Session
-                      </span>
-                    )}
-                  </div>
                   {/* Creator's Dashboard — ONLY shown to non-admin creators or during first-time reveal */}
                   {!isAdmin && localStorage.getItem('slidepapers_admin_session') !== 'true' && (isCurator || isUnlockingCurator) && (
                     <div
