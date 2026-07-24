@@ -579,24 +579,29 @@ function AppContent() {
     // Step 1 (0.0s) — Lights Off (85% Blackout Overlay)
     setUnlockPhase('dim');
 
-    // Step 2 (1.0s) — Open profile dropdown showing ONLY Sign Out (holds for 1.2s, NO ghost item!)
+    // Step 2 (0.6s) — Open profile dropdown showing ONLY Sign Out (holds for 0.8s)
     setTimeout(() => {
       setUnlockPhase('spotlight');
       setShowProfileMenu(true);
-    }, 1000);
+    }, 600);
 
-    // Step 3 (2.2s) — Silky 2.2-second slow, cinematic Creator's Dashboard reveal
+    // Step 3 (1.4s) — Silky 2.2-second high-FPS Creator's Dashboard reveal (1.4s -> 3.6s)
     setTimeout(() => {
       setUnlockPhase('reveal');
-    }, 2200);
+    }, 1400);
 
-    // Step 4 (5.4s) — 1.0s hold after 2.2s reveal, then turn lights 100% back to normal!
+    // Step 4 (3.6s — EXACT moment 2.2s reveal completes) — Start 0.35s fade-out lights-back-on transition!
     setTimeout(() => {
-      setIsUnlockedLocally(true); // Permanently unlocked locally after reveal completes!
-      setUnlockPhase(null); // Lights turn 100% back to normal!
+      setIsUnlockedLocally(true); // Permanently unlocked locally!
+      setUnlockPhase('done'); // Triggers smooth CSS opacity fade-out animation (.creator-cinematic-dim--out)!
       setShowProfileMenu(true); // Profile tab STAYS OPEN permanently!
       confetti({ particleCount: 160, spread: 85, origin: { y: 0.08 } });
-    }, 5400);
+
+      // Step 5 (3.95s) — Completely clear unlock phase after 0.35s fade-out completes
+      setTimeout(() => {
+        setUnlockPhase(null);
+      }, 350);
+    }, 3600);
   };
 
   // Refs for closing dropdowns when clicking outside
