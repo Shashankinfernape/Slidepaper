@@ -897,8 +897,8 @@ function AppContent() {
                       </span>
                     )}
                   </div>
-                  {/* Creator's Dashboard — only shown to curators or during first-time reveal */}
-                  {(isCurator || isUnlockingCurator) && (
+                  {/* Creator's Dashboard — ONLY shown to non-admin creators or during first-time reveal */}
+                  {!isAdmin && localStorage.getItem('slidepapers_admin_session') !== 'true' && (isCurator || isUnlockingCurator) && (
                     <div
                       className={`dropdown-item${unlockPhase === 'reveal' ? ' creator-btn-reveal' : ''}`}
                       onClick={() => {
@@ -909,8 +909,8 @@ function AppContent() {
                       }}
                       style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.25rem', whiteSpace: 'nowrap' }}
                     >
-                      <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Creator's Dashboard</span>
-                      <Sparkles size={15} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Creator's Dashboard</span>
+                      <Sparkles size={14} style={{ color: 'var(--color-google-yellow)', flexShrink: 0 }} />
                     </div>
                   )}
                   {(isAdmin || localStorage.getItem('slidepapers_admin_session') === 'true') && (
