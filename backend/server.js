@@ -2797,30 +2797,36 @@ app.post('/api/admin/creators/:uid/message', async (req, res) => {
   }
 });
 
-// Endpoint: Admin delete / revoke creator account & drops
+// Endpoint: Admin delete creator completely from MongoDB database
 app.delete('/api/admin/creators/:uid', async (req, res) => {
   const { uid } = req.params;
-  const { deleteBundles } = req.query;
 
   try {
     const user = await User.findOne({ uid });
-    if (user) {
-      user.role = 'user';
-      user.curatorStatus = 'revoked';
-      user.isCurator = false;
-      await user.save();
-    }
+    const userEmail = user ? user.email : '';
 
-    if (deleteBundles === 'true') {
-      await Bundle.deleteMany({ 'author.uid': uid });
-      saveBundlesToDrive();
-    }
+    // 1. Delete creator document from MongoDB User collection
+    await User.deleteOne({ uid });
 
-    console.log(`[Admin Delete Creator] Revoked creator access for ${uid} (deleteBundles: ${deleteBundles})`);
-    return res.status(200).json({ success: true, message: 'Creator access deleted / revoked' });
+    // 2. Delete all wallpaper drops published by this creator
+    await Bundle.deleteMany({
+      $or: [
+        { 'author.uid': uid },
+        ...(userEmail ? [{ 'author.email': { $regex: new RegExp('^' + userEmail + '$', 'i') } }] : [])
+      ]
+    });
+
+    // 3. Delete any notifications for this user
+    await Notification.deleteMany({ userUid: uid });
+
+    // Save backup
+    saveBundlesToDrive();
+
+    console.log(`[Admin Delete Creator] Permanently deleted creator ${uid} (${userEmail}) from MongoDB.`);
+    return res.status(200).json({ success: true, message: 'Creator database record and drops permanently deleted' });
   } catch (err) {
-    console.error('Error deleting creator:', err);
-    return res.status(500).json({ error: 'Failed to delete creator' });
+    console.error('Error deleting creator from database:', err);
+    return res.status(500).json({ error: 'Failed to delete creator database record' });
   }
 });
 

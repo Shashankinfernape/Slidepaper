@@ -2654,49 +2654,60 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
         {deleteConfirmCreator && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 99999,
-            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+            background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem'
           }} onClick={() => setDeleteConfirmCreator(null)}>
             <div style={{
-              background: 'var(--bg-primary)', border: '1px solid #ef4444',
-              borderRadius: '16px', padding: '1.5rem', width: '100%', maxWidth: '440px',
-              display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 20px 50px rgba(239,68,68,0.2)'
+              background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
+              borderRadius: '20px', padding: '1.75rem', width: '100%', maxWidth: '460px',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.6)'
             }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <ShieldAlert size={28} style={{ color: '#ef4444' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '46px', height: '46px', borderRadius: '12px',
+                  background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                }}>
+                  <Trash2 size={22} style={{ color: '#ef4444' }} />
+                </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>Revoke / Delete Creator</h3>
-                  <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{deleteConfirmCreator.displayName} ({deleteConfirmCreator.email})</p>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Delete Creator Account</h3>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    {deleteConfirmCreator.displayName}{deleteConfirmCreator.email ? ` • ${deleteConfirmCreator.email}` : ''}
+                  </p>
                 </div>
               </div>
 
-              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                Are you sure you want to revoke creator permissions for this user? They will no longer be able to access Creator Studio or upload wallpaper drops.
-              </p>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}>
-                <input
-                  type="checkbox"
-                  checked={deleteCreatorBundlesOption}
-                  onChange={(e) => setDeleteCreatorBundlesOption(e.target.checked)}
-                />
-                <span>Also delete all wallpaper drops published by this creator</span>
-              </label>
+              <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-primary)', lineHeight: 1.55 }}>
+                  This will permanently delete this creator record and all their published wallpaper drops from the MongoDB database.
+                </p>
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  When this user logs in again, they will return as a standard user until they click <strong style={{ color: 'var(--text-primary)' }}>+ Drop</strong> to re-register.
+                </p>
+              </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
-                <button onClick={() => setDeleteConfirmCreator(null)} className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}>
+                <button
+                  onClick={() => setDeleteConfirmCreator(null)}
+                  className="btn-secondary"
+                  style={{ padding: '0.6rem 1.25rem', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem' }}
+                >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteCreator}
                   disabled={isDeletingCreator}
                   style={{
-                    padding: '0.5rem 1.2rem', borderRadius: '8px', background: '#ef4444',
-                    color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem',
-                    opacity: isDeletingCreator ? 0.6 : 1
+                    padding: '0.6rem 1.35rem', borderRadius: '10px', background: '#ef4444',
+                    color: '#ffffff', border: 'none', fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.88rem',
+                    opacity: isDeletingCreator ? 0.6 : 1, boxShadow: '0 4px 16px rgba(239,68,68,0.35)'
                   }}
                 >
-                  <Trash2 size={15} /> {isDeletingCreator ? 'Revoking...' : 'Confirm Revoke & Delete'}
+                  <Trash2 size={16} /> {isDeletingCreator ? 'Deleting Database Entry...' : 'Delete Creator'}
                 </button>
               </div>
             </div>
