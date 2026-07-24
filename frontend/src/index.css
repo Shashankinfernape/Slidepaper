@@ -6797,38 +6797,25 @@ h1, h2, h3, h4, h5, h6 {
   animation: creatorBtnPopReveal 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)) !important;
   border-radius: 8px !important;
-  overflow: hidden;
-  will-change: transform, opacity, max-height, filter;
+  transform-origin: top center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
 }
 
 @keyframes creatorBtnPopReveal {
   0% {
     opacity: 0;
-    max-height: 0;
-    transform: translateY(-16px) scale(0.95);
-    filter: blur(6px);
-    margin-bottom: 0;
-    padding-top: 0;
-    padding-bottom: 0;
+    transform: translate3d(0, -18px, 0) scale(0.9);
   }
-  40% {
-    opacity: 0.6;
-    max-height: 48px;
-    filter: blur(2px);
-  }
-  80% {
-    opacity: 1;
-    max-height: 48px;
-    transform: translateY(1px) scale(1.01);
-    filter: blur(0);
+  60% {
+    opacity: 0.85;
+    transform: translate3d(0, 2px, 0) scale(1.02);
   }
   100% {
     opacity: 1;
-    max-height: 48px;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-    margin-bottom: 0.25rem;
-    padding-bottom: 0.5rem;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
