@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   BarChart2, Folder, HardDrive, Shield, LogOut, ArrowLeft, RefreshCw, 
   CheckCircle2, AlertCircle, FileText, Upload, Plus, Trash2, IndianRupee, HelpCircle, DollarSign, Check, User, X, Users, Clock, MessageSquare, Eye,
-  Sparkles, Send, ExternalLink, ShieldAlert, Search
+  Sparkles, Send, ExternalLink, ShieldAlert, Search, CheckSquare
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import DraggableGrid from './common/DraggableGrid';
@@ -248,11 +248,66 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
   const [viewingSubscriberImage, setViewingSubscriberImage] = useState(null);
 
   // Pending Drops Review States
-  const [pendingDrops, setPendingDrops] = useState([]);
-  const [loadingPendingDrops, setLoadingPendingDrops] = useState(false);
-  const [reviewingDrop, setReviewingDrop] = useState(null);
-  const [adminNoteInput, setAdminNoteInput] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionFilter, setSubmissionFilter] = useState('all');
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [rejectTargetId, setRejectTargetId] = useState(null);
+  const [rejectNote, setRejectNote] = useState('');
+
+  const fetchSubmissions = async () => {
+    setLoadingSubmissions(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/submissions`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setSubmissions(data.submissions || []);
+      }
+    } catch (err) {
+      console.error('Error fetching admin submissions list:', err);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
+  const handleApproveSubmission = async (bundleId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/submissions/${bundleId}/approve`, { method: 'POST' });
+      if (res.ok) {
+        showToast('Drop approved and published live.');
+        fetchSubmissions();
+        fetchBundles();
+        if (selectedSubmission?.id === bundleId) setSelectedSubmission(null);
+      }
+    } catch (err) {
+      console.error('Error approving submission:', err);
+      showToast('Failed to approve submission', 'error');
+    }
+  };
+
+  const handleRejectSubmission = async () => {
+    if (!rejectTargetId) return;
+    try {
+      const res = await fetch(`${API_URL}/api/admin/submissions/${rejectTargetId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminNote: rejectNote.trim() })
+      });
+      if (res.ok) {
+        showToast('Revision request sent to creator.');
+        setRejectModalOpen(false);
+        setRejectTargetId(null);
+        setRejectNote('');
+        fetchSubmissions();
+        fetchBundles();
+        if (selectedSubmission?.id === rejectTargetId) setSelectedSubmission(null);
+      }
+    } catch (err) {
+      console.error('Error requesting revisions:', err);
+      showToast('Failed to send revision request', 'error');
+    }
+  };
 
   // Creators Management States
   const [creatorsList, setCreatorsList] = useState([]);
@@ -287,6 +342,9 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
   useEffect(() => {
     if (activeTab === 'creators') {
       fetchCreators();
+    }
+    if (activeTab === 'submissions') {
+      fetchSubmissions();
     }
   }, [activeTab]);
 
@@ -1232,6 +1290,24 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
 
             {!isCreatorMode && (
               <button
+                onClick={() => { setActiveTab('submissions'); setIsSidebarOpen(false); }}
+                className={`admin-nav-item ${activeTab === 'submissions' ? 'active' : ''}`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CheckSquare size={16} style={{ flexShrink: 0 }} />
+                  <span>Submissions</span>
+                </div>
+                {submissions.filter(s => s.status === 'pending_review').length > 0 && (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '9999px', background: 'var(--text-primary)', color: 'var(--bg-primary)' }}>
+                    {submissions.filter(s => s.status === 'pending_review').length}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {!isCreatorMode && (
+              <button
                 onClick={() => { setActiveTab('monetize'); setIsSidebarOpen(false); }}
                 className={`admin-nav-item ${activeTab === 'monetize' ? 'active' : ''}`}
               >
@@ -1285,6 +1361,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
               {activeTab === 'overview' && 'Command Center'}
               {activeTab === 'drive' && 'Google Drive Integration'}
               {activeTab === 'bundles' && 'Bundles Manager'}
+              {activeTab === 'submissions' && 'Submissions Review Hub'}
               {activeTab === 'upload' && (editingBundleId ? 'Edit Wallpaper Bundle' : 'Publish New Bundle')}
               {activeTab === 'monetize' && 'Partner Earnings Studio'}
               {activeTab === 'profile' && 'Creator Profile Settings'}
@@ -1295,6 +1372,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
               {activeTab === 'overview' && 'System diagnostics, wallpaper caching and API metrics'}
               {activeTab === 'drive' && 'Linked OAuth 2.0 folders and file logs'}
               {activeTab === 'bundles' && 'List, edit, and delete active wallpaper sets'}
+              {activeTab === 'submissions' && 'Inspect pending wallpaper drops and approve or request revisions'}
               {activeTab === 'upload' && 'Upload high-resolution images dynamically to your Google Drive'}
               {activeTab === 'monetize' && 'YouTube Studio-style revenue sharing, ad metrics, and CPM'}
               {activeTab === 'profile' && 'Customize display name, channel about details, brand accents and socials'}
@@ -2832,6 +2910,207 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Submissions Review Hub */}
+        {activeTab === 'submissions' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="admin-card" style={{ padding: '1.25rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Review Queue Submissions</h2>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Inspect high-resolution wallpaper sets and approve or request revisions</p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setSubmissionFilter('all')}
+                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: submissionFilter === 'all' ? 'var(--text-primary)' : 'transparent', color: submissionFilter === 'all' ? 'var(--bg-primary)' : 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  All Drops ({submissions.length})
+                </button>
+                <button
+                  onClick={() => setSubmissionFilter('pending')}
+                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: submissionFilter === 'pending' ? 'var(--text-primary)' : 'transparent', color: submissionFilter === 'pending' ? 'var(--bg-primary)' : 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Pending Review ({submissions.filter(s => s.status === 'pending_review').length})
+                </button>
+              </div>
+            </div>
+
+            {loadingSubmissions ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                Loading review queue...
+              </div>
+            ) : submissions.filter(s => submissionFilter === 'pending' ? s.status === 'pending_review' : true).length === 0 ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border-color)', borderRadius: '12px' }}>
+                No submissions found in review queue.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                {submissions.filter(s => submissionFilter === 'pending' ? s.status === 'pending_review' : true).map((sub) => (
+                  <div key={sub.id} className="admin-card" style={{ padding: '1rem', background: 'var(--bg-primary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className={`curator-status-badge ${sub.status || 'published'}`}>
+                        {sub.status === 'pending_review' ? 'Pending Review' : sub.status === 'rejected' ? 'Needs Revision' : 'Published'}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ''}
+                      </span>
+                    </div>
+
+                    <div 
+                      style={{ position: 'relative', aspectRatio: '16/10', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+                      onClick={() => setSelectedSubmission(sub)}
+                    >
+                      <img 
+                        src={sub.images?.[sub.coverIndex || 0]?.url || sub.images?.[0]?.url} 
+                        alt={sub.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0.4rem 0.65rem', background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)', color: '#fff', fontSize: '0.75rem', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{sub.images?.length || 0} Wallpapers</span>
+                        <span>{sub.orientation || 'Horizontal'}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{sub.name}</h3>
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        By {sub.author?.name || 'Curator'}
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
+                      <button
+                        onClick={() => setSelectedSubmission(sub)}
+                        style={{ flex: 1, padding: '0.45rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Inspect
+                      </button>
+                      {sub.status !== 'published' && (
+                        <button
+                          onClick={() => handleApproveSubmission(sub.id)}
+                          style={{ flex: 1, padding: '0.45rem', borderRadius: '6px', border: 'none', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {sub.status !== 'rejected' && (
+                        <button
+                          onClick={() => {
+                            setRejectTargetId(sub.id);
+                            setRejectNote('');
+                            setRejectModalOpen(true);
+                          }}
+                          style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          Reject
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Inspection Modal */}
+            {selectedSubmission && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+                <div style={{ width: 'min(100%, 48rem)', maxHeight: '90vh', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{selectedSubmission.name}</h2>
+                      <p style={{ margin: '0.15rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        Submitted by {selectedSubmission.author?.name} ({selectedSubmission.author?.email})
+                      </p>
+                    </div>
+                    <button onClick={() => setSelectedSubmission(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', fontWeight: 700 }}>Wallpaper Media Set ({selectedSubmission.images?.length || 0})</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                        {selectedSubmission.images?.map((img, i) => (
+                          <div key={i} style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
+                            <img src={img.url || img.previewUrl} alt={img.label} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
+                            <div style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {img.label || `Image #${i+1}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--bg-surface)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>Category</span>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{selectedSubmission.type || 'Desktop'}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>Orientation</span>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{selectedSubmission.orientation || 'Horizontal'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                    <button
+                      onClick={() => {
+                        setRejectTargetId(selectedSubmission.id);
+                        setRejectNote('');
+                        setRejectModalOpen(true);
+                      }}
+                      style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Request Revisions
+                    </button>
+                    <button
+                      onClick={() => handleApproveSubmission(selectedSubmission.id)}
+                      style={{ padding: '0.55rem 1.5rem', borderRadius: '8px', border: 'none', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Approve & Publish Live
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reject Feedback Modal */}
+            {rejectModalOpen && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+                <div style={{ width: 'min(100%, 28rem)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Request Revisions</h3>
+                  <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                    Provide feedback explaining what changes the creator needs to make before approval:
+                  </p>
+                  <textarea
+                    rows="4"
+                    placeholder="e.g. Please re-upload cover image without watermark or in higher resolution..."
+                    value={rejectNote}
+                    onChange={(e) => setRejectNote(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '0.85rem', resize: 'vertical' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
+                    <button
+                      onClick={() => setRejectModalOpen(false)}
+                      style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleRejectSubmission}
+                      style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Send Revision Request
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

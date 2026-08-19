@@ -160,11 +160,37 @@ export default function CuratorDashboard({ user, onBack, onOpenDropStudio, onSel
         <div className="curator-bundles-grid">
           {myBundles.map(bundle => (
             <div key={bundle.id} className="curator-bundle-card-wrapper">
+              {/* Status Badge Indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                <span className={`curator-status-badge ${bundle.status || 'published'}`}>
+                  {bundle.status === 'pending_review' ? 'Pending Review' : bundle.status === 'rejected' ? 'Needs Revision' : 'Published'}
+                </span>
+              </div>
+
+              {bundle.status === 'rejected' && bundle.adminNote && (
+                <div style={{ padding: '0.4rem 0.65rem', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.75rem', color: '#ef4444', marginBottom: '0.35rem' }}>
+                  <strong>Admin Note:</strong> {bundle.adminNote}
+                </div>
+              )}
+
               <BundleCard 
                 bundle={bundle} 
                 onClick={() => onSelectBundle && onSelectBundle(bundle)} 
               />
-              <div className="curator-card-actions">
+              <div className="curator-card-actions" style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
+                {bundle.status === 'rejected' && (
+                  <button
+                    className="resubmit-drop-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenDropStudio && onOpenDropStudio(bundle);
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.65rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    <Edit3 size={14} />
+                    <span>Edit & Resubmit</span>
+                  </button>
+                )}
                 <button 
                   className="delete-drop-btn"
                   onClick={(e) => {

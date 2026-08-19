@@ -680,6 +680,7 @@ app.post('/api/custom-ratio', async (req, res) => {
   const ratioKey = isOriginal ? 'original' : `${widthRatio}:${heightRatio}`;
   const dbKey = ratioKey.replace(/\./g, '_');
   const jobKey = `${bundleId}_${dbKey}`;
+  const abortController = new AbortController();
 
   // 1. Check MongoDB ratioCaches for this bundleId + dbKey (Cache Hit)
   try {
@@ -732,7 +733,7 @@ app.post('/api/custom-ratio', async (req, res) => {
     // Fetch bundle details from MongoDB
     const dbBundle = await Bundle.findOne({ id: bundleId });
     if (!dbBundle) {
-      cropSemaphore.release();
+      safeRelease();
       processingJobs.delete(jobKey);
       rejectJob(new Error('Bundle not found'));
       return res.status(404).json({ error: `Bundle ${bundleId} not found in database` });
@@ -764,7 +765,7 @@ app.post('/api/custom-ratio', async (req, res) => {
         if (cfData && cfData.success && cfData.gcsUri) {
           const signedUrl = await getGcsSignedUrl(cfData.gcsUri);
           await Bundle.findOneAndUpdate({ id: bundleId }, { $set: { [`ratioCaches.${dbKey}`]: cfData.gcsUri }, $inc: { 'stats.downloads': 1 } });
-          cropSemaphore.release();
+          safeRelease();
           processingJobs.delete(jobKey);
           resolveJob(cfData.gcsUri);
           console.log(`[Cloud Function SUCCESS] Returned Signed URL for "${jobKey}" in <1s`);
@@ -794,7 +795,7 @@ app.post('/api/custom-ratio', async (req, res) => {
         isClientDisconnected = true;
         console.log(`[Client Disconnected Early] Aborting job "${jobKey}"...`);
         try { archive.destroy(); } catch (_) {}
-        try { cropSemaphore.release(); } catch (_) {}
+        try { safeRelease(); } catch (_) {}
         processingJobs.delete(jobKey);
       }
     });
@@ -936,7 +937,7 @@ app.post('/api/custom-ratio', async (req, res) => {
       } else {
         res.destroy();
       }
-      cropSemaphore.release();
+      safeRelease();
       processingJobs.delete(jobKey);
       rejectJob(new Error('No images could be successfully fetched from Google Drive or GCS'));
       return;
@@ -963,7 +964,7 @@ app.post('/api/custom-ratio', async (req, res) => {
           );
 
           resolveJob(gcsUri);
-          cropSemaphore.release();
+          safeRelease();
           processingJobs.delete(jobKey);
 
           const signedUrl = await getGcsSignedUrl(gcsUri);
@@ -984,13 +985,13 @@ app.post('/api/custom-ratio', async (req, res) => {
 
     // Direct streaming complete
     await Bundle.findOneAndUpdate({ id: bundleId }, { $inc: { 'stats.downloads': 1 } });
-    cropSemaphore.release();
+    safeRelease();
     processingJobs.delete(jobKey);
     resolveJob(null);
 
   } catch (error) {
     console.error('Custom ratio streaming error:', error);
-    cropSemaphore.release();
+    safeRelease();
     processingJobs.delete(jobKey);
     rejectJob(error);
     if (!res.headersSent) {
@@ -2625,11 +2626,32 @@ app.post('/api/curator/bundles', async (req, res) => {
       coverIndex: coverIndex || 0,
       images: formattedImages,
       author: authorObj || { uid: uid || 'anonymous', name: 'Curator', avatar: '' },
-      stats: { views: 0, downloads: 0 }
+      stats: { views: 0, downloads: 0 },
+      status: 'pending_review'
     });
 
     await newBundle.save();
-    console.log(`[Curator] Published new wallpaper drop: ${name} (${cleanId})`);
+    console.log(`[Curator] Submitted new wallpaper drop for review: ${name} (${cleanId})`);
+
+    // Create notification alert for Admin Review Hub
+    try {
+      const adminNotif = new Notification({
+        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        recipientUid: 'admin',
+        authorName: authorObj?.name || 'Curator',
+        authorAvatar: authorObj?.avatar || '',
+        authorUid: authorObj?.uid || '',
+        title: 'New Drop Submitted',
+        message: `${authorObj?.name || 'Curator'} submitted '${name}' for review.`,
+        type: 'submission',
+        bundleId: cleanId,
+        bundleName: name,
+        thumbnailUrl: formattedImages[coverIndex || 0]?.url || formattedImages[0]?.url || ''
+      });
+      await adminNotif.save();
+    } catch (notifErr) {
+      console.error('[Notification Error] Failed to create admin submission alert:', notifErr.message);
+    }
 
     // Backup
     saveBundlesToDrive();
@@ -2647,7 +2669,103 @@ app.get('/api/admin/curator-applications', async (req, res) => {
     const pendingUsers = await User.find({ curatorStatus: 'pending' });
     return res.status(200).json({ success: true, applications: pendingUsers });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch curator applications' });
+    console.error('Error fetching curator applications:', err);
+    return res.status(500).json({ error: 'Failed to fetch applications' });
+  }
+});
+
+// Endpoint: Admin fetch all submission drops for review
+app.get('/api/admin/submissions', async (req, res) => {
+  try {
+    const submissions = await Bundle.find({
+      status: { $in: ['pending_review', 'rejected', 'published'] }
+    }).sort({ createdAt: -1 });
+    return res.status(200).json({ success: true, submissions });
+  } catch (err) {
+    console.error('[Admin Submissions Error]', err);
+    return res.status(500).json({ error: 'Failed to fetch review submissions' });
+  }
+});
+
+// Endpoint: Admin approve submission drop
+app.post('/api/admin/submissions/:bundleId/approve', async (req, res) => {
+  const { bundleId } = req.params;
+  try {
+    const bundle = await Bundle.findOneAndUpdate(
+      { id: bundleId },
+      { status: 'published', adminNote: '', reviewedAt: new Date() },
+      { new: true }
+    );
+    if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
+
+    console.log(`[Admin] Approved drop '${bundle.name}' (${bundleId}).`);
+
+    // Send notification to creator
+    if (bundle.author?.uid) {
+      try {
+        const creatorNotif = new Notification({
+          id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          recipientUid: bundle.author.uid,
+          title: 'Drop Approved',
+          message: `Your drop '${bundle.name}' was approved and is live on Slidepapers.`,
+          type: 'approval',
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+          thumbnailUrl: bundle.images[bundle.coverIndex || 0]?.url || bundle.images[0]?.url || ''
+        });
+        await creatorNotif.save();
+      } catch (nErr) {
+        console.error('Error creating approval notification:', nErr.message);
+      }
+    }
+
+    saveBundlesToDrive();
+    return res.status(200).json({ success: true, bundle });
+  } catch (err) {
+    console.error('Error approving submission:', err);
+    return res.status(500).json({ error: 'Failed to approve submission' });
+  }
+});
+
+// Endpoint: Admin reject submission drop with feedback note
+app.post('/api/admin/submissions/:bundleId/reject', async (req, res) => {
+  const { bundleId } = req.params;
+  const { adminNote } = req.body;
+  try {
+    const noteText = adminNote || 'Revisions requested by admin.';
+    const bundle = await Bundle.findOneAndUpdate(
+      { id: bundleId },
+      { status: 'rejected', adminNote: noteText, reviewedAt: new Date() },
+      { new: true }
+    );
+    if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
+
+    console.log(`[Admin] Rejected drop '${bundle.name}' (${bundleId}) with note: "${noteText}"`);
+
+    // Send notification to creator with note
+    if (bundle.author?.uid) {
+      try {
+        const creatorNotif = new Notification({
+          id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          recipientUid: bundle.author.uid,
+          title: 'Revision Requested',
+          message: `Admin note for '${bundle.name}': ${noteText}`,
+          type: 'rejection',
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+          thumbnailUrl: bundle.images[bundle.coverIndex || 0]?.url || bundle.images[0]?.url || ''
+        });
+        await creatorNotif.save();
+      } catch (nErr) {
+        console.error('Error creating rejection notification:', nErr.message);
+      }
+    }
+
+    saveBundlesToDrive();
+    return res.status(200).json({ success: true, bundle });
+  } catch (err) {
+    console.error('Error rejecting submission:', err);
+    return res.status(500).json({ error: 'Failed to request revisions' });
   }
 });
 
