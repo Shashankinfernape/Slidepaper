@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  ChevronDown, ChevronLeft, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone, Plus, Sparkles
+  ChevronDown, ChevronLeft, ChevronRight, Check, LogOut, Search, Bell, Shield, AlertCircle, Monitor, Smartphone, Plus, Sparkles, Menu, X
 } from 'lucide-react';
 import { WALLPAPER_BUNDLES } from './data';
 import WallpaperGrid from './components/WallpaperGrid';
@@ -289,6 +289,8 @@ function HeroSection({ onGetStarted, bundles }) {
 function AppContent() {
   const { user, userProfile, isAdmin, isCurator, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
   
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // Curator Studio & Drop Modal States
   const [showDropStudioModal, setShowDropStudioModal] = useState(false);
   const [showCuratorAppModal, setShowCuratorAppModal] = useState(false);
@@ -757,7 +759,7 @@ function AppContent() {
   return (
     <div className="webapp-container">
       {/* Sleek Minimalist Header */}
-      <header className="header-nav">
+      <header className={`header-nav ${isMobileMenuOpen ? 'menu-open' : ''}`}>
         {/* Brand Logo & Search Bar */}
         <div className="header-left">
           <a
@@ -911,12 +913,21 @@ function AppContent() {
                 </div>
               )}
             </div>
-          ) : (
-            <button className="auth-btn-google" onClick={loginWithGoogle}>
-              <span>Login</span>
+            ) : (
+              <button className="auth-btn-google" onClick={loginWithGoogle}>
+                <span>Login</span>
+              </button>
+            )}
+
+            {/* Mobile Hamburger Button */}
+            <button
+              className="mobile-hamburger-btn"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              title="Menu"
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-          )}
-        </div>
+          </div>
 
         {/* Cinematic dim backdrop — punches out around elevated profile zone */}
         {(unlockPhase === 'dim' || unlockPhase === 'spotlight' || unlockPhase === 'reveal' || unlockPhase === 'done') && (
