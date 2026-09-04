@@ -2073,12 +2073,37 @@ app.post('/api/users/sync-profile', async (req, res) => {
   }
 
   try {
-    let user = await User.findOne({ uid });
+    let user = null;
+    if (email) {
+      user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+    }
+    if (!user) {
+      user = await User.findOne({ uid });
+    }
+
     if (user) {
+      const oldUid = user.uid;
+      
+      user.uid = uid; // Always sync to current active Firebase UID
       user.displayName = displayName || user.displayName;
       user.email = email || user.email;
       user.photoURL = photoURL || user.photoURL;
       await user.save();
+
+      // If they logged in with a different method (e.g. Google vs Email) but same email, UIDs might differ.
+      // We must cascade the new UID to all their content so nothing breaks.
+      if (oldUid && oldUid !== uid) {
+        console.log(`[Database] Migrating user data from old UID ${oldUid} to new UID ${uid}`);
+        await Bundle.updateMany({ 'author.uid': oldUid }, { $set: { 'author.uid': uid } });
+        await Notification.updateMany({ authorUid: oldUid }, { $set: { authorUid: uid } });
+        await Notification.updateMany({ targetUserUid: oldUid }, { $set: { targetUserUid: uid } });
+        // Update subscriptions array in other users
+        const subscribedUsers = await User.find({ subscriberUids: oldUid });
+        for (const su of subscribedUsers) {
+          su.subscriberUids = su.subscriberUids.map(id => id === oldUid ? uid : id);
+          await su.save();
+        }
+      }
     } else {
       user = await User.create({
         uid,
