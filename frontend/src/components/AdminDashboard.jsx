@@ -248,6 +248,12 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
   const [viewingSubscriberImage, setViewingSubscriberImage] = useState(null);
 
   // Pending Drops Review States
+  const [pendingDrops, setPendingDrops] = useState([]);
+  const [loadingPendingDrops, setLoadingPendingDrops] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewingDrop, setReviewingDrop] = useState(null);
+  const [adminNoteInput, setAdminNoteInput] = useState('');
+  
   const [submissions, setSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [submissionFilter, setSubmissionFilter] = useState('all');
