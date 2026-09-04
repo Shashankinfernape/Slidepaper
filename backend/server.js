@@ -2075,7 +2075,18 @@ app.post('/api/users/sync-profile', async (req, res) => {
   try {
     let user = null;
     if (email) {
-      user = await User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
+      // Find all matching emails and sort to prioritize the one with role 'curator'
+      const users = await User.find({ email: { $regex: new RegExp(`^${email}$`, 'i') } }).sort({ role: 1 });
+      if (users.length > 0) {
+        user = users[0];
+        
+        // Cleanup any extra ghost profiles created before we added this linking logic
+        if (users.length > 1) {
+          const idsToDelete = users.slice(1).map(u => u._id);
+          await User.deleteMany({ _id: { $in: idsToDelete } });
+          console.log(`[Database] Cleaned up ${idsToDelete.length} ghost duplicate profiles for ${email}`);
+        }
+      }
     }
     if (!user) {
       user = await User.findOne({ uid });
