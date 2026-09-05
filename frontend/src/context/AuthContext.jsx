@@ -25,30 +25,16 @@ if (
 
 const AuthContext = createContext(null);
 
+// These are the real Firebase-authenticated admin accounts.
+// Role is also enforced server-side in sync-profile.
 const ALLOWED_ADMIN_EMAILS = [
-  'admin@slidepapers.com',
   'infernapeshashank@gmail.com',
-  'jasondomnic@gmail.com',
-  'jasondomnii@gmail.com',
-  'jasondomnic5@gmail.com',
-  'jasondomnic025@gmail.com'
+  'jasondomnic5@gmail.com'
 ];
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const isAdminSession = localStorage.getItem('slidepapers_admin_session') === 'true';
-    if (isAdminSession) {
-      return {
-        uid: 'admin-mock-999',
-        displayName: 'Infernape',
-        email: 'admin@slidepapers.com'
-      };
-    }
-    return null;
-  });
-  const [isAdmin, setIsAdmin] = useState(() => {
-    return localStorage.getItem('slidepapers_admin_session') === 'true';
-  });
+  const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [initialLoading, setInitialLoading] = useState(!!(isConfigured && auth));
   const [loading, setLoading] = useState(false);
 
@@ -101,12 +87,13 @@ export function AuthProvider({ children }) {
           if (data.subscriptions) {
             setSubscriptions(data.subscriptions);
           }
+          // Set isAdmin from what the DATABASE says — this is the source of truth
+          const dbRole = data.user.role;
+          setIsAdmin(dbRole === 'admin');
           setUser(prev => {
             if (!prev) return null;
             return {
               ...prev,
-              uid: data.user.uid || prev.uid,
-              email: data.user.email || prev.email,
               displayName: data.user.displayName || prev.displayName,
               photoURL: data.user.photoURL || prev.photoURL
             };
@@ -118,46 +105,24 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Monitor Firebase Auth state if configured
+  // Monitor Firebase Auth state
   useEffect(() => {
     if (!isConfigured || !auth) {
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      const isAdminSession = localStorage.getItem('slidepapers_admin_session') === 'true';
-      console.log('[AuthContext] onAuthStateChanged fired. User:', currentUser ? currentUser.email : 'null', 'isAdminSession:', isAdminSession);
-
-      // If mock admin session is active and no real Firebase user is signed in, preserve mock user
-      if (isAdminSession && (!currentUser || currentUser.email === 'admin@slidepapers.com')) {
-        console.log('[AuthContext] Preserving mock admin session and setting user state');
-        setUser(prev => ({
-          uid: 'admin-mock-999',
-          displayName: 'Infernape',
-          email: 'admin@slidepapers.com',
-          photoURL: prev?.photoURL || userProfile?.photoURL || undefined
-        }));
-        setIsAdmin(true);
-        setInitialLoading(false);
-        return;
-      }
+      console.log('[AuthContext] onAuthStateChanged fired. User:', currentUser ? currentUser.email : 'null');
 
       setUser(currentUser);
       if (currentUser) {
         const emailClean = (currentUser.email || '').trim().toLowerCase();
-        const isEmailPassword = currentUser.providerData.some(p => p.providerId === 'password');
-        const computedAdmin = ALLOWED_ADMIN_EMAILS.includes(emailClean) || isAdminSession;
-        
-        console.log('[AuthContext] User exists. computedAdmin:', computedAdmin);
-        setIsAdmin(computedAdmin);
-
-        // Always clear mock session if a real Firebase user is logged in (unless it's the mock admin email)
-        if (currentUser.email !== 'admin@slidepapers.com' && isAdminSession) {
-          localStorage.removeItem('slidepapers_admin_session');
-        }
+        // Optimistic admin flag while DB sync is in-flight
+        setIsAdmin(ALLOWED_ADMIN_EMAILS.includes(emailClean));
       } else {
-        console.log('[AuthContext] User is null. Setting isAdmin = false');
         setIsAdmin(false);
+        hasSynced.current = false;
+        setUserProfile(null);
       }
       setInitialLoading(false);
     });
@@ -168,12 +133,9 @@ export function AuthProvider({ children }) {
   // Sync user profile with backend database whenever user state changes
   useEffect(() => {
     if (user) {
-      // If the currently synced profile doesn't match the active user, we need to re-sync
-      // This happens when transitioning from the mock-admin initial state to a real Firebase user
       const isMismatch = userProfile && userProfile.uid !== user.uid;
-      
       if (!hasSynced.current || isMismatch) {
-        hasSynced.current = false; // Reset it so it can sync again
+        hasSynced.current = false;
         syncUserProfile(user);
       }
     } else {
@@ -194,122 +156,44 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return result.user;
       } catch (error) {
-        console.error("Firebase Login Error:", error);
+        console.error('Firebase Login Error:', error);
         setLoading(false);
         throw error;
       }
     } else {
-      // Simulate Google Sign-In with a delay
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const mockUser = {
-            uid: 'google-mock-101',
-            displayName: 'Google Designer (Simulated)',
-            email: 'designer@google.com',
-            photoURL: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23888888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>'
-          };
-          setUser(mockUser);
-          syncUserProfile(mockUser);
-          setIsAdmin(false);
-          setLoading(false);
-          resolve(mockUser);
-        }, 800);
-      });
+      setLoading(false);
+      throw new Error('Firebase is not configured.');
     }
   };
 
-  // Google Admin sign in helper (sets admin session flag)
+  // Admin Google sign in — validates the email is an allowed admin account
   const loginAdminWithGoogle = async () => {
     setLoading(true);
     try {
       const googleUser = await loginWithGoogle();
       const emailClean = (googleUser.email || '').trim().toLowerCase();
-      
-      const isMockUser = googleUser.uid === 'google-mock-101';
-      if (!ALLOWED_ADMIN_EMAILS.includes(emailClean) && !isMockUser) {
+      if (!ALLOWED_ADMIN_EMAILS.includes(emailClean)) {
         if (isConfigured && auth) {
           await firebaseSignOut(auth);
         }
         setUser(null);
         setIsAdmin(false);
-        localStorage.removeItem('slidepapers_admin_session');
         throw new Error('This Google Account is not registered as an Admin.');
       }
-      
-      setIsAdmin(true);
       setLoading(false);
       return googleUser;
     } catch (error) {
-      localStorage.removeItem('slidepapers_admin_session');
       setIsAdmin(false);
       setLoading(false);
       throw error;
     }
   };
 
-  // Admin email/password login helper
+  // Email/password login — goes directly through Firebase for all accounts
   const loginWithEmail = async (email, password) => {
     setLoading(true);
+    const emailClean = (email || '').trim().toLowerCase();
 
-    let emailClean = (email || '').trim().toLowerCase();
-
-    // Normalize shorthands
-    if (emailClean === 'admin') {
-      emailClean = 'admin@slidepapers.com';
-    }
-
-    // 2. Local admin account bypass
-    if (emailClean === 'admin@slidepapers.com' || emailClean === 'infernapeshashank@gmail.com') {
-      if (password === 'Javierdx5' || password === 'admin') {
-        console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
-        localStorage.setItem('slidepapers_admin_session', 'true');
-        setIsAdmin(true);
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            const adminUser = {
-              uid: 'admin-mock-999',
-              displayName: 'Infernape',
-              email: 'admin@slidepapers.com'
-            };
-            console.log('[AuthContext] Local mock admin logged in successfully. Setting user.');
-            setUser(adminUser);
-            setLoading(false);
-            resolve(adminUser);
-          }, 800);
-        });
-      } else if (emailClean === 'admin@slidepapers.com') {
-        // Only hard-block if it's strictly the mock email, since it has no real Firebase account
-        console.log('[AuthContext] Incorrect password for local bypass account.');
-        setLoading(false);
-        throw new Error('Incorrect password for admin@slidepapers.com.');
-      }
-      // If it's a different admin email (like infernape) but wrong local password, it will naturally fall through to Firebase
-    }
-
-    // 2. Custom local check for jasondomnic025@gmail.com
-    if (emailClean === 'jasondomnic025@gmail.com') {
-      if (password === 'Javierdx5') {
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            const mockUser = {
-              uid: 'jasondomnic025',
-              displayName: 'Jason Domnic',
-              email: 'jasondomnic025@gmail.com'
-            };
-            setUser(mockUser);
-            setIsAdmin(true);
-            localStorage.setItem('slidepapers_admin_session', 'true');
-            setLoading(false);
-            resolve(mockUser);
-          }, 800);
-        });
-      } else {
-        setLoading(false);
-        throw new Error(`Incorrect password for ${emailClean}.`);
-      }
-    }
-
-    // 3. Let Firebase handle real email/password authentication
     if (isConfigured && auth) {
       try {
         console.log('[AuthContext] Attempting Firebase signInWithEmailAndPassword for:', emailClean);
@@ -318,9 +202,9 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return result.user;
       } catch (error) {
-        console.warn('[AuthContext] Firebase signIn failed with code:', error.code, 'Attempting auto-registration...');
-        
-        // If user is not found or credentials not created yet in Firebase Auth, attempt auto-registration
+        console.warn('[AuthContext] Firebase signIn failed:', error.code);
+
+        // Auto-register if the account doesn't exist in Firebase yet
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
           try {
             const createResult = await createUserWithEmailAndPassword(auth, emailClean, password);
@@ -343,17 +227,15 @@ export function AuthProvider({ children }) {
         throw new Error(`Incorrect password for ${emailClean}.`);
       }
     } else {
-      console.log('[AuthContext] Firebase not configured or auth not initialized.');
       setLoading(false);
-      throw new Error(`Firebase is not configured. Use admin@slidepapers.com / admin123 to log in locally.`);
+      throw new Error('Firebase is not configured. Cannot sign in.');
     }
   };
 
-  // Sign out helper
+  // Sign out
   const logout = async () => {
     setLoading(true);
     setIsAdmin(false);
-    localStorage.removeItem('slidepapers_admin_session');
     hasSynced.current = false;
     setUserProfile(null);
     if (isConfigured && auth) {
@@ -361,7 +243,7 @@ export function AuthProvider({ children }) {
         await firebaseSignOut(auth);
         setLoading(false);
       } catch (error) {
-        console.error("Firebase Signout Error:", error);
+        console.error('Firebase Signout Error:', error);
         setLoading(false);
         throw error;
       }

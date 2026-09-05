@@ -2071,14 +2071,20 @@ app.post('/api/users/sync-profile', async (req, res) => {
     return res.status(400).json({ error: 'Missing uid' });
   }
 
+  // Real admin accounts — role is enforced server-side so both Google and email/password
+  // login always get the same admin profile from the database.
+  const ALLOWED_ADMIN_EMAILS = [
+    'infernapeshashank@gmail.com',
+    'jasondomnic5@gmail.com'
+  ];
+
   try {
     let user = null;
     if (email) {
-      // Find all matching emails
+      // Find all DB documents matching this email (handles duplicates from past bugs)
       const users = await User.find({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
       if (users.length > 0) {
-        // Prioritize the profile that has the most data (e.g. curator/admin role, or has a photo/name)
-        // Sort by role (admin > curator > user) and then by presence of photoURL
+        // Prioritize the profile with the highest role, then by presence of a photoURL
         users.sort((a, b) => {
           const roleWeight = { admin: 3, curator: 2, user: 1 };
           const weightA = (roleWeight[a.role] || 1) + (a.photoURL ? 0.5 : 0);
@@ -2141,6 +2147,10 @@ app.post('/api/users/sync-profile', async (req, res) => {
       user.displayName = displayName || user.displayName;
       user.email = email || user.email;
       user.photoURL = photoURL || user.photoURL;
+      // Enforce admin role server-side — DB is source of truth for role
+      if (email && ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase())) {
+        user.role = 'admin';
+      }
       await user.save();
 
       // If they logged in with a different method (e.g. Google vs Email) but same email, UIDs might differ.
@@ -2163,6 +2173,7 @@ app.post('/api/users/sync-profile', async (req, res) => {
         displayName,
         email,
         photoURL,
+        role: (email && ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase())) ? 'admin' : 'user',
         subscribers: 0,
         subscriberUids: []
       });
