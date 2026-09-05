@@ -1313,23 +1313,6 @@ h1, h2, h3, h4, h5, h6 {
   transform: scale(0.98);
 }
 
-
-/* Mobile Hamburger Button */
-.mobile-hamburger-btn {
-  display: none;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: var(--radius-full);
-  align-items: center;
-  justify-content: center;
-  margin-left: 0.25rem;
-}
-.mobile-hamburger-btn:hover {
-  background-color: var(--bg-surface);
-}
 @media (max-width: 768px) {
   .hero-section {
     padding: 2.5rem 0;
@@ -5667,7 +5650,7 @@ h1, h2, h3, h4, h5, h6 {
 
   .header-nav {
     display: grid !important;
-    grid-template-columns: auto 1fr auto auto auto auto !important;
+    grid-template-columns: auto 1fr auto auto auto !important;
     grid-auto-rows: auto !important;
     gap: 0.45rem 0.5rem !important;
     width: 100% !important;
@@ -5718,18 +5701,10 @@ h1, h2, h3, h4, h5, h6 {
     justify-self: end !important;
   }
 
-  .mobile-hamburger-btn {
-    display: flex !important;
-    grid-row: 1 !important;
-    grid-column: 6 !important;
-    justify-self: end !important;
-  }
-
   /* Line 2: Search Box (Full width) */
   .search-container-header {
-    display: none !important;
     grid-row: 2 !important;
-    grid-column: 1 / 7 !important;
+    grid-column: 1 / 6 !important;
     width: 100% !important;
     max-width: 100% !important;
     justify-self: stretch !important;
@@ -5741,9 +5716,8 @@ h1, h2, h3, h4, h5, h6 {
 
   /* Line 3: Genres Tabs Bar (occupies full width with clean spacious top gap on feed view) */
   .genre-tabs-bar {
-    display: none !important;
     grid-row: 3 !important;
-    grid-column: 1 / 7 !important;
+    grid-column: 1 / 6 !important;
     width: 100% !important;
     margin: 0.35rem 0 0 !important;
     justify-content: flex-start !important;
@@ -5751,14 +5725,6 @@ h1, h2, h3, h4, h5, h6 {
 
   .wallpaper-grid {
     margin-top: 0.4rem !important;
-  }
-
-  .header-nav.menu-open .search-container-header {
-    display: flex !important;
-  }
-
-  .header-nav.menu-open .genre-tabs-bar {
-    display: flex !important;
   }
 
   .genre-tabs-bar .genre-tabs {
