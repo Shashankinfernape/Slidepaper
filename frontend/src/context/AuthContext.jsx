@@ -259,7 +259,7 @@ export function AuthProvider({ children }) {
     }
 
     // 2. Local admin account bypass
-    if (ALLOWED_ADMIN_EMAILS.includes(emailClean)) {
+    if (emailClean === 'admin@slidepapers.com' || emailClean === 'infernapeshashank@gmail.com') {
       if (password === 'Javierdx5' || password === 'admin') {
         console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
         localStorage.setItem('slidepapers_admin_session', 'true');

@@ -2071,22 +2071,6 @@ app.post('/api/users/sync-profile', async (req, res) => {
     return res.status(400).json({ error: 'Missing uid' });
   }
 
-  // Algorithm: All admins share the master database. Creators use their unique email database.
-  const ALLOWED_ADMIN_EMAILS = [
-    'admin@slidepapers.com',
-    'infernapeshashank@gmail.com',
-    'jasondomnic@gmail.com',
-    'jasondomnii@gmail.com',
-    'jasondomnic5@gmail.com',
-    'jasondomnic025@gmail.com'
-  ];
-
-  if (email && ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase())) {
-    console.log(`[Auth] Admin email ${email} detected. Mapping to shared admin database.`);
-    uid = 'admin-mock-999';
-    email = 'admin@slidepapers.com';
-  }
-
   try {
     let user = null;
     if (email) {
