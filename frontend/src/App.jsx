@@ -287,98 +287,21 @@ function HeroSection({ onGetStarted, bundles }) {
 }
 
 function AppContent() {
-  const { user, userProfile, isAdmin, isCurator, loginWithGoogle, loginAdminWithGoogle, loginWithEmail, logout, isFirebaseReal } = useAuth();
+  const { user, userProfile, isAdmin, isCurator, loginWithGoogle, loginAdminWithGoogle, logout, isFirebaseReal } = useAuth();
   
   // Curator Studio & Drop Modal States
   const [showDropStudioModal, setShowDropStudioModal] = useState(false);
   const [showCuratorAppModal, setShowCuratorAppModal] = useState(false);
 
-  // Secret admin modal states
+  // Admin login modal states
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   const [adminLoginError, setAdminLoginError] = useState('');
   const [adminLoginLoading, setAdminLoginLoading] = useState(false);
-  
-  // Refs for input focus transitions
-  const emailInputRef = useRef(null);
-  const passwordInputRef = useRef(null);
-  
-  // Track keys for secret JDX triggers
-  const keySequenceRef = useRef('');
 
   // Refs and states for genre tabs scrolling
   const genreTabsRef = useRef(null);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
-  
-  // Autofocus email input when admin modal is opened
-  useEffect(() => {
-    if (showAdminLoginModal) {
-      setTimeout(() => {
-        emailInputRef.current?.focus();
-      }, 80);
-    }
-  }, [showAdminLoginModal]);
-  
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Safety check for undefined key events
-      if (!e || !e.key) return;
-
-      // Trigger 1: Ctrl + Shift + X (Simple, no browser conflicts)
-      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'X') {
-        e.preventDefault();
-        setShowAdminLoginModal(true);
-        return;
-      }
-
-      // Trigger 2: Secret "JDX" typing sequence (without Ctrl/Shift, ignored inside inputs)
-      const activeEl = document.activeElement;
-      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
-      
-      if (!isInput) {
-        const key = e.key.toUpperCase();
-        if (key === 'J') {
-          keySequenceRef.current = 'J';
-        } else if (key === 'D' && keySequenceRef.current === 'J') {
-          keySequenceRef.current = 'JD';
-        } else if (key === 'X' && keySequenceRef.current === 'JD') {
-          keySequenceRef.current = '';
-          e.preventDefault();
-          setShowAdminLoginModal(true);
-        } else {
-          // Clear sequence if other keys are pressed
-          if (key !== 'J' && key !== 'D' && key !== 'X') {
-            keySequenceRef.current = '';
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    console.log('[App] handleAdminLogin called with:', adminEmail, adminPassword);
-    setAdminLoginLoading(true);
-    setAdminLoginError('');
-    try {
-      await loginWithEmail(adminEmail, adminPassword);
-      console.log('[App] loginWithEmail completed successfully! Closing modal and opening admin view...');
-      setShowAdminLoginModal(false);
-      setAdminEmail('');
-      setAdminPassword('');
-      setCurrentView('admin');
-    } catch (err) {
-      console.error('[App] Error in handleAdminLogin:', err);
-      setAdminLoginError(err.message || 'Login failed. Please check credentials.');
-    } finally {
-      setAdminLoginLoading(false);
-    }
-  };
 
   const handleGoogleAdminLogin = async () => {
     setAdminLoginLoading(true);
@@ -1074,106 +997,46 @@ function AppContent() {
         <LegalModal type={legalModalType} onClose={() => setLegalModalType(null)} />
       )}
 
-      {/* Secret Admin Login Modal */}
+      {/* Admin Login Modal — Google only */}
       {showAdminLoginModal && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal" style={{ width: 'min(100%, 24rem)' }}>
-            <h2>Admin Authorization</h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 0.5rem 0' }}>
-              Sign in with email and password to access dashboard.
+        <div className="admin-modal-overlay" onClick={() => { setShowAdminLoginModal(false); setAdminLoginError(''); }}>
+          <div className="admin-modal" style={{ width: 'min(100%, 22rem)' }} onClick={e => e.stopPropagation()}>
+            <h2>Admin Sign In</h2>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 1.2rem 0' }}>
+              Use your authorized Google account to access the dashboard.
             </p>
 
             {adminLoginError && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0.8rem 1rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
-                  <AlertCircle size={16} />
-                  <span>Authentication Failed</span>
-                </div>
-                <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.9, lineHeight: '1.4' }}>{adminLoginError}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAdminLoginError('');
-                    setAdminEmail('');
-                    setAdminPassword('');
-                    emailInputRef.current?.focus();
-                  }}
-                  className="admin-btn secondary"
-                  style={{ alignSelf: 'flex-start', padding: '4px 10px', fontSize: '0.72rem', marginTop: '4px' }}
-                >
-                  Clear & Retry
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.75rem 1rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#ef4444', fontSize: '0.82rem', marginBottom: '1rem' }}>
+                <AlertCircle size={15} />
+                <span>{adminLoginError}</span>
               </div>
             )}
 
-            <div className="admin-modal-form" style={{ marginTop: '0.5rem' }}>
-              <div className="admin-modal-field">
-                <label>Admin ID / Email</label>
-                <input 
-                  type="text" 
-                  required
-                  ref={emailInputRef}
-                  autoComplete="new-username"
-                  value={adminEmail}
-                  onChange={(e) => {
-                    setAdminEmail(e.target.value);
-                    if (adminLoginError) setAdminLoginError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      passwordInputRef.current?.focus();
-                    }
-                  }}
-                  className="admin-modal-input" 
-                />
-              </div>
-
-              <div className="admin-modal-field">
-                <label>Password</label>
-                <input 
-                  type="text" 
-                  required
-                  ref={passwordInputRef}
-                  autoComplete="new-password"
-                  value={adminPassword}
-                  onChange={(e) => {
-                    setAdminPassword(e.target.value);
-                    if (adminLoginError) setAdminLoginError('');
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAdminLogin(e);
-                    }
-                  }}
-                  className="admin-modal-input admin-password-input" 
-                />
-              </div>
-
-              <div className="admin-modal-actions" style={{ marginTop: '0.5rem' }}>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setShowAdminLoginModal(false);
-                    setAdminLoginError('');
-                    setAdminEmail('');
-                    setAdminPassword('');
-                  }}
-                  className="admin-btn secondary"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleAdminLogin}
-                  disabled={adminLoginLoading}
-                  className="admin-btn primary"
-                >
-                  {adminLoginLoading ? 'Signing in...' : 'Sign In'}
-                </button>
-              </div>
-
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={handleGoogleAdminLogin}
+                disabled={adminLoginLoading}
+                className="admin-btn primary"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '0.7rem 1rem' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                {adminLoginLoading ? 'Signing in...' : 'Continue with Google'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowAdminLoginModal(false); setAdminLoginError(''); }}
+                className="admin-btn secondary"
+                style={{ width: '100%' }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
