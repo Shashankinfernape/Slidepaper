@@ -105,6 +105,8 @@ export function AuthProvider({ children }) {
             if (!prev) return null;
             return {
               ...prev,
+              uid: data.user.uid || prev.uid,
+              email: data.user.email || prev.email,
               displayName: data.user.displayName || prev.displayName,
               photoURL: data.user.photoURL || prev.photoURL
             };
