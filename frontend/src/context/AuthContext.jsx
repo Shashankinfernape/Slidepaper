@@ -32,6 +32,10 @@ const ALLOWED_ADMIN_EMAILS = [
   'jasondomnic5@gmail.com'
 ];
 
+const ALLOWED_ADMIN_UIDS = [
+  'pBXcA5QY4TPhUG4pNBWyQwBVHwh2' // Ghost UID for infernapeshashank that is returning null email
+];
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -120,7 +124,7 @@ export function AuthProvider({ children }) {
       if (currentUser) {
         const emailClean = (currentUser.email || '').trim().toLowerCase();
         // Optimistic admin flag while DB sync is in-flight
-        setIsAdmin(ALLOWED_ADMIN_EMAILS.includes(emailClean));
+        setIsAdmin(ALLOWED_ADMIN_EMAILS.includes(emailClean) || ALLOWED_ADMIN_UIDS.includes(currentUser.uid));
       } else {
         setIsAdmin(false);
         hasSynced.current = false;
