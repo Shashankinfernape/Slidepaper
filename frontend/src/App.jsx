@@ -807,9 +807,11 @@ function AppContent() {
                 <div className={`dropdown-menu align-right${isUnlockingCurator ? ' creator-unlock-dropdown' : ''}`}>
                   {/* DEBUG INFO */}
                   <div style={{ padding: '0.5rem', background: '#333', color: '#fff', fontSize: '10px', marginBottom: '0.5rem', borderRadius: '4px' }}>
-                    <p style={{ margin: 0 }}>Debug: {user?.email}</p>
+                    <p style={{ margin: 0 }}>UID: {user?.uid}</p>
+                    <p style={{ margin: 0 }}>Email: {user?.email || 'NULL'}</p>
+                    <p style={{ margin: 0 }}>Provider: {user?.providerData?.[0]?.providerId || 'Unknown'}</p>
                     <p style={{ margin: 0 }}>isAdmin: {String(isAdmin)}</p>
-                    <p style={{ margin: 0 }}>role: {userProfile?.role}</p>
+                    <p style={{ margin: 0 }}>dbRole: {userProfile?.role}</p>
                   </div>
                   
                   {/* Creator's Dashboard — ONLY shown to non-admin creators or during reveal/done phase */}
