@@ -258,6 +258,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [submissionFilter, setSubmissionFilter] = useState('all');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTargetId, setRejectTargetId] = useState(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -3064,11 +3065,17 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                         <Folder size={18} style={{ color: 'var(--text-secondary)' }} />
                         Wallpaper Media Set ({selectedSubmission.images?.length || 0})
                       </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                         {selectedSubmission.images?.map((img, i) => (
-                          <div key={i} style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                            <img src={img.previewUrl || img.url} alt={img.label} style={{ width: '100%', height: '140px', objectFit: 'cover' }} loading="lazy" />
-                            <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
+                          <div 
+                            key={i} 
+                            style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', display: 'flex', flexDirection: 'column' }} 
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)'; }} 
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                            onClick={() => setPreviewImage(img)}
+                          >
+                            <img src={img.previewUrl || img.url} alt={img.label} style={{ height: '150px', width: 'auto', objectFit: 'contain', background: '#0a0a0a' }} loading="lazy" />
+                            <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, textAlign: 'center' }}>
                               {img.label || `Image #${i+1}`}
                             </div>
                           </div>
@@ -3146,6 +3153,37 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Image Preview Modal */}
+            {previewImage && (
+              <div 
+                style={{ 
+                  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(8px)', zIndex: 9999999, 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+                  animation: 'fadeIn 0.2s ease-out' 
+                }}
+                onClick={() => setPreviewImage(null)}
+              >
+                <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
+                  <button onClick={() => setPreviewImage(null)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}>
+                    <X size={24} />
+                  </button>
+                </div>
+                <img 
+                  src={previewImage.previewUrl || previewImage.url} 
+                  alt={previewImage.label} 
+                  style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', animation: 'scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)', borderRadius: '8px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.8)' }} 
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div style={{ marginTop: '1.5rem', color: '#fff', fontSize: '1.1rem', fontWeight: 600, animation: 'fadeIn 0.4s ease-out', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                  {previewImage.label}
+                </div>
+                <style>{`
+                  @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+                  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                `}</style>
               </div>
             )}
           </div>
