@@ -2972,7 +2972,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                       onClick={() => setSelectedSubmission(sub)}
                     >
                       <img 
-                        src={sub.images?.[sub.coverIndex || 0]?.url || sub.images?.[0]?.url} 
+                        src={sub.images?.[sub.coverIndex || 0]?.previewUrl || sub.images?.[sub.coverIndex || 0]?.url || sub.images?.[0]?.previewUrl || sub.images?.[0]?.url} 
                         alt={sub.name} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                       />
@@ -2992,14 +2992,14 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)' }}>
                       <button
                         onClick={() => setSelectedSubmission(sub)}
-                        style={{ flex: 1, padding: '0.45rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ flex: 1, padding: '0.45rem', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
                       >
                         Inspect
                       </button>
                       {sub.status !== 'published' && (
                         <button
                           onClick={() => handleApproveSubmission(sub.id)}
-                          style={{ flex: 1, padding: '0.45rem', borderRadius: '6px', border: 'none', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}
+                          style={{ flex: 1, padding: '0.45rem', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#ffffff', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
                         >
                           Approve
                         </button>
@@ -3011,7 +3011,7 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                             setRejectNote('');
                             setRejectModalOpen(true);
                           }}
-                          style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+                          style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: 'none', background: '#ef4444', color: '#ffffff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
                         >
                           Reject
                         </button>
@@ -3025,61 +3025,75 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
             {/* Inspection Modal */}
             {selectedSubmission && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-                <div style={{ width: 'min(100%, 48rem)', maxHeight: '90vh', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ width: 'min(100%, 52rem)', maxHeight: '92vh', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>{selectedSubmission.name}</h2>
-                      <p style={{ margin: '0.15rem 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                        Submitted by {selectedSubmission.author?.name} ({selectedSubmission.author?.email})
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>{selectedSubmission.name}</h2>
+                        <span className={`curator-status-badge ${selectedSubmission.status || 'published'}`}>
+                          {selectedSubmission.status === 'pending_review' ? 'Pending Review' : selectedSubmission.status === 'rejected' ? 'Needs Revision' : 'Published'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        Submitted by <strong style={{ color: 'var(--text-primary)' }}>{selectedSubmission.author?.name}</strong> ({selectedSubmission.author?.email})
                       </p>
                     </div>
-                    <button onClick={() => setSelectedSubmission(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <X size={20} />
+                    <button onClick={() => setSelectedSubmission(null)} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}>
+                      <X size={18} />
                     </button>
                   </div>
 
-                  <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', background: 'var(--bg-surface)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Category</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedSubmission.type || 'Desktop'}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Orientation</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedSubmission.orientation || 'Horizontal'}</span>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Resolution/Ratio</span>
+                        <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedSubmission.ratio || '16:9'}</span>
+                      </div>
+                    </div>
+
                     <div>
-                      <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.88rem', fontWeight: 700 }}>Wallpaper Media Set ({selectedSubmission.images?.length || 0})</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                      <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Folder size={18} style={{ color: 'var(--text-secondary)' }} />
+                        Wallpaper Media Set ({selectedSubmission.images?.length || 0})
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                         {selectedSubmission.images?.map((img, i) => (
-                          <div key={i} style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}>
-                            <img src={img.url || img.previewUrl} alt={img.label} style={{ width: '100%', height: '120px', objectFit: 'cover' }} />
-                            <div style={{ padding: '0.35rem 0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div key={i} style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                            <img src={img.previewUrl || img.url} alt={img.label} style={{ width: '100%', height: '140px', objectFit: 'cover' }} loading="lazy" />
+                            <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.8rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
                               {img.label || `Image #${i+1}`}
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'var(--bg-surface)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                      <div>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>Category</span>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{selectedSubmission.type || 'Desktop'}</span>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'block' }}>Orientation</span>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{selectedSubmission.orientation || 'Horizontal'}</span>
-                      </div>
-                    </div>
                   </div>
 
-                  <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                  <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-color)', background: 'var(--bg-surface)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                     <button
                       onClick={() => {
                         setRejectTargetId(selectedSubmission.id);
                         setRejectNote('');
                         setRejectModalOpen(true);
                       }}
-                      style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ padding: '0.65rem 1.5rem', borderRadius: '10px', border: 'none', background: '#ef4444', color: '#ffffff', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
                     >
+                      <AlertCircle size={18} />
                       Request Revisions
                     </button>
                     <button
                       onClick={() => handleApproveSubmission(selectedSubmission.id)}
-                      style={{ padding: '0.55rem 1.5rem', borderRadius: '8px', border: 'none', background: 'var(--text-primary)', color: 'var(--bg-primary)', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ padding: '0.65rem 1.75rem', borderRadius: '10px', border: 'none', background: '#22c55e', color: '#ffffff', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.2)' }}
                     >
+                      <CheckCircle2 size={18} />
                       Approve & Publish Live
                     </button>
                   </div>
@@ -3090,30 +3104,45 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
             {/* Reject Feedback Modal */}
             {rejectModalOpen && (
               <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-                <div style={{ width: 'min(100%, 28rem)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Request Revisions</h3>
-                  <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
-                    Provide feedback explaining what changes the creator needs to make before approval:
-                  </p>
-                  <textarea
-                    rows="4"
-                    placeholder="e.g. Please re-upload cover image without watermark or in higher resolution..."
-                    value={rejectNote}
-                    onChange={(e) => setRejectNote(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '0.85rem', resize: 'vertical' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
+                <div style={{ width: 'min(100%, 32rem)', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                  <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#ef4444' }}>
+                      <AlertCircle size={20} />
+                      <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>Request Revisions</h3>
+                    </div>
+                    <button onClick={() => setRejectModalOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                  
+                  <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                      Provide feedback explaining what changes the creator needs to make before this drop can be approved:
+                    </p>
+                    <textarea
+                      rows="4"
+                      placeholder="e.g. Please re-upload cover image without watermark or in higher resolution..."
+                      value={rejectNote}
+                      onChange={(e) => setRejectNote(e.target.value)}
+                      style={{ width: '100%', padding: '0.85rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'vertical', outline: 'none' }}
+                      onFocus={(e) => e.target.style.borderColor = '#ef4444'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
+                    />
+                  </div>
+
+                  <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--border-color)', background: 'var(--bg-surface)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
                     <button
                       onClick={() => setRejectModalOpen(false)}
-                      style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ padding: '0.6rem 1.25rem', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleRejectSubmission}
-                      style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ padding: '0.6rem 1.5rem', borderRadius: '10px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
                     >
-                      Send Revision Request
+                      <Send size={16} />
+                      Send Feedback
                     </button>
                   </div>
                 </div>

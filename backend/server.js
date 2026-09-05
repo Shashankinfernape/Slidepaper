@@ -2685,14 +2685,23 @@ app.get('/api/curator/dashboard/:uid', async (req, res) => {
 });
 
 // Endpoint: Publish New Drop / Bundle
-app.post('/api/curator/bundles', async (req, res) => {
-  const { uid, name, description, type, orientation, ratioOptions, coverIndex, images, author } = req.body;
-  if (!name || !images || images.length === 0) {
+app.post('/api/curator/bundles', upload.array('images'), async (req, res) => {
+  if (!drive) {
+    return res.status(401).json({ error: 'Google Drive client not authenticated. Admin must configure this.' });
+  }
+
+  const { uid, name, description, type, orientation, ratioOptions, coverIndex, author } = req.body;
+  const files = req.files;
+
+  if (!name || !files || files.length === 0) {
     return res.status(400).json({ error: 'Drop title and at least 1 image are required.' });
   }
 
   try {
-    let authorObj = author;
+    let authorObj = null;
+    if (author) {
+      try { authorObj = JSON.parse(author); } catch (e) { }
+    }
     if (uid) {
       const user = await User.findOne({ uid });
       if (user) {
@@ -2706,13 +2715,78 @@ app.post('/api/curator/bundles', async (req, res) => {
     }
 
     const cleanId = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+    
+    console.log(`[Curator] Uploading new bundle "${name}" containing ${files.length} images to GDrive...`);
 
-    const formattedImages = images.map((img, i) => ({
-      id: `${cleanId}-${i+1}`,
-      url: typeof img === 'string' ? img : (img.url || img.previewUrl),
-      previewUrl: typeof img === 'string' ? img : (img.previewUrl || img.url),
-      label: (typeof img === 'object' && img.label) ? img.label : `${name} #${i+1}`
-    }));
+    // 1. Create Google Drive Folder
+    const parentFolderId = await getOrCreateFolder();
+    const folderMetadata = {
+      name: name,
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: [parentFolderId]
+    };
+    const folderResponse = await drive.files.create({
+      requestBody: folderMetadata,
+      fields: 'id'
+    });
+    const bundleFolderId = folderResponse.data.id;
+
+    // 2. Upload files sequentially
+    const uploadResults = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      const fileMetadata = { name: file.originalname, parents: [bundleFolderId] };
+      const media = { mimeType: file.mimetype, body: fs.createReadStream(file.path) };
+      
+      const driveFile = await drive.files.create({
+        requestBody: fileMetadata,
+        media: media,
+        fields: 'id, name'
+      });
+      const fileId = driveFile.data.id;
+      
+      await drive.permissions.create({
+        fileId: fileId,
+        requestBody: { role: 'reader', type: 'anyone' }
+      });
+      
+      const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      const previewDownloadUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1920`;
+
+      // Store in GCS if enabled
+      const gcsSourcePath = `sources/${cleanId}/${file.originalname}`;
+      if (gcsEnabled && GCS_BUCKET) {
+        try {
+          const fileBuffer = fs.readFileSync(file.path);
+          await gcs.bucket(GCS_BUCKET).file(gcsSourcePath).save(fileBuffer, {
+            contentType: file.mimetype,
+            resumable: false
+          });
+        } catch (gcsSaveErr) {
+          console.warn(`[GCS Source Error] Failed to save "${file.originalname}":`, gcsSaveErr.message);
+        }
+      }
+
+      // Cleanup
+      try { await fs.promises.unlink(file.path); } catch (_) {}
+
+      uploadResults.push({
+        index: i,
+        id: `${cleanId}-${i+1}`,
+        url: downloadUrl,
+        previewUrl: previewDownloadUrl,
+        label: `${name} #${i+1}`
+      });
+    }
+
+    uploadResults.sort((a, b) => a.index - b.index);
+    const formattedImages = uploadResults.map(r => ({ id: r.id, url: r.url, previewUrl: r.previewUrl, label: r.label }));
+
+    let parsedRatioOptions = ratioOptions;
+    if (typeof ratioOptions === 'string') {
+      try { parsedRatioOptions = JSON.parse(ratioOptions); } catch (e) { parsedRatioOptions = ['16:9', '9:16', '21:9']; }
+    }
 
     const newBundle = new Bundle({
       id: cleanId,
@@ -2721,8 +2795,8 @@ app.post('/api/curator/bundles', async (req, res) => {
       type: type || 'Desktop',
       orientation: orientation || 'Horizontal',
       ratio: '16:9',
-      ratioOptions: ratioOptions || ['16:9', '9:16', '21:9'],
-      coverIndex: coverIndex || 0,
+      ratioOptions: parsedRatioOptions || ['16:9', '9:16', '21:9'],
+      coverIndex: parseInt(coverIndex) || 0,
       images: formattedImages,
       author: authorObj || { uid: uid || 'anonymous', name: 'Curator', avatar: '' },
       stats: { views: 0, downloads: 0 },
@@ -2745,7 +2819,7 @@ app.post('/api/curator/bundles', async (req, res) => {
         type: 'submission',
         bundleId: cleanId,
         bundleName: name,
-        thumbnailUrl: formattedImages[coverIndex || 0]?.url || formattedImages[0]?.url || ''
+        thumbnailUrl: formattedImages[parseInt(coverIndex) || 0]?.url || formattedImages[0]?.url || ''
       });
       await adminNotif.save();
     } catch (notifErr) {

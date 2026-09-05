@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, Plus, Check, AlertCircle, Clock } from 'lucide-react';
+import TransferHUD from './TransferHUD';
 
 let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 if (
@@ -20,10 +21,10 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
   const [orientation, setOrientation] = useState('Horizontal');
   const [coverIndex, setCoverIndex] = useState(0);
   const [images, setImages] = useState([]);
-  const [customImageUrl, setCustomImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successBanner, setSuccessBanner] = useState(false);
+  const [uploadMetrics, setUploadMetrics] = useState(null);
 
   if (!isOpen) return null;
 
@@ -37,6 +38,7 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
         setImages(prev => [
           ...prev,
           {
+            file: file,
             previewUrl: event.target.result,
             url: event.target.result,
             label: file.name.replace(/\.[^/.]+$/, '')
@@ -47,18 +49,7 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
     });
   };
 
-  const handleAddUrlImage = () => {
-    if (!customImageUrl.trim()) return;
-    setImages(prev => [
-      ...prev,
-      {
-        previewUrl: customImageUrl.trim(),
-        url: customImageUrl.trim(),
-        label: `Wallpaper #${prev.length + 1}`
-      }
-    ]);
-    setCustomImageUrl('');
-  };
+
 
   const handleRemoveImage = (indexToRemove) => {
     setImages(prev => prev.filter((_, i) => i !== indexToRemove));
@@ -81,49 +72,111 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
 
     setLoading(true);
     setError('');
+    
+    setUploadMetrics({
+      progress: 5,
+      speedMbps: 0,
+      transferredMB: 0,
+      totalMB: 0,
+      etaSeconds: 0,
+      stage: 'Preparing payload...'
+    });
 
     try {
-      const res = await fetch(`${API_URL}/api/curator/bundles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: user?.uid,
-          name: title.trim(),
-          description: description.trim(),
-          type: category,
-          orientation,
-          ratioOptions: orientation === 'Vertical' ? ['9:16', '3:4'] : ['16:9', '21:9', '16:10'],
-          coverIndex,
-          images,
-          author: {
-            uid: user?.uid || 'anonymous',
-            name: user?.displayName || 'Curator',
-            avatar: user?.photoURL || '',
-            email: user?.email || ''
-          }
-        })
+      const formData = new FormData();
+      formData.append('uid', user?.uid || '');
+      formData.append('name', title.trim());
+      formData.append('description', description.trim());
+      formData.append('type', category);
+      formData.append('orientation', orientation);
+      formData.append('ratioOptions', JSON.stringify(orientation === 'Vertical' ? ['9:16', '3:4'] : ['16:9', '21:9', '16:10']));
+      formData.append('coverIndex', coverIndex.toString());
+      
+      const authorObj = {
+        uid: user?.uid || 'anonymous',
+        name: user?.displayName || 'Curator',
+        avatar: user?.photoURL || '',
+        email: user?.email || ''
+      };
+      formData.append('author', JSON.stringify(authorObj));
+
+      images.forEach((img) => {
+        if (img.file) {
+          formData.append('images', img.file);
+        }
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to publish drop');
-      }
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_URL}/api/curator/bundles`, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable || e.total > 0) {
+          const totalBytes = e.total;
+          const loadedBytes = e.loaded;
+          const pct = Math.min(99, Math.max(5, (loadedBytes / totalBytes) * 100));
+          const currentTime = Date.now();
+          const timeDelta = (currentTime - lastTime) / 1000;
+
+          if (timeDelta >= 0.15) {
+            const bytesDelta = loadedBytes - lastLoaded;
+            const speedBps = bytesDelta / timeDelta;
+            const speedMbps = (speedBps * 8) / (1024 * 1024);
+            const remainingBytes = Math.max(0, totalBytes - loadedBytes);
+            const eta = speedBps > 0 ? (remainingBytes / speedBps) : 0;
+
+            setUploadMetrics({
+              progress: pct,
+              speedMbps: Math.max(0.2, speedMbps),
+              transferredMB: loadedBytes / (1024 * 1024),
+              totalMB: totalBytes / (1024 * 1024),
+              etaSeconds: Math.max(0, eta),
+              stage: 'Uploading images to Google Drive...'
+            });
+            lastLoaded = loadedBytes;
+            lastTime = currentTime;
+          }
+        }
+      };
+
+      const responseData = await new Promise((resolve, reject) => {
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setUploadMetrics(prev => ({ ...prev, progress: 100, stage: 'Upload complete! Processing database...' }));
+            let resData;
+            try { resData = JSON.parse(xhr.responseText); } catch(e) {}
+            setTimeout(() => resolve(resData), 1500);
+          } else {
+            let errorMessage = 'Failed to publish drop.';
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              errorMessage = errorData.error || errorMessage;
+            } catch (_) {}
+            reject(new Error(errorMessage));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Network error during upload.'));
+        xhr.send(formData);
+      });
 
       setSuccessBanner(true);
       setTimeout(() => {
-        if (onDropPublished) {
-          onDropPublished(data.bundle);
-        }
+        if (onDropPublished) onDropPublished(responseData?.bundle);
         onClose();
         setSuccessBanner(false);
         setStep(1);
         setTitle('');
         setDescription('');
         setImages([]);
+        setUploadMetrics(null);
       }, 2000);
     } catch (err) {
       console.error('[Drop Studio] Publish failed:', err);
       setError(err.message || 'Failed to submit drop');
+      setUploadMetrics(null);
     } finally {
       setLoading(false);
     }
@@ -196,25 +249,7 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
                   </label>
                 </div>
 
-                <div className="url-input-row">
-                  <input
-                    type="text"
-                    placeholder="Or paste image URL (https://...)"
-                    value={customImageUrl}
-                    onChange={(e) => setCustomImageUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddUrlImage()}
-                    className="url-input"
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
-                  />
-                  <button 
-                    className="add-url-btn" 
-                    onClick={handleAddUrlImage}
-                    style={{ background: 'var(--text-primary)', color: 'var(--bg-primary)' }}
-                  >
-                    <Plus size={16} />
-                    <span>Add Image</span>
-                  </button>
-                </div>
+
 
                 {/* Thumbnails */}
                 <div className="preview-thumbnails-grid">
@@ -376,6 +411,21 @@ export default function BundleStudioModal({ isOpen, onClose, onDropPublished, us
           </>
         )}
       </div>
+
+      {uploadMetrics && (
+        <TransferHUD
+          type="upload"
+          title="Publishing Wallpaper Drop"
+          fileName={`${title} (${images.length} files)`}
+          progress={uploadMetrics.progress}
+          speedMbps={uploadMetrics.speedMbps}
+          transferredMB={uploadMetrics.transferredMB}
+          totalMB={uploadMetrics.totalMB}
+          etaSeconds={uploadMetrics.etaSeconds}
+          stage={uploadMetrics.stage}
+          onClose={() => setUploadMetrics(null)}
+        />
+      )}
     </div>
   );
 }
