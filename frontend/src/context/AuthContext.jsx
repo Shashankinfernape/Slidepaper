@@ -151,10 +151,9 @@ export function AuthProvider({ children }) {
         console.log('[AuthContext] User exists. computedAdmin:', computedAdmin);
         setIsAdmin(computedAdmin);
 
-        // Only clear mock session if they are NOT an allowed admin
-        if (!ALLOWED_ADMIN_EMAILS.includes(emailClean) && isAdminSession) {
+        // Always clear mock session if a real Firebase user is logged in (unless it's the mock admin email)
+        if (currentUser.email !== 'admin@slidepapers.com' && isAdminSession) {
           localStorage.removeItem('slidepapers_admin_session');
-          setIsAdmin(false);
         }
       } else {
         console.log('[AuthContext] User is null. Setting isAdmin = false');
@@ -237,7 +236,6 @@ export function AuthProvider({ children }) {
         throw new Error('This Google Account is not registered as an Admin.');
       }
       
-      localStorage.setItem('slidepapers_admin_session', 'true');
       setIsAdmin(true);
       setLoading(false);
       return googleUser;
