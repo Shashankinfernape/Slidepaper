@@ -2142,11 +2142,21 @@ app.post('/api/users/sync-profile', async (req, res) => {
 
     if (user) {
       const oldUid = user.uid;
-      
-      user.uid = uid; // Always sync to current active Firebase UID
+
+      // Only update UID if none is stored yet, OR if the incoming UID matches a known Google provider
+      // (i.e., prefer the Google UID over the email/password UID to keep data stable)
+      // Simple rule: if the incoming photoURL is a real Google photo, this is the Google UID — trust it.
+      const incomingIsGoogleLogin = photoURL && photoURL.startsWith('https://lh3.googleusercontent.com');
+      if (!user.uid || incomingIsGoogleLogin) {
+        user.uid = uid;
+      }
+
       user.displayName = displayName || user.displayName;
       user.email = email || user.email;
-      user.photoURL = photoURL || user.photoURL;
+      // Only overwrite photoURL with a real URL — never null out an existing photo
+      if (photoURL && !photoURL.startsWith('data:image')) {
+        user.photoURL = photoURL;
+      }
       // Enforce admin role server-side — DB is source of truth for role
       if (email && ALLOWED_ADMIN_EMAILS.includes(email.toLowerCase())) {
         user.role = 'admin';

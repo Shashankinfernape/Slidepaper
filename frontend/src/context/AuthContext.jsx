@@ -94,6 +94,8 @@ export function AuthProvider({ children }) {
             if (!prev) return null;
             return {
               ...prev,
+              // Always show what the DB has — this ensures email/password users
+              // see the same displayName and photo as their Google login
               displayName: data.user.displayName || prev.displayName,
               photoURL: data.user.photoURL || prev.photoURL
             };
@@ -130,19 +132,16 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  // Sync user profile with backend database whenever user state changes
+  // Sync user profile with backend database whenever Firebase user changes (every login)
   useEffect(() => {
     if (user) {
-      const isMismatch = userProfile && userProfile.uid !== user.uid;
-      if (!hasSynced.current || isMismatch) {
-        hasSynced.current = false;
-        syncUserProfile(user);
-      }
+      hasSynced.current = false;
+      syncUserProfile(user);
     } else {
       hasSynced.current = false;
       setUserProfile(null);
     }
-  }, [user]);
+  }, [user?.uid]); // Re-run only when the Firebase UID changes (new login session)
 
   const loginWithGoogle = async () => {
     setLoading(true);
