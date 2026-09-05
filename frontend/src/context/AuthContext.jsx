@@ -259,7 +259,7 @@ export function AuthProvider({ children }) {
     }
 
     // 2. Local admin account bypass
-    if (emailClean === 'admin@slidepapers.com') {
+    if (ALLOWED_ADMIN_EMAILS.includes(emailClean)) {
       if (password === 'Javierdx5' || password === 'admin') {
         console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
         localStorage.setItem('slidepapers_admin_session', 'true');
@@ -277,11 +277,13 @@ export function AuthProvider({ children }) {
             resolve(adminUser);
           }, 800);
         });
-      } else {
+      } else if (emailClean === 'admin@slidepapers.com') {
+        // Only hard-block if it's strictly the mock email, since it has no real Firebase account
         console.log('[AuthContext] Incorrect password for local bypass account.');
         setLoading(false);
         throw new Error('Incorrect password for admin@slidepapers.com.');
       }
+      // If it's a different admin email (like infernape) but wrong local password, it will naturally fall through to Firebase
     }
 
     // 2. Custom local check for jasondomnic025@gmail.com
