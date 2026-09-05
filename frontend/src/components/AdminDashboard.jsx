@@ -3025,8 +3025,8 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
 
             {/* Inspection Modal */}
             {selectedSubmission && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-                <div style={{ width: 'min(100%, 52rem)', maxHeight: '92vh', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ width: '95vw', height: '95vh', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
                   <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -3069,13 +3069,13 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                         {selectedSubmission.images?.map((img, i) => (
                           <div 
                             key={i} 
-                            style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', display: 'flex', flexDirection: 'column' }} 
+                            style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', display: 'flex', flexDirection: 'column', flex: '0 0 auto', maxWidth: '100%' }} 
                             onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)'; }} 
                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
                             onClick={() => setPreviewImage(img)}
                           >
-                            <img src={img.previewUrl || img.url} alt={img.label} style={{ height: '150px', width: 'auto', objectFit: 'contain', background: '#0a0a0a' }} loading="lazy" />
-                            <div style={{ padding: '0.5rem 0.75rem', fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, textAlign: 'center' }}>
+                            <img src={img.previewUrl || img.url} alt={img.label} style={{ height: '220px', width: 'auto', objectFit: 'contain', background: '#0a0a0a' }} loading="lazy" />
+                            <div style={{ padding: '0.65rem 0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, textAlign: 'center' }}>
                               {img.label || `Image #${i+1}`}
                             </div>
                           </div>
