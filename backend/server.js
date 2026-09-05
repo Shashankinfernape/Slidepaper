@@ -2056,7 +2056,6 @@ app.delete('/api/bundles/:bundleId', async (req, res) => {
 
     // 5. Save updated bundles database back to Google Drive (backup)
     await saveBundlesToDrive();
-
     return res.status(200).json({ success: true, message: `Bundle "${bundle.name}" deleted successfully` });
 
   } catch (error) {
@@ -2070,13 +2069,6 @@ app.post('/api/users/sync-profile', async (req, res) => {
   let { uid, displayName, email, photoURL } = req.body;
   if (!uid) {
     return res.status(400).json({ error: 'Missing uid' });
-  }
-
-  // Force infernapeshashank@gmail.com to always fetch the master admin account
-  if (email && email.toLowerCase() === 'infernapeshashank@gmail.com') {
-    console.log('[Auth] Intercepted admin email login. Forcing mapping to admin-mock-999');
-    uid = 'admin-mock-999';
-    email = 'admin@slidepapers.com';
   }
 
   try {

@@ -261,28 +261,29 @@ export function AuthProvider({ children }) {
     }
 
     // 2. Local admin account bypass
-    if ((emailClean === 'admin@slidepapers.com' || emailClean === 'infernapeshashank@gmail.com') && (password === 'Javierdx5' || password === 'admin')) {
-      console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
-      localStorage.setItem('slidepapers_admin_session', 'true');
-      setIsAdmin(true);
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const adminUser = {
-            uid: 'admin-mock-999',
-            displayName: 'Infernape',
-            email: emailClean
-          };
-          console.log('[AuthContext] Local mock admin logged in successfully. Setting user.');
-          setUser(adminUser);
-          setLoading(false);
-          resolve(adminUser);
-        }, 800);
-      });
-    } else if (emailClean === 'admin@slidepapers.com') {
-      // If it's literally admin@slidepapers.com and password didn't match, block it since there's no Firebase account
-      console.log('[AuthContext] Incorrect password for local bypass account.');
-      setLoading(false);
-      throw new Error(`Incorrect password for ${emailClean}.`);
+    if (emailClean === 'admin@slidepapers.com') {
+      if (password === 'Javierdx5' || password === 'admin') {
+        console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
+        localStorage.setItem('slidepapers_admin_session', 'true');
+        setIsAdmin(true);
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            const adminUser = {
+              uid: 'admin-mock-999',
+              displayName: 'Infernape',
+              email: 'admin@slidepapers.com'
+            };
+            console.log('[AuthContext] Local mock admin logged in successfully. Setting user.');
+            setUser(adminUser);
+            setLoading(false);
+            resolve(adminUser);
+          }, 800);
+        });
+      } else {
+        console.log('[AuthContext] Incorrect password for local bypass account.');
+        setLoading(false);
+        throw new Error('Incorrect password for admin@slidepapers.com.');
+      }
     }
 
     // 2. Custom local check for jasondomnic025@gmail.com
