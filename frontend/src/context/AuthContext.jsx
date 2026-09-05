@@ -188,48 +188,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Email/password login — goes directly through Firebase for all accounts
-  const loginWithEmail = async (email, password) => {
-    setLoading(true);
-    const emailClean = (email || '').trim().toLowerCase();
 
-    if (isConfigured && auth) {
-      try {
-        console.log('[AuthContext] Attempting Firebase signInWithEmailAndPassword for:', emailClean);
-        const result = await signInWithEmailAndPassword(auth, emailClean, password);
-        console.log('[AuthContext] Firebase signInWithEmailAndPassword success:', result.user.email);
-        setLoading(false);
-        return result.user;
-      } catch (error) {
-        console.warn('[AuthContext] Firebase signIn failed:', error.code);
-
-        // Auto-register if the account doesn't exist in Firebase yet
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
-          try {
-            const createResult = await createUserWithEmailAndPassword(auth, emailClean, password);
-            console.log('[AuthContext] Firebase createUserWithEmailAndPassword success:', createResult.user.email);
-            setLoading(false);
-            return createResult.user;
-          } catch (createErr) {
-            console.error('[AuthContext] Firebase Registration Error:', createErr);
-            setLoading(false);
-            if (createErr.code === 'auth/email-already-in-use') {
-              throw new Error(`Incorrect password for ${emailClean}.`);
-            } else if (createErr.code === 'auth/weak-password') {
-              throw new Error('Password should be at least 6 characters.');
-            }
-            throw new Error(createErr.message || 'Authentication failed.');
-          }
-        }
-
-        setLoading(false);
-        throw new Error(`Incorrect password for ${emailClean}.`);
-      }
-    } else {
-      setLoading(false);
-      throw new Error('Firebase is not configured. Cannot sign in.');
-    }
-  };
 
   // Sign out
   const logout = async () => {
@@ -265,7 +224,6 @@ export function AuthProvider({ children }) {
     loading,
     loginWithGoogle,
     loginAdminWithGoogle,
-    loginWithEmail,
     logout,
     isFirebaseReal: isConfigured,
     subscriptions,
