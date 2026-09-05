@@ -2075,16 +2075,59 @@ app.post('/api/users/sync-profile', async (req, res) => {
   try {
     let user = null;
     if (email) {
-      // Find all matching emails and sort to prioritize the one with role 'curator'
-      const users = await User.find({ email: { $regex: new RegExp(`^${email}$`, 'i') } }).sort({ role: 1 });
+      // Find all matching emails
+      const users = await User.find({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
       if (users.length > 0) {
+        // Prioritize the profile that has the most data (e.g. curator/admin role, or has a photo/name)
+        // Sort by role (admin > curator > user) and then by presence of photoURL
+        users.sort((a, b) => {
+          const roleWeight = { admin: 3, curator: 2, user: 1 };
+          const weightA = (roleWeight[a.role] || 1) + (a.photoURL ? 0.5 : 0);
+          const weightB = (roleWeight[b.role] || 1) + (b.photoURL ? 0.5 : 0);
+          return weightB - weightA; // Descending
+        });
+
         user = users[0];
         
-        // Cleanup any extra ghost profiles created before we added this linking logic
+        // Merge and Cleanup any extra ghost profiles created before we added this linking logic
         if (users.length > 1) {
-          const idsToDelete = users.slice(1).map(u => u._id);
+          const idsToDelete = [];
+          const uidsToDelete = [];
+
+          for (let i = 1; i < users.length; i++) {
+            const u = users[i];
+            idsToDelete.push(u._id);
+            uidsToDelete.push(u.uid);
+
+            // Merge profile fields if missing in the primary user
+            if (!user.displayName && u.displayName) user.displayName = u.displayName;
+            if (!user.photoURL && u.photoURL) user.photoURL = u.photoURL;
+            if (!user.portfolioUrl && u.portfolioUrl) user.portfolioUrl = u.portfolioUrl;
+            if (!user.about && u.about) user.about = u.about;
+            if (u.subscribers > user.subscribers) user.subscribers = u.subscribers;
+            if (u.subscriberUids && u.subscriberUids.length > 0) {
+              user.subscriberUids = [...new Set([...(user.subscriberUids || []), ...u.subscriberUids])];
+            }
+          }
+
+          await user.save();
+
+          // Re-assign all content from the ghost profiles to the primary profile
+          for (const deletedUid of uidsToDelete) {
+            await Bundle.updateMany({ 'author.uid': deletedUid }, { $set: { 'author.uid': user.uid } });
+            await Notification.updateMany({ authorUid: deletedUid }, { $set: { authorUid: user.uid } });
+            await Notification.updateMany({ targetUserUid: deletedUid }, { $set: { targetUserUid: user.uid } });
+            
+            // Update subscriptions array in other users who subscribed to the deleted uid
+            const subscribedUsers = await User.find({ subscriberUids: deletedUid });
+            for (const su of subscribedUsers) {
+              su.subscriberUids = su.subscriberUids.map(id => id === deletedUid ? user.uid : id);
+              await su.save();
+            }
+          }
+
           await User.deleteMany({ _id: { $in: idsToDelete } });
-          console.log(`[Database] Cleaned up ${idsToDelete.length} ghost duplicate profiles for ${email}`);
+          console.log(`[Database] Merged and cleaned up ${idsToDelete.length} duplicate profiles for ${email}`);
         }
       }
     }

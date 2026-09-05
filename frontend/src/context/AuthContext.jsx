@@ -133,10 +133,15 @@ export function AuthProvider({ children }) {
 
       setUser(currentUser);
       if (currentUser) {
-        const isEmailPassword = currentUser.providerData.some(p => p.providerId === 'password');
-        const computedAdmin = isEmailPassword || currentUser.email === 'admin@slidepapers.com' || isAdminSession;
+        const computedAdmin = currentUser.email === 'admin@slidepapers.com' || isAdminSession;
         console.log('[AuthContext] User exists. computedAdmin:', computedAdmin);
         setIsAdmin(computedAdmin);
+        
+        // If they are a real firebase user but not the admin, ensure the mock session is cleared
+        if (currentUser.email !== 'admin@slidepapers.com' && isAdminSession) {
+          localStorage.removeItem('slidepapers_admin_session');
+          setIsAdmin(false);
+        }
       } else {
         console.log('[AuthContext] User is null. Setting isAdmin = false');
         setIsAdmin(false);
@@ -300,8 +305,6 @@ export function AuthProvider({ children }) {
         console.log('[AuthContext] Attempting Firebase signInWithEmailAndPassword for:', emailClean);
         const result = await signInWithEmailAndPassword(auth, emailClean, password);
         console.log('[AuthContext] Firebase signInWithEmailAndPassword success:', result.user.email);
-        localStorage.setItem('slidepapers_admin_session', 'true');
-        setIsAdmin(true);
         setLoading(false);
         return result.user;
       } catch (error) {
@@ -312,14 +315,10 @@ export function AuthProvider({ children }) {
           try {
             const createResult = await createUserWithEmailAndPassword(auth, emailClean, password);
             console.log('[AuthContext] Firebase createUserWithEmailAndPassword success:', createResult.user.email);
-            localStorage.setItem('slidepapers_admin_session', 'true');
-            setIsAdmin(true);
             setLoading(false);
             return createResult.user;
           } catch (createErr) {
             console.error('[AuthContext] Firebase Registration Error:', createErr);
-            localStorage.removeItem('slidepapers_admin_session');
-            setIsAdmin(false);
             setLoading(false);
             if (createErr.code === 'auth/email-already-in-use') {
               throw new Error(`Incorrect password for ${emailClean}.`);
@@ -330,8 +329,6 @@ export function AuthProvider({ children }) {
           }
         }
 
-        localStorage.removeItem('slidepapers_admin_session');
-        setIsAdmin(false);
         setLoading(false);
         throw new Error(`Incorrect password for ${emailClean}.`);
       }
