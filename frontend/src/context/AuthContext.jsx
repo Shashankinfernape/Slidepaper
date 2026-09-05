@@ -25,6 +25,15 @@ if (
 
 const AuthContext = createContext(null);
 
+const ALLOWED_ADMIN_EMAILS = [
+  'admin@slidepapers.com',
+  'infernapeshashank@gmail.com',
+  'jasondomnic@gmail.com',
+  'jasondomnii@gmail.com',
+  'jasondomnic5@gmail.com',
+  'jasondomnic025@gmail.com'
+];
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const isAdminSession = localStorage.getItem('slidepapers_admin_session') === 'true';
@@ -133,12 +142,15 @@ export function AuthProvider({ children }) {
 
       setUser(currentUser);
       if (currentUser) {
-        const computedAdmin = currentUser.email === 'admin@slidepapers.com' || isAdminSession;
+        const emailClean = (currentUser.email || '').trim().toLowerCase();
+        const isEmailPassword = currentUser.providerData.some(p => p.providerId === 'password');
+        const computedAdmin = ALLOWED_ADMIN_EMAILS.includes(emailClean) || isAdminSession;
+        
         console.log('[AuthContext] User exists. computedAdmin:', computedAdmin);
         setIsAdmin(computedAdmin);
-        
-        // If they are a real firebase user but not the admin, ensure the mock session is cleared
-        if (currentUser.email !== 'admin@slidepapers.com' && isAdminSession) {
+
+        // Only clear mock session if they are NOT an allowed admin
+        if (!ALLOWED_ADMIN_EMAILS.includes(emailClean) && isAdminSession) {
           localStorage.removeItem('slidepapers_admin_session');
           setIsAdmin(false);
         }
@@ -212,15 +224,6 @@ export function AuthProvider({ children }) {
       const googleUser = await loginWithGoogle();
       const emailClean = (googleUser.email || '').trim().toLowerCase();
       
-      const ALLOWED_ADMIN_EMAILS = [
-        'admin@slidepapers.com',
-        'infernapeshashank@gmail.com',
-        'jasondomnic@gmail.com',
-        'jasondomnii@gmail.com',
-        'jasondomnic5@gmail.com',
-        'jasondomnic025@gmail.com'
-      ];
-      
       const isMockUser = googleUser.uid === 'google-mock-101';
       if (!ALLOWED_ADMIN_EMAILS.includes(emailClean) && !isMockUser) {
         if (isConfigured && auth) {
@@ -256,29 +259,28 @@ export function AuthProvider({ children }) {
     }
 
     // 2. Local admin account bypass
-    if (emailClean === 'admin@slidepapers.com') {
-      if (password === 'Javierdx5' || password === 'admin') {
-        console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
-        localStorage.setItem('slidepapers_admin_session', 'true');
-        setIsAdmin(true);
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            const adminUser = {
-              uid: 'admin-mock-999',
-              displayName: 'Infernape',
-              email: 'admin@slidepapers.com'
-            };
-            console.log('[AuthContext] Local mock admin logged in successfully. Setting user.');
-            setUser(adminUser);
-            setLoading(false);
-            resolve(adminUser);
-          }, 800);
-        });
-      } else {
-        console.log('[AuthContext] Incorrect password for local bypass account.');
-        setLoading(false);
-        throw new Error('Incorrect password for admin@slidepapers.com.');
-      }
+    if ((emailClean === 'admin@slidepapers.com' || emailClean === 'infernapeshashank@gmail.com') && (password === 'Javierdx5' || password === 'admin')) {
+      console.log('[AuthContext] Match mock admin login credentials. Bypassing Firebase.');
+      localStorage.setItem('slidepapers_admin_session', 'true');
+      setIsAdmin(true);
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const adminUser = {
+            uid: 'admin-mock-999',
+            displayName: 'Infernape',
+            email: emailClean
+          };
+          console.log('[AuthContext] Local mock admin logged in successfully. Setting user.');
+          setUser(adminUser);
+          setLoading(false);
+          resolve(adminUser);
+        }, 800);
+      });
+    } else if (emailClean === 'admin@slidepapers.com') {
+      // If it's literally admin@slidepapers.com and password didn't match, block it since there's no Firebase account
+      console.log('[AuthContext] Incorrect password for local bypass account.');
+      setLoading(false);
+      throw new Error(`Incorrect password for ${emailClean}.`);
     }
 
     // 2. Custom local check for jasondomnic025@gmail.com

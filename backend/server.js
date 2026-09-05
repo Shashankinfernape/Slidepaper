@@ -2067,9 +2067,16 @@ app.delete('/api/bundles/:bundleId', async (req, res) => {
 
 // Endpoint: Sync user profile when they login/authenticate
 app.post('/api/users/sync-profile', async (req, res) => {
-  const { uid, displayName, email, photoURL } = req.body;
+  let { uid, displayName, email, photoURL } = req.body;
   if (!uid) {
     return res.status(400).json({ error: 'Missing uid' });
+  }
+
+  // Force infernapeshashank@gmail.com to always fetch the master admin account
+  if (email && email.toLowerCase() === 'infernapeshashank@gmail.com') {
+    console.log('[Auth] Intercepted admin email login. Forcing mapping to admin-mock-999');
+    uid = 'admin-mock-999';
+    email = 'admin@slidepapers.com';
   }
 
   try {
