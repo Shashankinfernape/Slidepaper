@@ -3065,21 +3065,26 @@ export default function AdminDashboard({ onBack, logout, isCreatorMode = false }
                         <Folder size={18} style={{ color: 'var(--text-secondary)' }} />
                         Wallpaper Media Set ({selectedSubmission.images?.length || 0})
                       </h4>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                        {selectedSubmission.images?.map((img, i) => (
-                          <div 
-                            key={i} 
-                            style={{ borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', display: 'flex', flexDirection: 'column', flex: '0 0 auto', maxWidth: '100%' }} 
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)'; }} 
-                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                            onClick={() => setPreviewImage(img)}
-                          >
-                            <img src={img.previewUrl || img.url} alt={img.label} style={{ height: '220px', width: 'auto', objectFit: 'contain', background: '#0a0a0a' }} loading="lazy" />
-                            <div style={{ padding: '0.65rem 0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, textAlign: 'center' }}>
-                              {img.label || `Image #${i+1}`}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '1.25rem' }}>
+                        {selectedSubmission.images?.map((img, i) => {
+                          const cssRatio = (selectedSubmission.ratio || '16:9').replace(':', '/');
+                          return (
+                            <div 
+                              key={i} 
+                              style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer', display: 'flex', flexDirection: 'column' }} 
+                              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 24px -8px rgba(0, 0, 0, 0.4)'; }} 
+                              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              onClick={() => setPreviewImage(img)}
+                            >
+                              <div style={{ width: '100%', aspectRatio: cssRatio, background: '#0a0a0a' }}>
+                                <img src={img.previewUrl || img.url} alt={img.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                              </div>
+                              <div style={{ padding: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 600, textAlign: 'center', background: 'var(--bg-surface-elevated)' }}>
+                                {img.label || `Image #${i+1}`}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
