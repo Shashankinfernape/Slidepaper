@@ -155,7 +155,12 @@ export function AuthProvider({ children }) {
   // Sync user profile with backend database whenever user state changes
   useEffect(() => {
     if (user) {
-      if (!hasSynced.current) {
+      // If the currently synced profile doesn't match the active user, we need to re-sync
+      // This happens when transitioning from the mock-admin initial state to a real Firebase user
+      const isMismatch = userProfile && userProfile.uid !== user.uid;
+      
+      if (!hasSynced.current || isMismatch) {
+        hasSynced.current = false; // Reset it so it can sync again
         syncUserProfile(user);
       }
     } else {
